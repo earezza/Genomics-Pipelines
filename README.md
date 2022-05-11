@@ -8,7 +8,11 @@ Picard https://broadinstitute.github.io/picard/
 Samtools  http://www.htslib.org/  
 Deeptools  https://deeptools.readthedocs.io/en/develop/  
 SEACR https://github.com/FredHutch/SEACR  
-
+  
+### Resources  
+CUT&Tag https://www.nature.com/articles/s41467-019-09982-5  
+Pipeline example https://yezhengstat.github.io/CUTTag_tutorial/  
+Additional https://learn.gencore.bio.nyu.edu/  
 ___
 Start  
 	  Reads_fastq.gz  
