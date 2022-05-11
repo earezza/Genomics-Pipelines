@@ -4,8 +4,25 @@
 Created on Mon Apr 25 11:12:54 2022
 Description:
     Script to run the Snakemake pipeline file without snakemake (essentially a copy of executables).
+    Processes CUT&TAG sequence data to generate bigwig/bigbed files for viewing in the UCSC Browser.
     
-    Processes CUT&TAG sequence data.
+    Reads and md5sum.txt must be saved into their own directory.
+    
+    Requires input files formatted as {SAMPLE_NAME}_{READ}.fastq.gz
+    e.g.
+        MY-SAMPLE-NAME_R1.fastq.gz
+        MY-SAMPLE-NAME_R2.fastq.gz
+        
+    An md5 hash for each read must also be saved into a file named md5sum.txt
+    e.g. md5sum.txt would look like:
+        abcdefghijklmnop MY-SAMPLE-NAME_R1.fastq.gz
+        qrstuvqxyz123456 MY-SAMPLE-NAME_R2.fastq.gz
+    
+    Output from the pipeline will generate a file tree as follows:
+        logs/
+        Analysis_Results/
+        All_output/
+    
     
 @author: earezza
 """
@@ -54,6 +71,7 @@ parser.add_argument('-spikein', '--spikein', help='Spikein type', type=str, choi
 parser.add_argument('-length', '--length', help='Read length', type=str, default='50', choices=['50', '75', '100', '150', '200'])
 parser.add_argument('-controls', '--controls', help='Control reads for peaks calling', default=[], nargs='+')
 parser.add_argument('-no_spikein', '--no_spikein', help='If no spikein, skip steps for normalizing to spikein', action='store_true')
+parser.add_argument('-cleanup', '--cleanup', help='If cleanup, remove all intermediate files keeping only final .bw and .bed files', action='store_true')
 # Program and reference genome locations
 parser.add_argument('-PicardLoc', '--PicardLoc', help='Location of picard.jar', type=str, default="java -jar /home/earezza/projects/def-jdilwort/earezza/picard.jar")
 parser.add_argument('-SEACRLoc', '--SEACRLoc', help='Location of SEACR .sh', type=str, default="/home/earezza/projects/def-jdilwort/earezza/SEACR/SEACR_1.3.sh")
@@ -62,7 +80,8 @@ parser.add_argument('-bowtie2_index', '--bowtie2_index', help='Location of bowti
 parser.add_argument('-spike_align', '--spike_align', help='Command input options for spikein alignment', type=str, default="-p 8 --end-to-end --very-sensitive --no-overlap --no-dovetail --no-mixed --no-discordant --phred33 -I 10 -X 700")
 parser.add_argument('-bamCov_default', '--bamCov_default', help='Command input default for bamCoverage', type=str, default="--binSize 10 --ignoreForNormalization 'chrM' --extendReads")
 parser.add_argument('-bamCov_min', '--bamCov_min', help='Command input options for bamCoverage', type=str, default="--binSize 10 --extendReads")
-parser.add_argument('-bamCov_RPGC', '--bamCov_RPGC', help='Command input options for bamCoverage reads per genome counts', type=str, default="--binSize 10 --normalizeUsing 'RPGC'  --ignoreForNormalization 'chrM' --extendReads")
+parser.add_argument('-bamCov_RPGC', '--bamCov_RPGC', help='Command input options for bamCoverage, reads per genomic content (1x normalization)', type=str, default="--binSize 10 --normalizeUsing 'RPGC'  --ignoreForNormalization 'chrM' --extendReads")
+parser.add_argument('-bamCov_CPM', '--bamCov_CPM', help='Command input options for bamCoverage, number of reads per bin / number of mapped reads (in millions)', type=str, default="--binSize 10 --normalizeUsing 'CPM'  --ignoreForNormalization 'chrM' --extendReads")
 parser.add_argument('-genome_align', '--genome_align', help='Command input options for genome alignment', type=str, default="-p 8 --local --very-sensitive-local --no-unal --no-mixed --no-discordant --phred33 -I 10 -X 700")
 parser.add_argument('-samtools_mapq', '--samtools_mapq', help='Command input option for samtools mapq', type=str, default="-q 10")
 parser.add_argument('-samtools_proper_paired', '--samtools_proper_paired', help='Command input option for samtools', type=str, default="-f 2")
@@ -89,7 +108,8 @@ IGGREADS = set(args.controls)
 TARGETS = set([ f for f in fastqfiles if f not in IGGREADS ])
 
 # Read lengths genome mapping
-EGS_GRCh38 = {'50': '2308125349', '75': '2747877777', '100': '2805636331', '150': '2862010578', '200': '2887553303'}
+# https://deeptools.readthedocs.io/en/latest/content/feature/effectiveGenomeSize.html
+EGS_GRCh38 = {'50': '2701495761', '75': '2747877777', '100': '2805636331', '150': '2862010578', '200': '2887553303'}
 EGS_GRCm38 = {'50': '2308125349', '75': '2407883318', '100': '2467481108', '150': '2494787188', '200': '2520869189'}
 if args.species == 'Mus':
     EFFECTIVEGENOMESIZE = EGS_GRCm38[args.length]
@@ -490,9 +510,9 @@ def GetBigwigs_BamCoverage():
         formatter = logging.Formatter('%(levelname)s : %(name)s : %(message)s')
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
-        if os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bw'%f) and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo.norm.bw'%f) and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo.norm_wDups.bw'%f):
+        if os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bw'%f) and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo.norm.bw'%f) and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo.norm_wDups.bw'%f) and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bw'%f):
             continue
-        # RPGC
+        # RPGC normalized without duplicates
         try:
             result = subprocess.run(('bamCoverage --bam All_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam -o Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bw %s --effectiveGenomeSize %s'%(f, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
@@ -500,7 +520,7 @@ def GetBigwigs_BamCoverage():
         except Exception as e:
             logger.exception(e)
             passed = False
-        # No normalization -bigwig
+        # No normalization without duplicates
         try:
             result = subprocess.run(('bamCoverage --bam All_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam -o Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo.norm.bw %s'%(f, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
@@ -516,10 +536,28 @@ def GetBigwigs_BamCoverage():
         except Exception as e:
             logger.exception(e)
             passed = False
-    
+        # CPM normalized without duplicates
+        try:
+            result = subprocess.run(('bamCoverage --bam All_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam -o Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bw %s --effectiveGenomeSize %s'%(f, f, args.bamCov_CPM, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+            logger.info(result.stdout.rstrip('\n'))
+            logger.warning(result.stderr.rstrip('\n'))
+        except Exception as e:
+            logger.exception(e)
+            passed = False
+        '''
+        # Get bedgraph
+        try:
+            result = subprocess.run(('bamCoverage --bam All_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam --outFileFormat bedgraph -o Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bedgraph %s --effectiveGenomeSize %s'%(f, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+            logger.info(result.stdout.rstrip('\n'))
+            logger.warning(result.stderr.rstrip('\n'))
+        except Exception as e:
+            logger.exception(e)
+            passed = False
+        '''
         passed = passed and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bw'%f)
         passed = passed and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo.norm.bw'%f)
         passed = passed and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo.norm_wDups.bw'%f)
+        passed = passed and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bw'%f)
     return passed
         
 # Step 12
@@ -542,9 +580,9 @@ def Map2Spikein_Bowtie2():
         logger.addHandler(file_handler)
         if os.path.exists('All_output/Spike_mapped_reads/%s.bam'%f) and os.path.exists('All_output/Spike_mapped_reads/%s.coordsorted.bam'%f) and os.path.exists('All_output/Spike_mapped_reads/%s.coordsorted.bam.bai'%f):
             continue
-        if args.no_spikein:
-            logger.info('No spikein, skipping step.')
-            break
+        #if args.no_spikein:
+        #    logger.info('No spikein, skipping step.')
+        #    break
         # Bowtie2
         try:
             result = subprocess.run(('bowtie2 %s -x %s -1 All_output/Trimmed_reads/%s_Trimmed_R1.fastq -2 All_output/Trimmed_reads/%s_Trimmed_R2.fastq 2> logs/Spike_Alignment/bowtie2/%s.log | samtools view -Sb - > All_output/Spike_mapped_reads/%s.bam'%(args.spike_align, SPIKEINDEX, f, f, f, f)), shell=True, capture_output=True, text=True)
@@ -597,9 +635,9 @@ def Collect_Spikealignment_stats():
         logger.addHandler(file_handler)
         if os.path.exists('logs/Spike_Alignment/dupstats/%s.dupMarked.bam'%f) and os.path.exists('logs/Spike_Alignment/dupstats/%s_picard.dupMark.txt'%f):
             continue
-        if args.no_spikein:
-            logger.info('No spikein, skipping step.')
-            break
+        #if args.no_spikein:
+        #    logger.info('No spikein, skipping step.')
+        #    break
         try:
             result = subprocess.run(('%s MarkDuplicates -I All_output/Spike_mapped_reads/%s.coordsorted.bam -O logs/Spike_Alignment/dupstats/%s.dupMarked.bam -METRICS_FILE logs/Spike_Alignment/dupstats/%s_picard.dupMark.txt'%(args.PicardLoc, f, f, f)), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
@@ -637,9 +675,9 @@ def Compileresults_Spike():
     logger.addHandler(file_handler)
     if os.path.exists('Analysis_Results/Spikein_alignment/Spike_alignment_%s.html'%args.logfile.rstrip('.log')):
         return passed
-    if args.no_spikein:
-        logger.info('No spikein, skipping step.')
-        return passed
+    #if args.no_spikein:
+    #    logger.info('No spikein, skipping step.')
+    #    return passed
     try:
         result = subprocess.run('multiqc ./logs/Spike_Alignment --force -v -o ./Analysis_Results/Spikein_alignment -n Spike_alignment_%s.html'%args.logfile.rstrip('.log'), shell=True, capture_output=True, text=True)
         logger.info(result.stdout.rstrip('\n'))
@@ -666,9 +704,9 @@ def CalcNormFactors():
     logger.addHandler(file_handler)
     if os.path.exists('Analysis_Results/Spikein_normalized_bws_bdgs/Spike_align_stats_%s.csv'%args.logfile.rstrip('.log')):
         return passed
-    if args.no_spikein:
-        logger.info('No spikein, skipping step.')
-        return passed
+    #if args.no_spikein:
+    #    logger.info('No spikein, skipping step.')
+    #    return passed
     try:
         filetoread = "Analysis_Results/Spikein_alignment/Spike_alignment_%s_data/multiqc_bowtie2.txt"%args.logfile.rstrip('.log')
         logger.info('Looking to read %s'%filetoread)
@@ -703,9 +741,9 @@ def GetNormBwsBdgs_BamCoverage():
     if not os.path.exists('Analysis_Results/Spikein_normalized_bws_bdgs/Normalized_bigwigs_wDups'):
         os.mkdir('Analysis_Results/Spikein_normalized_bws_bdgs/Normalized_bigwigs_wDups')
     passed = True
-    if args.no_spikein:
-        print('No spikein, skipping step.')
-        return passed
+    #if args.no_spikein:
+    #    print('No spikein, skipping step.')
+    #    return passed
     AlignStats = pd.read_csv("Analysis_Results/Spikein_normalized_bws_bdgs/Spike_align_stats_%s.csv"%args.logfile.rstrip('.log'))
     AlignStats.set_index('Sample', inplace=True)
     
@@ -762,9 +800,9 @@ def Peaks_SEACR():
     formatter = logging.Formatter('%(levelname)s : %(name)s : %(message)s')
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
-    if args.no_spikein:
-        logger.info('No spikein, skipping step.')
-        return passed
+    #if args.no_spikein:
+    #    logger.info('No spikein, skipping step.')
+    #    return passed
     
     # If conrol reads given
     if len(args.controls) >= 1:
@@ -918,6 +956,11 @@ if __name__ == '__main__':
     
     logger.info("Getting pipeline steps...")
     pipeline = [ f for f in globals().values() if type(f) == types.FunctionType ]
+    if args.no_spikein:
+        del pipeline[11:-1]
+    if not args.cleanup:
+        del pipeline[-1]
+        
     logger.info("Running pipeline...")
     for p in range(0, len(pipeline)):
         logger.info("Step %s/%s - %s"%(p+1, len(pipeline), pipeline[p].__name__))
