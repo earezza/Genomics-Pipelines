@@ -1,5 +1,15 @@
 # CnT-Pipeline
 
+## Software Required  
+FASTQC https://www.bioinformatics.babraham.ac.uk/projects/fastqc/  
+MULTIQC https://multiqc.info/  
+Bowtie2 http://bowtie-bio.sourceforge.net/bowtie2/index.shtml  
+Picard https://broadinstitute.github.io/picard/  
+Samtools  http://www.htslib.org/  
+Deeptools  https://deeptools.readthedocs.io/en/develop/  
+SEACR https://github.com/FredHutch/SEACR  
+
+___
 Start  
 	  Reads_fastq.gz  
 	  Reads.fastq.gz.md5  
