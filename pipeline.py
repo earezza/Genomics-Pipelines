@@ -510,7 +510,7 @@ def GetBigwigs_BamCoverage():
         formatter = logging.Formatter('%(levelname)s : %(name)s : %(message)s')
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
-        if os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bw'%f) and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo.norm.bw'%f) and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo.norm_wDups.bw'%f) and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bw'%f):
+        if os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bw'%f) and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo_norm.bw'%f) and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo_norm_wDups.bw'%f) and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bw'%f):
             continue
         # RPGC normalized without duplicates
         try:
@@ -522,7 +522,7 @@ def GetBigwigs_BamCoverage():
             passed = False
         # No normalization without duplicates
         try:
-            result = subprocess.run(('bamCoverage --bam All_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam -o Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo.norm.bw %s'%(f, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('bamCoverage --bam All_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam -o Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo_norm.bw %s'%(f, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
         except Exception as e:
@@ -530,7 +530,7 @@ def GetBigwigs_BamCoverage():
             passed = False
         # No normalization with duplicates
         try:
-            result = subprocess.run(('bamCoverage --bam All_output/Processed_reads/%s.MappedPaired.MAPQ10.bam -o Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo.norm_wDups.bw %s'%(f, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('bamCoverage --bam All_output/Processed_reads/%s.MappedPaired.MAPQ10.bam -o Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo_norm_wDups.bw %s'%(f, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
         except Exception as e:
@@ -555,8 +555,8 @@ def GetBigwigs_BamCoverage():
             passed = False
         '''
         passed = passed and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bw'%f)
-        passed = passed and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo.norm.bw'%f)
-        passed = passed and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo.norm_wDups.bw'%f)
+        passed = passed and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo_norm.bw'%f)
+        passed = passed and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo_norm_wDups.bw'%f)
         passed = passed and os.path.exists('Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bw'%f)
     return passed
         
@@ -857,62 +857,83 @@ def Clean_up():
     formatter = logging.Formatter('%(levelname)s : %(name)s : %(message)s')
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
-    logger.info("Removing files except for bigwigs/bigbeds")
-    try:
-        result = subprocess.run(('rm Analysis_Results/Spikein_normalized_bws_bdgs/Spike_align_stats_%s.csv'%(args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
-        logger.info(result.stdout.rstrip('\n'))
-        logger.warning(result.stderr.rstrip('\n'))
-        result = subprocess.run(('rm Analysis_Results/Spikein_alignment/Spike_alignment_%s.html'%(args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
-        logger.info(result.stdout.rstrip('\n'))
-        logger.warning(result.stderr.rstrip('\n'))
-        result = subprocess.run(('rm Analysis_Results/primary_alignment/filteringbamsStats_%s.html'%(args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
-        logger.info(result.stdout.rstrip('\n'))
-        logger.warning(result.stderr.rstrip('\n'))
-        result = subprocess.run(('rm Analysis_Results/primary_alignment/Alignment_results_%s.html'%(args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
-        logger.info(result.stdout.rstrip('\n'))
-        logger.warning(result.stderr.rstrip('\n'))
-        result = subprocess.run(('rm Analysis_Results/Trimming/PostTrimming_QC_%s.html'%(args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
-        logger.info(result.stdout.rstrip('\n'))
-        logger.warning(result.stderr.rstrip('\n'))
-        result = subprocess.run(('rm Analysis_Results/QC_Rawreads/Rawreads_QC_%s.html'%(args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
-        logger.info(result.stdout.rstrip('\n'))
-        logger.warning(result.stderr.rstrip('\n'))
-        result = subprocess.run(('rm *.out'), shell=True, capture_output=True, text=True)
-        logger.info(result.stdout.rstrip('\n'))
-        logger.warning(result.stderr.rstrip('\n'))
-    except Exception as e:
-        logger.exception(e)
-        passed = False
-    for f in fastqfiles:
+    passed = True
+    if args.cleanup:
+        logger.info("Removing files except for bigwigs/bigbeds")
         try:
-            result = subprocess.run(('rm logs/Spike_Alignment/dupstats/%s*'%(f)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('rm Analysis_Results/Spikein_normalized_bws_bdgs/Spike_align_stats_%s.csv'%(args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
-            result = subprocess.run(('rm All_output/Spike_mapped_reads/%s*'%(f)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('rm Analysis_Results/Spikein_alignment/Spike_alignment_%s.html'%(args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
-            result = subprocess.run(('rm All_output/Processed_reads/%s*'%(f)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('rm Analysis_Results/primary_alignment/filteringbamsStats_%s.html'%(args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
-            result = subprocess.run(('rm logs/filtered_bams/%s*'%(f)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('rm Analysis_Results/primary_alignment/Alignment_results_%s.html'%(args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
-            result = subprocess.run(('rm logs/primary_alignment/PostAlignmentStats/dupstats/%s*'%(f)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('rm Analysis_Results/Trimming/PostTrimming_QC_%s.html'%(args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
-            result = subprocess.run(('rm All_output/Mapped_reads/%s*'%(f)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('rm Analysis_Results/QC_Rawreads/Rawreads_QC_%s.html'%(args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
-            result = subprocess.run(('rm All_output/Trimmed_reads/%s*'%(f)), shell=True, capture_output=True, text=True)
-            logger.info(result.stdout.rstrip('\n'))
-            logger.warning(result.stderr.rstrip('\n'))
-            result = subprocess.run(('rm Analysis_Results/QC_Rawreads/%s*'%(f)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('rm *.out'), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
         except Exception as e:
             logger.exception(e)
             passed = False
-    return True
+        for f in fastqfiles:
+            try:
+                result = subprocess.run(('rm logs/Spike_Alignment/dupstats/%s*'%(f)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+                result = subprocess.run(('rm All_output/Spike_mapped_reads/%s*'%(f)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+                result = subprocess.run(('rm All_output/Processed_reads/%s*'%(f)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+                result = subprocess.run(('rm logs/filtered_bams/%s*'%(f)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+                result = subprocess.run(('rm logs/primary_alignment/PostAlignmentStats/dupstats/%s*'%(f)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+                result = subprocess.run(('rm All_output/Mapped_reads/%s*'%(f)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+                result = subprocess.run(('rm All_output/Trimmed_reads/%s*'%(f)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+                result = subprocess.run(('rm Analysis_Results/QC_Rawreads/%s*'%(f)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+            except Exception as e:
+                logger.exception(e)
+                passed = False
+    else:
+        logger.info("Removing intermediate large reads, .bam, and .bai files")
+        for f in fastqfiles:
+            try:
+                result = subprocess.run(('rm All_output/Processed_reads/%s*'%(f)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+                result = subprocess.run(('rm All_output/Mapped_reads/%s*'%(f)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+                result = subprocess.run(('rm All_output/Trimmed_reads/%s*'%(f)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+                result = subprocess.run(('rm logs/primary_alignment/PostAlignmentStats/dupstats/%s*.bam'%(f)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+            except Exception as e:
+                logger.exception(e)
+                passed = False
+    return passed
 
 if __name__ == '__main__':
     t_begin = time.time()
@@ -958,8 +979,8 @@ if __name__ == '__main__':
     pipeline = [ f for f in globals().values() if type(f) == types.FunctionType ]
     if args.no_spikein:
         del pipeline[11:-1]
-    if not args.cleanup:
-        del pipeline[-1]
+    #if not args.cleanup:
+    #    del pipeline[-1]
         
     logger.info("Running pipeline...")
     for p in range(0, len(pipeline)):
