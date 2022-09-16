@@ -8,6 +8,8 @@ Picard https://broadinstitute.github.io/picard/
 Samtools  http://www.htslib.org/  
 Deeptools  https://deeptools.readthedocs.io/en/develop/  
 SEACR https://github.com/FredHutch/SEACR  
+MACS2 https://github.com/macs3-project/MACS/wiki/Install-macs2  
+GoPeaks https://github.com/maxsonBraunLab/gopeaks  
   
 ### Resources  
 CUT&Tag https://www.nature.com/articles/s41467-019-09982-5  
@@ -80,8 +82,12 @@ Start
 	  Reads_Norm.bedgraph  
 	  Reads_Norm_wDups.bw  
 
-17. Peaks -> SEACR (peaks by calling enriched regions, can use control and stringent or relaxed thresholds)  
+17. Peak_Calling -> SEACR (peaks by calling enriched regions, can use control and stringent or relaxed thresholds), MACS2, GoPeaks  
 	  Reads.stringent.bed  
+	  Reads.relaxed.bed  
+	  Reads_peaks.narrowPeak  
+	  Reads_gopeaks_peaks.bed  
+	  
 
 18. Cleanup  
 End  
