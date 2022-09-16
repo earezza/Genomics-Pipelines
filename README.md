@@ -91,3 +91,4 @@ Start
 
 18. Cleanup  
 End  
+NOTE: Pipeline skips steps 12-16 if no spike-in (--no_spikein) used    
