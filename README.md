@@ -15,7 +15,8 @@ GoPeaks https://github.com/maxsonBraunLab/gopeaks
 CUT&Tag https://www.nature.com/articles/s41467-019-09982-5  
 Pipeline example https://yezhengstat.github.io/CUTTag_tutorial/  
 Additional https://learn.gencore.bio.nyu.edu/  
-___
+___  
+NOTE: Pipeline skips steps 12-16 if no spike-in (--no_spikein) used  
 Start  
 	  Reads_fastq.gz  
 	  Reads.fastq.gz.md5  
@@ -91,4 +92,5 @@ Start
 
 18. Cleanup  
 End  
+
 NOTE: Pipeline skips steps 12-16 if no spike-in (--no_spikein) used    
