@@ -553,72 +553,83 @@ def GetBigwigs_BamCoverage():
         formatter = logging.Formatter('%(levelname)s : %(name)s : %(message)s')
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
-        if os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bw'%f) and os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo_norm.bw'%f) and os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo_norm_wDups.bw'%f) and os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bw'%f):
+        '''
+        if os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bw'%f) and \
+            os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo_norm.bw'%f) and \
+                os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo_norm_wDups.bw'%f) and \
+                    os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bw'%f):
             continue
+        '''
         # RPGC normalized without duplicates
-        try:
-            result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam -o %sAnalysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
-            logger.info(result.stdout.rstrip('\n'))
-            logger.warning(result.stderr.rstrip('\n'))
-        except Exception as e:
-            logger.exception(e)
-            passed = False
+        if not os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bw'%f):
+            try:
+                result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam -o %sAnalysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+            except Exception as e:
+                logger.exception(e)
+                passed = False
         # RPGC normalized without duplicated bedgraph for peaks
-        try:
-            result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bedgraph %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
-            logger.info(result.stdout.rstrip('\n'))
-            logger.warning(result.stderr.rstrip('\n'))
-        except Exception as e:
-            logger.exception(e)
-            passed = False
-        # No normalization without duplicates
-        try:
-            result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam -o %sAnalysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo_norm.bw %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
-            logger.info(result.stdout.rstrip('\n'))
-            logger.warning(result.stderr.rstrip('\n'))
-        except Exception as e:
-            logger.exception(e)
-            passed = False
-        # No normalization without duplicates bedgraph for peaks
-        try:
-            result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo_norm.bedgraph %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
-            logger.info(result.stdout.rstrip('\n'))
-            logger.warning(result.stderr.rstrip('\n'))
-        except Exception as e:
-            logger.exception(e)
-            passed = False
-        # No normalization with duplicates
-        try:
-            result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.MappedPaired.MAPQ10.bam -o %sAnalysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo_norm_wDups.bw %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
-            logger.info(result.stdout.rstrip('\n'))
-            logger.warning(result.stderr.rstrip('\n'))
-        except Exception as e:
-            logger.exception(e)
-            passed = False
+        if not os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bedgraph'%f):
+            try:
+                result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bedgraph %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+            except Exception as e:
+                logger.exception(e)
+                passed = False
         # CPM normalized without duplicates
-        '''
-        try:
-            result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam -o %sAnalysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_CPM, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
-            logger.info(result.stdout.rstrip('\n'))
-            logger.warning(result.stderr.rstrip('\n'))
-        except Exception as e:
-            logger.exception(e)
-            passed = False
-        '''
-        '''
-        # Get bedgraph
-        try:
-            result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bedgraph %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
-            logger.info(result.stdout.rstrip('\n'))
-            logger.warning(result.stderr.rstrip('\n'))
-        except Exception as e:
-            logger.exception(e)
-            passed = False
-        '''
+        if not os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bw'%f):
+            try:
+                result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam -o %sAnalysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_CPM, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+            except Exception as e:
+                logger.exception(e)
+                passed = False
+        # Get CPM bedgraph
+        if not os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bedgraph'%f):
+            try:
+                result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bedgraph %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+            except Exception as e:
+                logger.exception(e)
+                passed = False
+            
+        # No normalization without duplicates
+        if not os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo_norm.bw'%f):
+            try:
+                result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam -o %sAnalysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo_norm.bw %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+            except Exception as e:
+                logger.exception(e)
+                passed = False
+        # No normalization without duplicates bedgraph for peaks
+        if not os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo_norm.bedgraph'%f):
+            try:
+                result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.MappedPaired.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo_norm.bedgraph %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+            except Exception as e:
+                logger.exception(e)
+                passed = False
+            
+        # No normalization with duplicates
+        if not os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo_norm_wDups.bw'%f):
+            try:
+                result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.MappedPaired.MAPQ10.bam -o %sAnalysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo_norm_wDups.bw %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+            except Exception as e:
+                logger.exception(e)
+                passed = False
+        
         passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_RPGC.bw'%f)
         passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_normalization/%s_wo_norm.bw'%f)
         passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/bws_wo_norm_wDups/%s_wo_norm_wDups.bw'%f)
-        #passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bw'%f)
+        passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/RPGC_and_Unnormalized_bws/RPGC_normalized_bws/%s_CPM.bw'%f)
     return passed
         
 # Step 12
