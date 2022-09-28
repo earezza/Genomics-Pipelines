@@ -61,7 +61,7 @@ import glob
 import yaml
 from pathlib import Path
 
-describe_help = 'python run_CnT_pipeline.py --reads READS_DIR/ --species Mus musculus --spikein Amp -l 50 --samples ExampleSample1 ExampleSample2 -c Target IgG'
+describe_help = 'python cnt_pipeline.py --reads READS_DIR/ --adapters 1 --species Mus --spikein Amp -l 100 --samples ExampleSample1 ExampleSample2 -c Target IgG'
 parser = argparse.ArgumentParser(description=describe_help)
 # User defined options
 parser.add_argument('-logfile', '--logfile', help='Name of .log file', type=str, default="cnt_pipeline.log")
