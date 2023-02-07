@@ -1,9 +1,10 @@
-# CnT-Pipeline
+# NGS-Pipeline
 
 ## Software Required  
 FASTQC https://www.bioinformatics.babraham.ac.uk/projects/fastqc/  
 MULTIQC https://multiqc.info/  
 Bowtie2 http://bowtie-bio.sourceforge.net/bowtie2/index.shtml  
+Hisat2 https://daehwankimlab.github.io/hisat2/  
 Picard https://broadinstitute.github.io/picard/  
 Samtools  http://www.htslib.org/  
 Deeptools  https://deeptools.readthedocs.io/en/develop/  
@@ -23,11 +24,11 @@ Start
 
 1. md5checksum (ensure files not corrupted in transfers, copies, etc...)  
 
-2. QC -> fastqc (+picard)	(quality control of reads)  
+2. QC -> fastqc (+picard)	(quality control of raw reads)  
 	  Reads_fastqc.html  
 	  Reads_fastqc.zip  
 
-3. CompileQCResults -> multiqc (searches directory for results and generates report into .html)  
+3. CompileQCResults -> multiqc (searches directory for results and compiles QC report into .html)  
 	  Rawreads_QC.html  
 
 4. AdapterTrim -> cutadapt (finds and removes adapter sequences, primers, poly-A tails, etc...from reads)  
@@ -36,7 +37,7 @@ Start
 5. CompileResultsPostTrimQC -> multiqc  
 	  postTrimming_QC.html  
 
-6. MapBowtie2 -> bowtie2, picard, samtools (bowtie2 aligns reads to reference sequences, samtools creates .bam file and .bam.bai index file, picard sorts .bam file by coordinate)  
+6. MapGenome -> bowtie2 (or hisat2 if RNA-Seq), picard, samtools (aligns reads to reference sequences, samtools creates .bam file and .bai index file, picard sorts .bam file by coordinate)  
 	  Reads.bam  
 	  Reads.coordsorted.bam  
 	  Reads.coordsorted.bam.bai  
@@ -49,17 +50,18 @@ Start
 	  Alignment_results.html  
 
 9. FilteringBamsPicardSamtools -> samtools, picard (skip alignments with mapping quality scoring < 10 −10 log10 Pr{mapping position is wrong}, remove duplicates)  
-	  Reads.MappedPaired.MAPQ10.bam  
-	  Reads.MappedPaired.MAPQ10.bam.bai  
-	  Reads.MappedPaired.MAPQ10.NoDups.bam  	
+	  Reads.Mapped.MAPQ10.bam  
+	  Reads.Mapped.MAPQ10.bam.bai  
+	  Reads.Mapped.MAPQ10.NoDups.bam  	
 	  Reads_picard.rmDup.txt  
-	  Reads.MappedPaired.MAPQ10.NoDups.bam.bai  
+	  Reads.Mapped.MAPQ10.NoDups.bam.bai  
 
 10. CompileResultsFiltering -> multiqc  
 	  filteringbamsStats.html  
 
 11. GetBigwigsBamCoverage -> deeptools (bamCoverage) (convert .bam to .bw (or .bed))  
 	  Reads_RPGC.bw  
+	  Reads_CPM.bw  
 	  Reads_wo.norm.bw  
 	  Reads_wo.norm_wDups.bw  
 
