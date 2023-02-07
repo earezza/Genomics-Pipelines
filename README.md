@@ -1,15 +1,15 @@
 # NGS-Pipeline
 
 ## Software Required  
-FASTQC https://www.bioinformatics.babraham.ac.uk/projects/fastqc/  
-MULTIQC https://multiqc.info/  
+FastQC https://www.bioinformatics.babraham.ac.uk/projects/fastqc/  
+MultiQC https://multiqc.info/  
 Bowtie2 http://bowtie-bio.sourceforge.net/bowtie2/index.shtml  
 Hisat2 https://daehwankimlab.github.io/hisat2/  
 Picard https://broadinstitute.github.io/picard/  
 Samtools  http://www.htslib.org/  
 Deeptools  https://deeptools.readthedocs.io/en/develop/  
 SEACR https://github.com/FredHutch/SEACR  
-MACS2 https://github.com/macs3-project/MACS/wiki/Install-macs2  
+MACS https://github.com/macs3-project/MACS    
 GoPeaks https://github.com/maxsonBraunLab/gopeaks  
   
 ### Resources  
@@ -96,3 +96,11 @@ Start
 End  
 
 NOTE: Pipeline skips steps 12-16 if no spike-in (--no_spikein) used    
+
+## Downstream Analysis: Differential Gene Expression
+Rsubread to produce a count matrix from provided .bam files using featureCounts (if matrix not already created). https://bioconductor.org/packages/release/bioc/html/Rsubread.html  
+DESeq2 to process the count matrix and produce differential gene expression statistics. https://bioconductor.org/packages/release/bioc/html/DESeq2.html  
+clusterProfilerto annotate genes (GO, GSEA, KEGG) using database packages for mappings. https://bioconductor.org/packages/release/bioc/html/clusterProfiler.html  
+
+
+
