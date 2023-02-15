@@ -8,9 +8,9 @@ File name convention to run properly should follow hyphens "-" only between word
 &emsp;e.g.:  
 &emsp;&emsp;<strong>CORRECT:</strong> one-file-of-reads_R1.fastq.gz  
 &emsp;&emsp;<strong>NOT CORRECT:</strong> one_file-of_reads-R1.fastq.gz  
-___
+___  
+#### 1. Prepare files  
 Place .fastq.gz files for a sample replicate into a folder.  
-
 
 &emsp;e.g. paired-end reads:  
 &emsp;(Note: one paired-end replicate will have an "_R1" and "_R2" file)  
@@ -18,22 +18,38 @@ Place .fastq.gz files for a sample replicate into a folder.
 &emsp;&emsp;&emsp;read_R1.fastq.gz  
 &emsp;&emsp;&emsp;read_R2.fastq.gz  
 
-Run script (see default options):  
-&emsp;e.g. RNA-Seq:  
-> python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --technique rnaseq --species Mus --length 100 --reads_type paired --genome_index hisat_genomes_index/UCSC/mm10/genome --no_spikein -adapters 1 -qctrim -outdir RAW_READS/  
-
-&emsp;e.g. Other:  
-> python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --species Mus --length 100 --reads_type paired --genome_index mm10/Bowtie2Index/genome --no_spikein -adapters 1 -qctrim -outdir RAW_READS/  
-
 &emsp;e.g. single-end reads:  
+&emsp;(Note: only put multiple single-end replicates together if --merge will be used)  
 &emsp;&emsp;RAW_READS/  
 &emsp;&emsp;&emsp;read_1.fastq.gz  
 &emsp;&emsp;&emsp;read_2.fastq.gz  
 &emsp;&emsp;&emsp;read_3.fastq.gz  
-&emsp;&emsp;&emsp;read_4.fastq.gz  
+&emsp;&emsp;&emsp;read_4.fastq.gz 
+  
+#### 2. Run command-line execution (see default options)    
+&emsp;e.g. RNA-Seq:  
+> python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --technique rnaseq --species Mus --length 100 --reads_type paired --genome_index hisat_genomes_index/UCSC/mm10/genome --no_spikein -adapters 1 -qctrim -outdir RAW_READS/  
 
-&emsp;e.g. Merge replicates with "--merge" option:  
-> python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --species Mus --length 100 --reads_type single --genome_index mm10/Bowtie2Index/genome --no_spikein -adapters 1 -qctrim -outdir RAW_READS/ --merge
+&emsp;e.g. Other:  
+> python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --species Mus --length 100 --reads_type paired --genome_index mm10/Bowtie2Index/genome --no_spikein -adapters 1 -qctrim -outdir RAW_READS/   
+
+&emsp;e.g. Merge single-end replicates with "--merge" option:  
+> python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --species Mus --length 100 --reads_type single --genome_index mm10/Bowtie2Index/genome --no_spikein -adapters 1 -qctrim -outdir RAW_READS/ --merge  
+___ 
+### Important output files  
+&emsp;Analysis_Results/QC_Rawreads/  
+&emsp;&emsp;&emsp;  ...html <-- quality check raw reads and modify input options/re-run if required  
+&emsp;Analysis_Results/Peaks/  
+&emsp;&emsp;&emsp; ..._peaks.narrowPeak  
+&emsp;&emsp;&emsp; ...stringent.bed  
+&emsp;&emsp;&emsp; ..._gopeaks_peaks.bed <-- peaks files identifying enriched regions, useful in downstream analysis  
+&emsp;Analysis_Results/Peaks/  
+&emsp;&emsp;&emsp; ..._summits.bed <-- peak summits from MACS, useful in downstream analysis  
+&emsp;Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/  
+&emsp;&emsp;&emsp; ...bw <-- normalized bigwigs for viewing coverage in genome browsers  
+&emsp;All_output/Processed_reads/  
+&emsp;&emsp;&emsp; ...bam  
+&emsp;&emsp;&emsp; ...bai  <-- alignment+index files (should always be together), required for many analysis tools  
 ___
 ## Software Required  
 FastQC https://www.bioinformatics.babraham.ac.uk/projects/fastqc/  
