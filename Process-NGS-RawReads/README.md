@@ -37,6 +37,8 @@ Place .fastq.gz files for a sample replicate into a folder.
 > python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --species Mus --length 100 --reads_type single --genome_index mm10/Bowtie2Index/genome --no_spikein -adapters 1 -qctrim -outdir RAW_READS/ --merge  
 ___ 
 ### Important output files  
+&emsp;logs/  
+&emsp;&emsp;&emsp;  ...log <-- monitor the progress of the script and troubleshoot problems  
 &emsp;Analysis_Results/QC_Rawreads/  
 &emsp;&emsp;&emsp;  ...html <-- quality check raw reads and modify input options/re-run if required  
 &emsp;Analysis_Results/Peaks/  
