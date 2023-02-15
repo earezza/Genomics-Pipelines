@@ -1,5 +1,28 @@
+## Description  
 Pipeline to process raw reads from next-generation sequencing experiments (CUT&Tag, ChIP-Seq, ATAC-Seq, RNA-Seq, MNase-Seq, etc...).  
-# NGS-Pipeline
+
+## Usage
+Place .fastq.gz files for a sample replicate into a folder.  
+
+&emsp;e.g. paired-end reads:  
+&emsp;(Note: one paired-end replicate will have an "_R1" and "_R2" file)  
+&emsp;&emsp;RAW_READS/  
+&emsp;&emsp;&emsp;read_R1.fastq.gz  
+&emsp;&emsp;&emsp;read_R2.fastq.gz  
+
+&emsp;Run script (see default options):  
+&emsp;e.g. RNA-Seq:  
+> python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --technique rnaseq --species Mus --length 100 --reads_type paired --genome_index hisat_genomes_index/UCSC/mm10/genome --no_spikein -adapters 1 -qctrim -outdir RAW_READS/  
+
+&emsp;e.g. Other:  
+> python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --species Mus --length 100 --reads_type paired --genome_index mm10/Bowtie2Index/genome --no_spikein -adapters 1 -qctrim -outdir RAW_READS/  
+
+&emsp;e.g. single-end reads:  
+&emsp;&emsp;RAW_READS/  
+&emsp;&emsp;&emsp;read_1.fastq.gz  
+&emsp;&emsp;&emsp;read_2.fastq.gz  
+&emsp;&emsp;&emsp;read_3.fastq.gz  
+&emsp;&emsp;&emsp;read_4.fastq.gz  
 
 ## Software Required  
 FastQC https://www.bioinformatics.babraham.ac.uk/projects/fastqc/  
@@ -13,90 +36,19 @@ SEACR https://github.com/FredHutch/SEACR
 MACS https://github.com/macs3-project/MACS    
 GoPeaks https://github.com/maxsonBraunLab/gopeaks  
   
-### Resources  
+## Reference Genome Files  
+Bowtie2 <a href="https://bowtie-bio.sourceforge.net/bowtie2/manual.shtml">genome index files</a>  for alignment (on right under Indexes). Alternatively, you can download from <a href="https://support.illumina.com/sequencing/sequencing_software/igenome.html">iGenomes.</a>  
+Hisat2 <a href="https://daehwankimlab.github.io/hisat2/download/">genome index files</a> for RNA-Seq alignment.  
+
+### Blacklist Regions  
+If blacklisted regions wish to be removed in bamCoverage, you can find these files <a href="https://github.com/Boyle-Lab/Blacklist">here.</a>  
+___  
+
+### Additional Resources  
 CUT&Tag https://www.nature.com/articles/s41467-019-09982-5  
 Pipeline example https://yezhengstat.github.io/CUTTag_tutorial/  
 Additional https://learn.gencore.bio.nyu.edu/  
   
 <img src="ngs_pipeline.png" alt="Pipeline Process">    
 
-___  
-NOTE: Pipeline skips steps 12-16 if no spike-in (--no_spikein) used  
-Start  
-	  Reads_fastq.gz  
-	  Reads.fastq.gz.md5  
-
-1. md5checksum (ensure files not corrupted in transfers, copies, etc...)  
-
-2. QC -> fastqc (+picard)	(quality control of raw reads)  
-	  Reads_fastqc.html  
-	  Reads_fastqc.zip  
-
-3. CompileQCResults -> multiqc (searches directory for results and compiles QC report into .html)  
-	  Rawreads_QC.html  
-
-4. AdapterTrim -> cutadapt (finds and removes adapter sequences, primers, poly-A tails, etc...from reads)  
-	  Reads_Trimmed.fastq  
-
-5. CompileResultsPostTrimQC -> multiqc  
-	  postTrimming_QC.html  
-
-6. MapGenome -> bowtie2 (or hisat2 if RNA-Seq), picard, samtools (aligns reads to reference sequences, samtools creates .bam file and .bai index file, picard sorts .bam file by coordinate)  
-	  Reads.bam  
-	  Reads.coordsorted.bam  
-	  Reads.coordsorted.bam.bai  
-
-7. CollectAlignmentStats -> picard, samtools (marks duplicate reads in .bam file and generates new with duplicates tagged)  
-	  Reads.dupMarked.bam  
-	  Reads_picard.dupMark.txt  
-
-8. CompileResultsMap -> multiqc  
-	  Alignment_results.html  
-
-9. FilteringBamsPicardSamtools -> samtools, picard (skip alignments with mapping quality scoring < 10 −10 log10 Pr{mapping position is wrong}, remove duplicates)  
-	  Reads.Mapped.MAPQ10.bam  
-	  Reads.Mapped.MAPQ10.bam.bai  
-	  Reads.Mapped.MAPQ10.NoDups.bam  	
-	  Reads_picard.rmDup.txt  
-	  Reads.Mapped.MAPQ10.NoDups.bam.bai  
-
-10. CompileResultsFiltering -> multiqc  
-	  filteringbamsStats.html  
-
-11. GetBigwigsBamCoverage -> deeptools (bamCoverage) (convert .bam to .bw (or .bed))  
-	  Reads_RPGC.bw  
-	  Reads_CPM.bw  
-	  Reads_wo.norm.bw  
-	  Reads_wo.norm_wDups.bw  
-
-12. Map2Spikein_Bowtie2 -> bowtie2, picard, samtools (alignment with spike-in index)  
-	  Reads.bam  
-	  Reads.coordsorted.bam  
-	  Reads.coordsorted.bam.bai  
-
-13. CollectSpikeAlignmentStats -> picard, samtools (mark duplicates)  
-	  Reads.dupMarked.bam  
-	  Reads_picard.dupMark.txt  
-
-14. CompileResultsSpike -> multiqc  
-	  Spike_alignment.html  
-
-15. CalcNormFactors	(get scaling to normalize reads to spike-in)  
-	  Spike_align_stats.csv  
-
-16. GetNormBwsBdgsBamCoverage -> deeptools (get normalized reads as .bw with/without duplicates, get bedgraph for SEACR)  
-	  Reads_Norm.bw  
-	  Reads_Norm.bedgraph  
-	  Reads_Norm_wDups.bw  
-
-17. Peak_Calling -> SEACR (peaks by calling enriched regions, can use control and stringent or relaxed thresholds), MACS2, GoPeaks  
-	  Reads.stringent.bed  
-	  Reads.relaxed.bed  
-	  Reads_peaks.narrowPeak  
-	  Reads_gopeaks_peaks.bed  
-	  
-
-18. Cleanup  
-End  
-
-NOTE: Pipeline skips steps 12-16 if no spike-in (--no_spikein) used    
+___     
