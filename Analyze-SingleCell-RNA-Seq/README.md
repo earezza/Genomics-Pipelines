@@ -1,6 +1,6 @@
 # scRNA-Seq  
 ## Description  
-Analyze the count (expression) matrix produced from single-cell RNA-Seq experiments using <a href="https://scanpy.readthedocs.io/en/stable/>Scanpy.</a>    
+Analyze the count (expression) matrix produced from single-cell RNA-Seq experiments using <a href="https://scanpy.readthedocs.io/en/stable/">Scanpy.</a>    
 
 ## Usage  
 ### Setup  
