@@ -87,6 +87,7 @@ ___
 <a href="https://igv.org/">Integrative Genomics Browser</a>  
 <a href="https://docs.alliancecan.ca/wiki/Technical_documentation">Digital Research Alliance of Canada (Compute Canada) Technical Documentation</a>  
 <a href="https://hgdownload.soe.ucsc.edu/admin/exe/">Binary downloads</a> for <a href="https://github.com/ucscGenomeBrowser/kent">kentutils</a> for converting file formats  
+<a href="https://github.com/IARCbioinfo/BAM-tricks">BAM tricks</a>  
 
 #### Genome Sequences  
 <a href="https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/">UCSC hg38 genome sequence files</a>  
