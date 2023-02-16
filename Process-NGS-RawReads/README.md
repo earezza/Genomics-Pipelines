@@ -38,32 +38,37 @@ Place .fastq.gz files for a sample replicate into a folder.
 ___ 
 ### Important output files  
 &emsp;logs/  
-&emsp;&emsp;&emsp;  ...log <-- monitor the progress of the script and troubleshoot problems  
+&emsp;&emsp;&emsp;  ...log (monitor the progress of the script and troubleshoot problems)  
+  
 &emsp;Analysis_Results/QC_Rawreads/  
-&emsp;&emsp;&emsp;  ...html <-- quality check raw reads and modify input options/re-run if required  
+&emsp;&emsp;&emsp;  ...html (quality check raw reads and modify input options/re-run if required)  
+  
 &emsp;Analysis_Results/Peaks/  
-&emsp;&emsp;&emsp; ..._peaks.narrowPeak  
 &emsp;&emsp;&emsp; ...stringent.bed  
-&emsp;&emsp;&emsp; ..._gopeaks_peaks.bed <-- peaks files identifying enriched regions, useful in downstream analysis  
+&emsp;&emsp;&emsp; ...peaks.narrowPeak (peaks files identifying enriched regions, useful in downstream analysis)  
+&emsp;&emsp;&emsp; ...gopeaks_peaks.bed   
+  
 &emsp;Analysis_Results/Peaks/  
-&emsp;&emsp;&emsp; ..._summits.bed <-- peak summits from MACS, useful in downstream analysis  
+&emsp;&emsp;&emsp; ..._summits.bed (peak summits from MACS, useful in downstream analysis)  
+  
 &emsp;Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/  
-&emsp;&emsp;&emsp; ...bw <-- normalized bigwigs for viewing coverage in genome browsers  
+&emsp;&emsp;&emsp; ...bw (normalized bigwigs for viewing coverage in genome browsers)  
+  
 &emsp;All_output/Processed_reads/  
 &emsp;&emsp;&emsp; ...bam  
-&emsp;&emsp;&emsp; ...bai  <-- alignment+index files (should always be together), required for many analysis tools  
+&emsp;&emsp;&emsp; ...bai  (alignment+index files (should always be together), required for many analysis tools)  
 ___
 ## Software Required  
-FastQC https://www.bioinformatics.babraham.ac.uk/projects/fastqc/  
-MultiQC https://multiqc.info/  
-Bowtie2 http://bowtie-bio.sourceforge.net/bowtie2/index.shtml  
-Hisat2 https://daehwankimlab.github.io/hisat2/  
-Picard https://broadinstitute.github.io/picard/  
-Samtools  http://www.htslib.org/  
-Deeptools  https://deeptools.readthedocs.io/en/develop/  
-SEACR https://github.com/FredHutch/SEACR  
-MACS https://github.com/macs3-project/MACS    
-GoPeaks https://github.com/maxsonBraunLab/gopeaks  
+<a href="https://www.bioinformatics.babraham.ac.uk/projects/fastqc/">FastQC</a>  
+<a href="https://multiqc.info/">MultiQC</a>  
+<a href="http://bowtie-bio.sourceforge.net/bowtie2/index.shtml">Bowtie2</a>   
+<a href="https://daehwankimlab.github.io/hisat2/">Hisat2</a>  
+<a href="https://broadinstitute.github.io/picard/">Picard</a>  
+<a href="http://www.htslib.org/">Samtools</a>  
+<a href="https://deeptools.readthedocs.io/en/develop/">Deeptools</a>  
+<a href="https://github.com/FredHutch/SEACR">SEACR</a>  
+<a href="https://github.com/macs3-project/MACS">MACS</a>    
+<a href="https://github.com/maxsonBraunLab/gopeaks">GoPeaks</a>  
 ___  
 ## Reference Genome Files  
 Bowtie2 <a href="https://bowtie-bio.sourceforge.net/bowtie2/manual.shtml">genome index files</a>  for alignment (on right under Indexes). Alternatively, you can download from <a href="https://support.illumina.com/sequencing/sequencing_software/igenome.html">iGenomes.</a>  
@@ -71,13 +76,23 @@ Hisat2 <a href="https://daehwankimlab.github.io/hisat2/download/">genome index f
 
 ### Blacklist Regions  
 If blacklisted regions wish to be removed in bamCoverage, you can find these files <a href="https://github.com/Boyle-Lab/Blacklist">here.</a>  
+
+#### Sequences  
+<a href="https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/">UCSC hg38 genome sequence files</a>  
+<a href="https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/">UCSC hg19 genome sequence files</a>  
+<a href="https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/">UCSC mm10 genome sequence files</a>  
 ___  
 
 ### Additional Resources  
-CUT&Tag https://www.nature.com/articles/s41467-019-09982-5  
-Pipeline example https://yezhengstat.github.io/CUTTag_tutorial/  
-Additional https://learn.gencore.bio.nyu.edu/  
-
+<a href="https://www.nature.com/articles/s41467-019-09982-5">CUT&Tag</a>  
+<a href="https://yezhengstat.github.io/CUTTag_tutorial/">Pipeline example</a>  
+<a href="https://learn.gencore.bio.nyu.edu/">NGS Analysis</a>  
+<a href="https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html">bamCoverage</a>  
+<a href="https://hbctraining.github.io/Intro-to-rnaseq-hpc-salmon/lessons/qc_fastqc_assessment.html">FastQC Guide</a>  
+<a href="https://www.genome.ucsc.edu/FAQ/FAQformat.html">File formats</a> and <a href="https://www.genome.ucsc.edu/FAQ/">UCSC Browser Help</a>  
+<a href="https://igv.org/">Integrative Genomics Browser</a>  
+<a href="https://docs.alliancecan.ca/wiki/Technical_documentation">Digital Research Alliance of Canada (Compute Canada) Technical Documentation</a>  
+<a href="https://hgdownload.soe.ucsc.edu/admin/exe/">Binary downloads</a> for <a href="https://github.com/ucscGenomeBrowser/kent">kentutils</a> for converting file formats  
 ___
 ### Pipeline  
 <img src="ngs_pipeline.png" alt="Pipeline Process">    
