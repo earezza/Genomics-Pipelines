@@ -1,6 +1,30 @@
 ## Description  
 Pipeline to process raw reads from next-generation sequencing experiments (CUT&Tag, ChIP-Seq, ATAC-Seq, RNA-Seq, MNase-Seq, etc...).  
 ___
+## Software Required  
+<a href="https://www.bioinformatics.babraham.ac.uk/projects/fastqc/">FastQC</a>  
+<a href="https://multiqc.info/">MultiQC</a>  
+<a href="http://bowtie-bio.sourceforge.net/bowtie2/index.shtml">Bowtie2</a>   
+<a href="https://daehwankimlab.github.io/hisat2/">Hisat2</a>  
+<a href="https://broadinstitute.github.io/picard/">Picard</a>  
+<a href="http://www.htslib.org/">Samtools</a>  
+<a href="https://deeptools.readthedocs.io/en/develop/">Deeptools</a>  
+<a href="https://github.com/FredHutch/SEACR">SEACR</a>  
+<a href="https://github.com/macs3-project/MACS">MACS</a>    
+<a href="https://github.com/maxsonBraunLab/gopeaks">GoPeaks</a>  
+___  
+## Reference Genome Files  
+Bowtie2 <a href="https://bowtie-bio.sourceforge.net/bowtie2/manual.shtml">genome index files</a>  for alignment (on right under Indexes). Alternatively, you can download from <a href="https://support.illumina.com/sequencing/sequencing_software/igenome.html">iGenomes.</a>  
+Hisat2 <a href="https://daehwankimlab.github.io/hisat2/download/">genome index files</a> for RNA-Seq alignment.  
+
+### Blacklist Regions  
+If blacklisted regions wish to be removed in bamCoverage, you can find these files <a href="https://github.com/Boyle-Lab/Blacklist">here.</a>  
+
+#### Genome Sequences  
+<a href="https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/">UCSC hg38 genome sequence files</a>  
+<a href="https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/">UCSC hg19 genome sequence files</a>  
+<a href="https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/">UCSC mm10 genome sequence files</a>  
+___  
 ## Usage  
 <strong>Be sure to edit file paths in ngs_processing_pipeline.py for -PicardLoc, -SEACRLoc, -genome_index etc...</strong>  
 File name convention to run properly should follow hyphens "-" only between words and an underscore "_" before R1/R2 in filenames.  
@@ -58,31 +82,6 @@ ___
 &emsp;&emsp;&emsp; ...bam  
 &emsp;&emsp;&emsp; ...bai  (alignment+index files (should always be together), required for many analysis tools)  
 ___
-## Software Required  
-<a href="https://www.bioinformatics.babraham.ac.uk/projects/fastqc/">FastQC</a>  
-<a href="https://multiqc.info/">MultiQC</a>  
-<a href="http://bowtie-bio.sourceforge.net/bowtie2/index.shtml">Bowtie2</a>   
-<a href="https://daehwankimlab.github.io/hisat2/">Hisat2</a>  
-<a href="https://broadinstitute.github.io/picard/">Picard</a>  
-<a href="http://www.htslib.org/">Samtools</a>  
-<a href="https://deeptools.readthedocs.io/en/develop/">Deeptools</a>  
-<a href="https://github.com/FredHutch/SEACR">SEACR</a>  
-<a href="https://github.com/macs3-project/MACS">MACS</a>    
-<a href="https://github.com/maxsonBraunLab/gopeaks">GoPeaks</a>  
-___  
-## Reference Genome Files  
-Bowtie2 <a href="https://bowtie-bio.sourceforge.net/bowtie2/manual.shtml">genome index files</a>  for alignment (on right under Indexes). Alternatively, you can download from <a href="https://support.illumina.com/sequencing/sequencing_software/igenome.html">iGenomes.</a>  
-Hisat2 <a href="https://daehwankimlab.github.io/hisat2/download/">genome index files</a> for RNA-Seq alignment.  
-
-### Blacklist Regions  
-If blacklisted regions wish to be removed in bamCoverage, you can find these files <a href="https://github.com/Boyle-Lab/Blacklist">here.</a>  
-
-#### Sequences  
-<a href="https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/">UCSC hg38 genome sequence files</a>  
-<a href="https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/">UCSC hg19 genome sequence files</a>  
-<a href="https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/">UCSC mm10 genome sequence files</a>  
-___  
-
 ### Additional Resources  
 <a href="https://www.nature.com/articles/s41467-019-09982-5">CUT&Tag</a>  
 <a href="https://yezhengstat.github.io/CUTTag_tutorial/">Pipeline example</a>  
