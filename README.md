@@ -7,16 +7,14 @@ Automated pipelines, scripts, and command-line operations to perform data proces
 - Analyze single-cell RNA-Seq data by clustering, differential gene expression, and trajectory inference.  
   
 ### Prerequisites:    
-- Linux terminal/bash/shell and <a href="https://ubuntu.com/tutorials/command-line-for-beginners#1-overview" target="_blank">command-line usage</a>  
-- Python and conda/virtualenv package management  
-- R and RStudio  
-- Jupyter Notebook  
-- Slurm job scheduling  
+- Linux terminal/bash/shell and <a href="https://ubuntu.com/tutorials/command-line-for-beginners#1-overview">command-line interface usage</a>  
+- <a href="https://www.python.org/">Python</a> and <a href="https://docs.conda.io/en/latest/">conda</a>/<a href="https://virtualenv.pypa.io/en/latest/">virtualenv</a> package environment management  
+- <a href="https://www.r-project.org/">R</a> and <a href="https://posit.co/downloads/">RStudio</a>  
+- <a href="https://docs.jupyter.org/en/latest/">Jupyter Notebook</a>  
+- <a href="https://slurm.schedmd.com/overview.html">Slurm</a> job scheduling  
   
 ### Resources  
-CUT&Tag https://www.nature.com/articles/s41467-019-09982-5  
-Pipeline example https://yezhengstat.github.io/CUTTag_tutorial/  
-Additional https://learn.gencore.bio.nyu.edu/  
+NGS Analysis https://learn.gencore.bio.nyu.edu/  
    
 
 ___  
