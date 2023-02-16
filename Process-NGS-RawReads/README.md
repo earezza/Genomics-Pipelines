@@ -19,11 +19,6 @@ Hisat2 <a href="https://daehwankimlab.github.io/hisat2/download/">genome index f
 
 ### Blacklist Regions  
 If blacklisted regions wish to be removed in bamCoverage, you can find these files <a href="https://github.com/Boyle-Lab/Blacklist">here.</a>  
-
-#### Genome Sequences  
-<a href="https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/">UCSC hg38 genome sequence files</a>  
-<a href="https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/">UCSC hg19 genome sequence files</a>  
-<a href="https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/">UCSC mm10 genome sequence files</a>  
 ___  
 ## Usage  
 <strong>Be sure to edit file paths in ngs_processing_pipeline.py for -PicardLoc, -SEACRLoc, -genome_index etc...</strong>  
@@ -92,6 +87,11 @@ ___
 <a href="https://igv.org/">Integrative Genomics Browser</a>  
 <a href="https://docs.alliancecan.ca/wiki/Technical_documentation">Digital Research Alliance of Canada (Compute Canada) Technical Documentation</a>  
 <a href="https://hgdownload.soe.ucsc.edu/admin/exe/">Binary downloads</a> for <a href="https://github.com/ucscGenomeBrowser/kent">kentutils</a> for converting file formats  
+
+#### Genome Sequences  
+<a href="https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/">UCSC hg38 genome sequence files</a>  
+<a href="https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/">UCSC hg19 genome sequence files</a>  
+<a href="https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/">UCSC mm10 genome sequence files</a>  
 ___
 ### Pipeline  
 <img src="ngs_pipeline.png" alt="Pipeline Process">    
