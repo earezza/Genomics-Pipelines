@@ -7,9 +7,11 @@ ___
 
 ### Reference Files  
 <a href="https://meme-suite.org/meme/db/motifs">Motif database files</a>  
+<a href="https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/">UCSC hg38 genome sequence files</a>  
+<a href="https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/">UCSC hg19 genome sequence files</a>  
+<a href="https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/">UCSC mm10 genome sequence files</a>  
 
-
-### Example  
+### Example Usage  
 Extend summit range for peaks  
 >bedtools slop -i summits.bed -g Reference_Files/mm10.chrom.sizes -b 500 > summits_slop500.bed
 
