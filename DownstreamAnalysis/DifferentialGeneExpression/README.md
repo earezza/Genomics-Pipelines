@@ -17,3 +17,4 @@ ___
 <a href="https://master.bioconductor.org/packages/release/workflows/vignettes/rnaseqGene/inst/doc/rnaseqGene.html">RNA-Seq DGE example 2 with DESeq2</a>  
 <a href="http://bioconductor.org/packages/devel/bioc/vignettes/ChIPseeker/inst/doc/ChIPseeker.html">ChIPseeker examples</a>  
 <a href="https://hbctraining.github.io/In-depth-NGS-Data-Analysis-Course/sessionV/lessons/12_annotation_functional_analysis.html">ChIPseeker examples 2</a>  
+<a href="https://hbctraining.github.io/Intro-to-ChIPseq-flipped/lessons/09_data_visualization.html">deepTools visualizations examples</a>  
