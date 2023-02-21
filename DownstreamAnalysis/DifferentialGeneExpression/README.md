@@ -15,3 +15,5 @@ ___
 <a href="https://hbctraining.github.io/DGE_workshop/lessons/02_DGE_count_normalization.html">Normalization and DGE</a>  
 <a href="https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html">RNA-Seq DGE example</a>  
 <a href="https://master.bioconductor.org/packages/release/workflows/vignettes/rnaseqGene/inst/doc/rnaseqGene.html">RNA-Seq DGE example 2 with DESeq2</a>  
+<a href="http://bioconductor.org/packages/devel/bioc/vignettes/ChIPseeker/inst/doc/ChIPseeker.html">ChIPseeker examples</a>  
+<a href="https://hbctraining.github.io/In-depth-NGS-Data-Analysis-Course/sessionV/lessons/12_annotation_functional_analysis.html">ChIPseeker examples 2</a>  
