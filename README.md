@@ -14,8 +14,8 @@ Automated pipelines, scripts, and command-line operations to perform data proces
 - <a href="https://slurm.schedmd.com/overview.html">Slurm</a> job scheduling  
   
 ### Resources  
-NGS Analysis NYU Resources https://learn.gencore.bio.nyu.edu/  
-Galaxy Tools, Training, Tutorials https://usegalaxy.org/  
+NGS analysis NYU resources https://learn.gencore.bio.nyu.edu/  
+Galaxy tools, training, tutorials https://usegalaxy.org/  
 
 ___  
  
