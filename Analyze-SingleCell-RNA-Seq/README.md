@@ -6,8 +6,8 @@ Analyze the count (expression) matrix produced from single-cell RNA-Seq experime
 ### Setup  
 Install <a href="https://www.anaconda.com/">Anaconda</a> or <a href="https://docs.conda.io/en/latest/miniconda.html">Miniconda</a>  
 
-Try to create a new environment from the provided environment file (will likely not work cross-platform).  
-> conda env create --file=myenvironment.yaml  
+Try to create a new environment from the provided .yml file (edit last line (prefix) in file for saving environment on your computer).  
+> conda env create --file=scRNAseq_environment.yml  
 
 Otherwise, install all the required packages:  
 > conda install -c conda-forge pandas numpy scikit-learn seaborn spyder  
