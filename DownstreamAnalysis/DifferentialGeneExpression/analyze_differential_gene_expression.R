@@ -21,7 +21,7 @@ suppressWarnings(suppressPackageStartupMessages({
 
 # If need to generate count matrix...Put all .bam and .bai files into a directory, e.g. "bams/"
 #bam_files <- list.files(path="bams/", full.names=TRUE)[c(TRUE, FALSE)]
-#bamcounts <- featureCounts(bam_files, annot.inbuilt="mm10", ignoreDup=TRUE, isPairedEnd=TRUE, nthreads=4, verbose=TRUE)
+#bamcounts <- featureCounts(bam_files, annot.inbuilt="mm10", countMultiMappingReads=FALSE, ignoreDup=FALSE, isPairedEnd=TRUE, nthreads=4, verbose=TRUE)
 #rownames(bamcounts$counts) <- mapIds(org.Mm.eg.db, keys = rownames(bamcounts$counts), column = "SYMBOL", keytype = "ENTREZID")
 #bamcounts$counts <- bamcounts$counts[!(is.na(rownames(bamcounts$counts))), ]
 #for (n in names(bamcounts)){
