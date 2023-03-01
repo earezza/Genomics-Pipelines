@@ -12,6 +12,33 @@ ___
 <a href="https://github.com/FredHutch/SEACR">SEACR</a>  
 <a href="https://github.com/macs3-project/MACS">MACS</a>    
 <a href="https://github.com/maxsonBraunLab/gopeaks">GoPeaks</a>  
+  
+On ComputeCanada (or other HPC platform), many of these programs are already available and you just have to load them. You can use the cc_modules_to_load.txt file shown below as a reference. Picard, SEACR, and GoPeaks will need to be manually downloaded and installed to your working directory.  
+
+For python environment:  
+>module load python>=3.8.2 scipy-stack/2021a  
+  
+For NGS tools:  
+>module load samtools>=1.11 r>=4.2.1 bowtie2>=2.4.1 fastqc>=0.11.9 hisat2  
+
+For featureCounts:  
+>module load subread  
+
+Meme Suite for motifs:  
+>module load StdEnv/2020 gcc/9.3.0 openmpi/4.0.3  
+>module load meme/5.4.1  
+
+Extra tools converting filetypes e.g. bigwigtobedgraph:  
+>module load nixpkgs/16.09  gcc/7.3.0  
+>module load kentutils/20180716  
+
+Bedtools:  
+>module load bedtools/2.30.0  
+
+Additionally, create a virtualenv using the provided cc_requirements.txt file if used on ComputeCanada, this environment must be loaded to run the script.  
+>virutalenv ngsENV  
+>source ngsENV/bin/activate  
+>pip install -r cc_requirements.txt  
 ___  
 ## Reference Genome Files  
 Bowtie2 <a href="https://bowtie-bio.sourceforge.net/bowtie2/manual.shtml">genome index files</a>  for alignment (on right under Indexes). Alternatively, you can download from <a href="https://support.illumina.com/sequencing/sequencing_software/igenome.html">iGenomes.</a>  
