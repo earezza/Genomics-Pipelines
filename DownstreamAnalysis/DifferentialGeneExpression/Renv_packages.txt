@@ -1,0 +1,34 @@
+# R packages installation
+
+install.packages("BiocManager")
+install.packages("devtools")
+install.packages("tidyverse")
+install.packages("VennDiagram")
+install.packages("eulerr")
+
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install()
+
+BiocManager::install("biomaRt")
+BiocManager::install("Rsamtools")
+BiocManager::install("DiffBind")
+BiocManager::install("edgeR")
+BiocManager::install("ChIPseeker")
+BiocManager::install("profileplyr")
+BiocManager::install("ensembldb")
+BiocManager::install("ReactomePA")
+BiocManager::install("clusterProfiler")
+BiocManager::install("csaw")
+BiocManager::install("vulcan")
+BiocManager::install("topGO")
+BiocManager::install("Rgraphviz")
+install.packages("UpSetR")
+install.packages("ggupset")
+install.packages("ggimage")
+library(VennDiagram)
+require(gridExtra)
+
+BiocManager::install("IRkernel")
+IRkernel::installspec()
+
