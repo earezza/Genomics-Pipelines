@@ -10,7 +10,7 @@
 module load python/3.9 scipy-stack/2021a
 module load samtools>=1.11 r>=4.0.5 bowtie2>=2.4.1 fastqc>=0.11.9
 module load hisat2
-source CutandTag_Env/bin/activate
+source ngsENV/bin/activate
 rm *=*
 
 files=(SAMPLE_FOLDER_1 SAMPLE_FOLDER_2 SAMPLE_FOLDER_3)
