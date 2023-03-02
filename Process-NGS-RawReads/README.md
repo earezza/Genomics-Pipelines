@@ -39,6 +39,9 @@ Additionally, create a virtualenv using the provided cc_requirements.txt file if
 >virutalenv ngsENV  
 >source ngsENV/bin/activate  
 >pip install -r cc_requirements.txt  
+  
+Example .sh scripts are also provided as templates for running on ComputeCanada or HPC platforms.  
+
 ___  
 ## Reference Genome Files  
 Bowtie2 <a href="https://bowtie-bio.sourceforge.net/bowtie2/manual.shtml">genome index files</a>  for alignment (on right under Indexes). Alternatively, you can download from <a href="https://support.illumina.com/sequencing/sequencing_software/igenome.html">iGenomes.</a>  
