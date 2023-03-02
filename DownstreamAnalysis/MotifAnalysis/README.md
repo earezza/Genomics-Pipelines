@@ -20,3 +20,6 @@ Get sequence for extended summits (use masked genome sequences)
 
 Run MEME-ChIP  
 >meme-chip summits_slop500.fasta -oc MEME-OUTPUT/ -ccut 500 -meme-nmotifs 15 -meme-mod anr -minw 15 -maxw 25 -db Reference_Files/HOCOMOCOv11_full_MOUSE_mono_meme_format.meme
+  
+  
+Example .sh scripts are also provided as templates for running on ComputeCanada or HPC platforms.  
