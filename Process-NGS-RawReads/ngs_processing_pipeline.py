@@ -424,7 +424,7 @@ def Compileresults_QC():
         # In case smaller or larger than EGS values, set to smallest/largest
         if int(read_length) <= int(list(EGS.keys())[0]):
             read_length = list(EGS.keys())[0]
-        elif int(read_length) <= int(list(EGS.keys())[-1]):
+        elif int(read_length) >= int(list(EGS.keys())[-1]):
             read_length = list(EGS.keys())[-1 ]
 
         if read_length != args.length:
