@@ -3,8 +3,8 @@
 """
 Created on Mon Apr 25 11:12:54 2022
 Description:
-    Script to run the Snakemake pipeline file without snakemake (essentially a copy of executables).
-    Processes CUT&TAG sequence data to generate bigwig/bigbed files for viewing in the UCSC Browser.
+    Processes NGS .fastq.gz sequence data to generate bam/bigwig/bed files
+    for visualizing in genome browsers and downstream analysis.
     
     Reads and md5sum.txt must be saved into their own directory.
     
@@ -18,11 +18,27 @@ Description:
         abcdefghijklmnop MY-SAMPLE-NAME_R1.fastq.gz
         qrstuvqxyz123456 MY-SAMPLE-NAME_R2.fastq.gz
     
-    Output from the pipeline will generate a file tree as follows:
+    Output from the pipeline will generate important files as follows:
         logs/
-        Analysis_Results/
-        All_output/
-    
+            ...log (monitor the progress of the script and troubleshoot problems)
+        
+        Analysis_Results/QC_Rawreads/
+            ...html (quality check raw reads and modify input options/re-run if required)
+        
+        All_output/Processed_reads/
+            ...bam
+            ...bai (alignment+index files (should always be together), required for many analysis tools)
+        
+        Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/
+            ...bw (normalized bigwigs for viewing coverage in genome browsers)
+            
+        Analysis_Results/Peaks/
+            ...stringent.bed
+            ...peaks.narrowPeak (peaks files identifying enriched regions, useful in downstream analysis)
+            ...gopeaks_peaks.bed
+       
+        Analysis_Results/Peaks/
+            ..._summits.bed (peak summits from MACS, useful in downstream analysis)
     
 @author: earezza
 """
