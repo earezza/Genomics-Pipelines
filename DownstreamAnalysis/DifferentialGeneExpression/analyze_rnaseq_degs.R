@@ -143,6 +143,7 @@ for (c in colnames(combs)){
   
   # Obtain DEG results and output to file
   res <- results(dds, contrast=c("Condition", combs[[c]][1], combs[[c]][2]))
+  res[['FoldChange']] <- 2^abs(res[['log2FoldChange']])*(res[['log2FoldChange']]/abs(res[['log2FoldChange']]))
   write.table(res[order(res$log2FoldChange, decreasing=TRUE), ], file=paste(output_prefix, "DESeq2_FullResult_", comparison, ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
   #resLFC <- lfcShrink(dds, coef=resultsNames(dds)[-1], type="apeglm")
