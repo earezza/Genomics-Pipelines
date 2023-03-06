@@ -45,6 +45,7 @@ cat("Command-line options:\n")
 for (i in which(names(opt) != "help")) {
   cat(names(opt)[i], '=', paste(opt)[i], "\n")
 }
+cat("log2FC of", opt$lfc, "equates to FC of", 2^opt$lfc)
 
 # ========= SETUP VARIABLES =========
 # Define references for GO/KEGG annotations
