@@ -143,7 +143,7 @@ for (c in colnames(combs)){
   
   # Obtain DEG results and output to file
   res <- results(dds, contrast=c("Condition", combs[[c]][1], combs[[c]][2]))
-  write.table(res[order(res$log2FoldChange, decreasing=TRUE), ], file=paste(output_prefix, "DESeq2_Result_", comparison, ".csv", sep=""), sep=",", quote=F, col.names=NA)
+  write.table(res[order(res$log2FoldChange, decreasing=TRUE), ], file=paste(output_prefix, "DESeq2_FullResult_", comparison, ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
   #resLFC <- lfcShrink(dds, coef=resultsNames(dds)[-1], type="apeglm")
   
@@ -173,14 +173,17 @@ for (c in colnames(combs)){
   # Get significantly Upregulated (log2FoldChange > 0)
   res_up <- res[res$log2FoldChange >= opt$lfc ,]
   res_up_sorted <- res_up[order(res_up$log2FoldChange, decreasing=TRUE),]
+  write.table(res_up_sorted, file=paste(output_prefix, "DESeq2_Result_", combs[[c]][1], ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
   # Get significantly Downregulated (log2FoldChange < 0)
   res_down <- res[res$log2FoldChange <= (0 - opt$lfc) ,]
   res_down_sorted <- res_down[order(res_down$log2FoldChange, decreasing=TRUE),]
+  write.table(res_down_sorted, file=paste(output_prefix, "DESeq2_Result_", combs[[c]][2], ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
   # Get all significantly changed genes
   res_changed <- res[(res$log2FoldChange >= opt$lfc | res$log2FoldChange <= (0 - opt$lfc)),]
   res_changed_sorted <- res_changed[order(abs(res_changed$log2FoldChange), decreasing=TRUE),]
+  write.table(res_changed_sorted, file=paste(output_prefix, "DESeq2_Result_DEGs", ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
   genes <- list()
   genes[[combs[[c]][1]]] <- rownames(res_up_sorted)
