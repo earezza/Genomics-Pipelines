@@ -77,6 +77,7 @@ combs <- as.data.frame(combn(unique(sampleinfo$Condition), 2))
 for (c in colnames(combs)){
   
   comparison <- paste(combs[[c]][1], combs[[c]][2], sep="_vs_")
+  cat("\n==========", comparison, "==========\n")
   
   # Isolate matrix for relevant samples
   samples1 <- rownames(sampleinfo[sampleinfo$Condition == combs[[c]][1], ])
@@ -222,7 +223,7 @@ for (c in colnames(combs)){
                                  readable=TRUE
         ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
         if (!is.null(compGO)){
-          plt <- dotplot(compGO, showCategory = 5, title = paste("GO -", n, sep=""))
+          plt <- dotplot(compGO, showCategory = 8, title = paste("GO -", n, sep=""))
           invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_annotation_', n, '.png', sep=''), plot=plt, dpi=320)))
           # Write annotations to csv
           write.table(as.data.frame(compGO), file=paste(output_prefix, 'GO_annotation_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
@@ -244,7 +245,7 @@ for (c in colnames(combs)){
                                    organism=keggOrg
         ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
         if (!is.null(compKEGG)){
-          plt <- dotplot(compKEGG, showCategory = 10, title = paste("KEGG -", n, sep=""))
+          plt <- dotplot(compKEGG, showCategory = 8, title = paste("KEGG -", n, sep=""))
           invisible(capture.output(ggsave(filename=paste(output_prefix, 'KEGG_annotation_', n, '.png', sep=''), plot=plt, dpi=320)))
           
           # Write annotations to csv
@@ -275,7 +276,7 @@ for (c in colnames(combs)){
                       pAdjustMethod = "BH"
         )
         if (!is.null(gsea)){
-          plt <- dotplot(gsea, showCategory = 10, title = paste("GSEA -", n, sep=""))
+          plt <- dotplot(gsea, showCategory = 8, title = paste("GSEA -", n, sep=""))
           invisible(capture.output(ggsave(filename=paste(output_prefix, 'GSEA_annotation_', n, '.png', sep=''), plot=plt, dpi=320)))
           
           # Write annotations to csv
