@@ -127,7 +127,7 @@ for (c in colnames(combs)){
     keep <- rowSums(counts(dds) > quant[[2]]) >= round(length(colnames(dds))/4)
     dds <- dds[keep,]
     
-    cat("Genes and samples after filtering:\n", dim(dds), "\n")
+    cat("Genes and samples after filtering raw counts:\n", dim(dds), "\n")
   }
   
   # ========== Normalize and Compute DEG Stats =============
@@ -146,6 +146,12 @@ for (c in colnames(combs)){
   write.table(res[order(res$log2FoldChange, decreasing=TRUE), ], file=paste(output_prefix, "DESeq2_FullResult_", comparison, ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
   #resLFC <- lfcShrink(dds, coef=resultsNames(dds)[-1], type="apeglm")
+  
+  # Filter out normalized low-expressed genes (bottom 10th percentile) by baseMean
+  cat("Genes and samples before filtering normalized genes:\n", dim(res), "\n")
+  quant <- quantile(res$baseMean, probs = c(0, 0.1, 0.25, 0.5, 0.75, 0.9, 1))
+  res <- res[res$baseMean >= quant[[2]], ]
+  cat("Genes and samples after filtering normalized genes:\n", dim(res), "\n")
   
   # Generate plots
   png(paste(output_prefix, 'MAplot.png', sep=''))
