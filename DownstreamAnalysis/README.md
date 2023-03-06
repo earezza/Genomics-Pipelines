@@ -1,2 +1,2 @@
 Analyze processed data for differential gene expression, motif discovery, etc...  
-Visualizing expression heatmaps/profiles can be done using the template shell script provided.
+Visualizing expression heatmaps/profiles can be done using the template shell script provided requiring <a href="https://deeptools.readthedocs.io/en/develop/">deepTools.</a>
