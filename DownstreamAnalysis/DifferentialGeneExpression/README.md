@@ -14,6 +14,7 @@ In addition to the above packages,
 
 ___  
 ### Additional Resources  
+<a href="https://hbctraining.github.io/DGE_workshop/lessons/04_DGE_DESeq2_analysis.html">DGE with DESeq2</a>  
 <a href="https://hbctraining.github.io/DGE_workshop/lessons/02_DGE_count_normalization.html">Normalization and DGE</a>  
 <a href="https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html">RNA-Seq DGE example</a>  
 <a href="https://master.bioconductor.org/packages/release/workflows/vignettes/rnaseqGene/inst/doc/rnaseqGene.html">RNA-Seq DGE example 2 with DESeq2</a>  
