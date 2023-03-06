@@ -3,12 +3,12 @@
 
 These pipelines and tools are performed in R. Packages which may be required can be found in the providedd Renv_packages.txt file.  
 
-### For RNA-Seq  
+### For RNA-Seq (analyze_rnaseq_degs.R)  
 <a href="https://bioconductor.org/packages/release/bioc/html/Rsubread.html">Rsubread</a> to produce a count matrix from provided .bam files using featureCounts (if matrix not already created).   
 <a href="https://bioconductor.org/packages/release/bioc/html/DESeq2.html">DESeq2</a> to process the count matrix and produce differential gene expression statistics.   
 <a href="https://bioconductor.org/packages/release/bioc/html/clusterProfiler.html">clusterProfiler</a> to annotate genes (GO, GSEA, KEGG) using database packages for mappings.   
   
-### For CUT&Tag, ChIP-Seq, etc...  
+### For CUT&Tag, ChIP-Seq, etc... (analyze_peaks_degs.R)  
 In addition to the above packages,  
 <a href="https://bioconductor.org/packages/release/bioc/html/DiffBind.html">DiffBind</a> to compare peaksets, determine overlaps, and establish consensus peaksets.  
 
