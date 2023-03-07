@@ -19,4 +19,15 @@ Galaxy tools, training, tutorials https://usegalaxy.org/
 
 ___  
  
+#### A typical workflow for these scripts/tools may be:  
+- For single-cell RNA-Seq data  
+  1. Analyze-SingleCell-RNA-Seq/<a href="Analyze-SingleCell-RNA-Seq/scRNAseq_Notebook.ipynb">**scRNAseq_Notebook.ipynb**</a> or <a href="Analyze-SingleCell-RNA-Seq/scRNAseq_main.py">**scRNAseq_main.py**</a> (run steps manually as needed while exploring data)  
+- For bulk RNA-Seq data  
 
+  1. Process-NGS-RawReads/<a href="Process-NGS-RawReads/ngs_processing_pipeline.py">**ngs_processing_pipeline.py**</a> (with option -technique rnaseq)  
+  2. DownstreamAnalysis/DifferentialGeneExpression/<a href="DownstreamAnalysis/DifferentialGeneExpression/RNA-Seq_Differential_Gene_Expression_Notebook.ipynb">**RNA-Seq_Differential_Gene_Expression_Notebook.ipynb**</a> or <a href="DownstreamAnalysis/DifferentialGeneExpression/analyze_rnaseq_degs.R">**analyze_rnaseq_degs.R**</a>  
+  
+- For ChIP-Seq, CUT&Tag, ATAC-Seq, etc... data  
+  1. Process-NGS-RawReads/<a href="Process-NGS-RawReads/ngs_processing_pipeline.py>Process-NGS-RawReads/ngs_processing_pipeline.py">**ngs_processing_pipeline.py**</a> (with option -technique chipseq (or whichever data is from))  
+  2. DownstreamAnalysis/DifferentialGeneExpression/<a href="DownstreamAnalysis/DifferentialGeneExpression/Peaks_Differential_Gene_Expression_Notebook.ipynb">**Peaks_Differential_Gene_Expression_Notebook.ipynb**</a> or <a href="DownstreamAnalysis/DifferentialGeneExpression/analyze_peaks_degs.R">**analyze_peaks_degs.R**</a>
+  3. DownstreamAnalysis/MotifAnalysis/...
