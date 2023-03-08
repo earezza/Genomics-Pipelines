@@ -1138,7 +1138,7 @@ def Peak_Calling():
         # =========== MACS2 peak calling - spike-in ==========
         if args.reads_type == 'paired':
             bamformat = 'BAMPE'
-        elif arg.reads_type == 'single':
+        elif args.reads_type == 'single':
             bamformat = 'BAM'
             
         # If control reads given
@@ -1268,7 +1268,7 @@ def Peak_Calling():
         # ========== MACS2 peak calling - NO spike-in ==========
         if args.reads_type == 'paired':
             bamformat = 'BAMPE'
-        elif arg.reads_type == 'single':
+        elif args.reads_type == 'single':
             bamformat = 'BAM'
             
         # If control reads given
