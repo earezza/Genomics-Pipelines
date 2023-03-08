@@ -1293,7 +1293,7 @@ def Peak_Calling():
                 if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r):
                     continue
                 try:
-                    result = subprocess.run(('macs2 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s'%(OUT_DIR, r, bamformat EFFECTIVEGENOMESIZE, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('macs2 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
