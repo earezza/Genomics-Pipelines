@@ -1,6 +1,48 @@
 ## Description  
 Pipeline to process raw reads from next-generation sequencing experiments (CUT&Tag, ChIP-Seq, ATAC-Seq, RNA-Seq, MNase-Seq, etc...).  
-___
+___  
+## Initial Setup  
+#### These steps need to be performed once:  
+<ol>  
+  <li>Copy/paste provided files (or download or clone git if possible, etc...) to your working directory (on HPC platform)</li>  
+  <li>Load Python  
+    <ul>  
+      <li>module load python/3.9</li>  
+    </ul>  
+  </li>  
+  <li>Create virtualenv, activate, and install packages from cc_requirements.txt  
+    <ul>  
+      <li>virtualenv --no-download ngsENV</li>  
+    </ul>  
+    <ul>  
+      <li>source ngsENV/bin/activate</li>  
+    </ul>  
+    <ul>  
+      <li>pip install --no-index --upgrade pip</li>  
+    </ul>  
+    <ul>  
+      <li>pip install -r cc_requirements.txt</li>  
+    </ul>  
+  </li>  
+  <li>Download the appropriate species/assembly genome index files to your working directory (see below for sources)</li>  
+</ol>  
+
+#### These steps will be performed any time new data comes in:  
+<ol>  
+  <li>Upload (or download) your .fastq.gz read files to their respective directories</li>  
+  <li>Modify the .sh scripts as needed to provide correct file paths and run options</li>  
+  <li>Run the .sh script  
+    <ul>  
+      <li>sbatch ngs_pipeline_RNASeq.sh</li>  
+    </ul>  
+    or  
+    <ul>  
+      <li>sbatch ngs_pipeline_CUTnTag.sh</li>  
+    </ul>  
+  </li>  
+</ol>  
+___  
+
 ## Software Required  
 <a href="https://www.bioinformatics.babraham.ac.uk/projects/fastqc/">FastQC</a>  
 <a href="https://multiqc.info/">MultiQC</a>  
