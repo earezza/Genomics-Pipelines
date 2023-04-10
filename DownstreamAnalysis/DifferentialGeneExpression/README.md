@@ -1,7 +1,7 @@
 
 ## Downstream Analysis: Differential Gene Expression  
 
-These pipelines and tools are performed in R. Packages which may be required can be found in the providedd Renv_packages.txt file.  
+These pipelines and tools are performed in R. Packages which may be required can be found in the provided <strong>Renv_packages.txt</strong> file.  
 
 ### For RNA-Seq (analyze_rnaseq_degs.R)  
 <a href="https://bioconductor.org/packages/release/bioc/html/Rsubread.html">Rsubread</a> to produce a count matrix from provided .bam files using featureCounts (if matrix not already created).   
