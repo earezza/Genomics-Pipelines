@@ -16,6 +16,7 @@ Automated pipelines, scripts, and command-line operations to perform data proces
 ### Resources  
 NGS analysis NYU resources https://learn.gencore.bio.nyu.edu/  
 Galaxy tools, training, tutorials https://usegalaxy.org/  
+Bioinformatics Training HBC https://hbctraining.github.io/main/  
 
 ___  
  
