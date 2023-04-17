@@ -244,9 +244,9 @@ def md5sum_check():
                     f = reads_files[i]
                     # Change filename format by replacing "_" with "-" except for paired-end read number _R1/_R2...
                     if args.reads_type == "paired":
-                        r = f.split('_')[:-1][-1]
-                        f_formatted = '-'.join(f.split('_')[:-2])
-                        f_formatted = f_formatted + '_' + r + '.fastq.gz'
+                        r = f.split('_')[-1] #r = f.split('_')[:-1][-1]
+                        f_formatted = '-'.join(f.split('_')[:-1]) # f_formatted = '-'.join(f.split('_')[:-2])
+                        f_formatted = f_formatted + '_' + r # f_formatted = f_formatted + '_' + r + '.fastq.gz'
                         # Rename reads file
                         subprocess.run('mv %s %s'%(f, f_formatted), shell=True, capture_output=False, text=True)
                     else:
@@ -277,9 +277,9 @@ def md5sum_check():
                 m = md5[i]
                 # Change filename format by replacing "_" with "-" except for paired-end read number _R1/_R2...
                 if args.reads_type == "paired":
-                    r = f.split('_')[:-1][-1]
-                    f_formatted = '-'.join(f.split('_')[:-2])
-                    f_formatted = f_formatted + '_' + r + '.fastq.gz'
+                    r = f.split('_')[-1] # r = f.split('_')[:-1][-1]
+                    f_formatted = '-'.join(f.split('_')[:-1]) # f_formatted = '-'.join(f.split('_')[-2:]) # not [:-2]
+                    f_formatted = f_formatted + '_' + r # f_formatted = f_formatted + '_' + r + '.fastq.gz'
                     # Rename reads file
                     subprocess.run('mv %s %s'%(f, f_formatted), shell=True, capture_output=False, text=True)
                 else:
