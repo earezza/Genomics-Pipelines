@@ -25,7 +25,7 @@ ___
     </ul>  
   </li>  
   <li>Download the appropriate species/assembly genome index files to your working directory (see below for sources)</li>  
-  <li>Download Picard https://broadinstitute.github.io/picard/ to your working directory and modify -PicardLoc in ngs_processing_pipeline.py to your path of picard.jar</li>   
+  <li>Download Picard https://broadinstitute.github.io/picard/ to your working directory and modify -PicardLoc in ngs_processing_pipeline.py to your path of picard.jar</li>  
 </ol>  
 
 #### These steps will be performed any time new data comes in:  
