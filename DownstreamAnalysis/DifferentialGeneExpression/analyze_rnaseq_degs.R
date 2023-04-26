@@ -80,10 +80,10 @@ for (c in colnames(combs)){
   cat("\n==========", comparison, "==========\n")
   
   # Isolate matrix for relevant samples
-  samples1 <- rownames(sampleinfo[sampleinfo$Condition == combs[[c]][1], ])
-  samples2 <- rownames(sampleinfo[sampleinfo$Condition == combs[[c]][2], ])
+  samples1 <- rownames(subset(sampleinfo, Condition == combs[[c]][1]))
+  samples2 <- rownames(subset(sampleinfo, Condition == combs[[c]][2]))
   mtx <- count_mtx[, c(samples1, samples2)]
-  mtx_info <- sampleinfo[c(samples1, samples2), ]
+  mtx_info <- subset(sampleinfo, rownames(sampleinfo) == samples1 | rownames(sampleinfo) == samples2)
   mtx_info$Condition <- factor(mtx_info$Condition)
   
   # Check that matrix columns are same order as sample info
