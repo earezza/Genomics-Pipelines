@@ -59,6 +59,27 @@ if (tolower(opt$organism) == "mouse"){
   stop("Invalid choice of organism")
 }
 
+# Define Functions
+make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n=15){
+  
+  df <- df[order(df$p.adjust, decreasing=FALSE),]
+  df <- head(df, n=n)
+  plt <- ggplot() +
+    geom_point(aes(x = -log(df$p.adjust), 
+                   y = df$Description, 
+                   colour = df$Count, 
+                   size = unname(unlist(sapply(df$GeneRatio, function(x) eval(parse(text=x)))))*100
+    ),
+    ) + 
+    scale_color_gradient(low = "black", high = colour) +
+    ggtitle(title)
+  plt$labels$x <- "-log(p.adjust)"
+  plt$labels$y <- ylabel
+  plt$labels$size <- "GenePercentage"
+  plt$labels$colour <- "GeneCount"
+  return(plt)
+}
+
 # =========== Load Input Files ============
 count_mtx <- as.matrix(read.csv(opt$countsfile, sep=",", row.names=1, check.names=FALSE))
 sampleinfo <- read.csv(opt$sampleinfo, row.names=1)
