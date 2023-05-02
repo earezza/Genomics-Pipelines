@@ -87,7 +87,9 @@ promoters <- getPromoters(TxDb=txdb, upstream=3000, downstream=3000)
 
 # Define Functions
 make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n=15){
-  
+  if ("ONTOLOGY" %in% colnames(df)){
+    df$Description <- paste(df$ONTOLOGY, df$Description, sep=' - ')
+  }
   df <- df[order(df$p.adjust, decreasing=FALSE),]
   df <- head(df, n=n)
   plt <- ggplot() +
