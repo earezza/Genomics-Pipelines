@@ -818,6 +818,7 @@ for (report in names(reports)){
       ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
       
       if (!is.null(compGO)){
+        compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
         plt <- dotplot(compGO, showCategory = 10, title = paste("GO Pathway Enrichment Analysis", report, sep=' - '))
         invisible(capture.output(ggsave(filename=paste(output_prefix, 'annotated_go_analysis_', report, '.png', sep=''), plot=plt, dpi=320)))
         # Write annotations to csv
@@ -946,6 +947,7 @@ tryCatch(
     ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
     
     if (!is.null(compGO)){
+      compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
       plt <- dotplot(compGO, showCategory = 10, title = paste("GO Pathway Enrichment Analysis", report, sep=' - '))
       invisible(capture.output(ggsave(filename=paste(output_prefix, 'annotated_go_analysis_', report, '.png', sep=''), plot=plt, dpi=320)))
       # Write annotations to csv
