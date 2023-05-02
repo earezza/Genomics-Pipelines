@@ -244,7 +244,7 @@ for (c in colnames(combs)){
                                  readable=TRUE
         ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
         if (!is.null(compGO)){
-          compGO@compareClusterResult$Ontology <- go2ont(compGO@compareClusterResult$ID)
+          compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
           plt <- dotplot(compGO, showCategory = 8, title = paste("GO -", n, sep=""))
           invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_annotation_', n, '.png', sep=''), plot=plt, dpi=320)))
           # Write annotations to csv
