@@ -85,6 +85,27 @@ if (opt$organism == "mouse"){
 # Get promoter regions from database
 promoters <- getPromoters(TxDb=txdb, upstream=3000, downstream=3000)
 
+# Define Functions
+make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n=15){
+  
+  df <- df[order(df$p.adjust, decreasing=FALSE),]
+  df <- head(df, n=n)
+  plt <- ggplot() +
+    geom_point(aes(x = -log(df$p.adjust), 
+                   y = df$Description, 
+                   colour = df$Count, 
+                   size = unname(unlist(sapply(df$GeneRatio, function(x) eval(parse(text=x)))))*100
+    ),
+    ) + 
+    scale_color_gradient(low = "black", high = colour) +
+    ggtitle(title)
+  plt$labels$x <- "-log(p.adjust)"
+  plt$labels$y <- ylabel
+  plt$labels$size <- "GenePercentage"
+  plt$labels$colour <- "GeneCount"
+  return(plt)
+}
+
 # # ========= START OCCUPANCY ANALYSIS =========
 # Here, peaks declared by peak caller(s) are used to identify
 # differential expression between conditions. Overlapping peaks 
