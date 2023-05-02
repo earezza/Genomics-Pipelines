@@ -432,6 +432,7 @@ tryCatch(
                              readable=TRUE
     ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
     if (!is.null(compGO)){
+      compGO@compareClusterResult$Ontology <- go2ont(compGO@compareClusterResult$ID)
       plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
       invisible(capture.output(ggsave(filename=paste(output_prefix, 'annotated_go_analysis.png', sep=''), plot=plt, dpi=320)))
       # Write annotations to csv
