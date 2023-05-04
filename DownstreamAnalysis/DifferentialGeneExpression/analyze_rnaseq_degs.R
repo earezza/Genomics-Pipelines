@@ -68,7 +68,7 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
   plt <- ggplot() +
     geom_point(data=head(df, n=n),
                aes(x = -log(p.adjust), 
-                   y = reorder(Description, p.adjust), 
+                   y = reorder(Description, -p.adjust), 
                    colour = Count, 
                    size = unname(unlist(sapply(GeneRatio, function(x) eval(parse(text=x)))))*100,
                ),
