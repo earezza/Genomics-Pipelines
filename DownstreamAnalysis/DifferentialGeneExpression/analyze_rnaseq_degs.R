@@ -65,13 +65,13 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
     df$Description <- paste(df$ONTOLOGY, df$Description, sep=' - ')
   }
   df <- df[order(df$p.adjust, decreasing=FALSE),]
-  df <- head(df, n=n)
   plt <- ggplot() +
-    geom_point(aes(x = -log(df$p.adjust), 
-                   y = df$Description, 
-                   colour = df$Count, 
-                   size = unname(unlist(sapply(df$GeneRatio, function(x) eval(parse(text=x)))))*100
-    ),
+    geom_point(data=head(df, n=n),
+               aes(x = -log(p.adjust), 
+                   y = reorder(Description, p.adjust), 
+                   colour = Count, 
+                   size = unname(unlist(sapply(GeneRatio, function(x) eval(parse(text=x)))))*100,
+               ),
     ) + 
     scale_color_gradient(low = "black", high = colour) +
     ggtitle(title)
@@ -240,6 +240,7 @@ for (c in colnames(combs)){
         compGO <- compareCluster(geneCluster=genes[n],
                                  OrgDb=annoDb,
                                  fun="enrichGO",
+                                 ont='ALL',
                                  keyType="SYMBOL", #ENSEMBL
                                  pvalueCutoff=0.05,
                                  pAdjustMethod="BH",
