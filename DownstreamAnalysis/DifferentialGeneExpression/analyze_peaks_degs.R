@@ -87,8 +87,12 @@ promoters <- getPromoters(TxDb=txdb, upstream=3000, downstream=3000)
 
 # Define Functions
 make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n=15){
+  df$ycolour <- "black"
   if ("ONTOLOGY" %in% colnames(df)){
     df$Description <- paste(df$ONTOLOGY, df$Description, sep=' - ')
+    df$ycolour <- ifelse(grepl("BP -", df$Description), 'blue', df$ycolour)
+    df$ycolour <- ifelse(grepl("CC -", df$Description), 'red', df$ycolour)
+    df$ycolour <- ifelse(grepl("MF -", df$Description), 'darkgreen', df$ycolour)
   }
   df <- df[order(df$p.adjust, decreasing=FALSE),]
   plt <- ggplot() +
@@ -99,6 +103,8 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
                    size = unname(unlist(sapply(GeneRatio, function(x) eval(parse(text=x)))))*100,
                ),
     ) + 
+    theme_linedraw() +
+    theme(axis.text.y = element_text(colour=rev(head(df$ycolour, n=n)))) +
     scale_color_gradient(low = "black", high = colour) +
     ggtitle(title)
   plt$labels$x <- "-log(p.adjust)"
