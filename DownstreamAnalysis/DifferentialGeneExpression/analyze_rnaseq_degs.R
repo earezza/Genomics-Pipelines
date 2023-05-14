@@ -36,7 +36,7 @@ option_list = list(
   make_option(c("-r", "--result_dir"), type="character", default="DEG_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-f", "--filter"), action="store_true", type="logical", default=FALSE, help="Flag to filter read counts (removes 0 counts, then removes genes in bottom 10th percentile of counts for those in < 3 samples)", metavar="character"),
   make_option(c("--min_count"), type="integer", default=1, help="Minimum counts to include if filtering", metavar="integer"),
-  make_option(c("--lfc"), type="double", default=1.5, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer")
+  make_option(c("--lfc"), type="double", default=1, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
