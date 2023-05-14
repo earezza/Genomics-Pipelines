@@ -258,7 +258,7 @@ for (c in colnames(combs)){
           if (!is.null(compGO)){
             compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
             #plt <- dotplot(compGO, showCategory = 8, title = paste("GO -", n, sep=""))
-            plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO - ", n, sep=""), ylabel="GO Term", colour=colour, n=15)
+            plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term", colour=colour, n=15)
             invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_', ont, '_', n, '.png', sep=''), plot=plt, dpi=320)))
             # Write annotations to csv
             write.table(as.data.frame(compGO), file=paste(output_prefix, 'GO_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
@@ -319,10 +319,10 @@ for (c in colnames(combs)){
           )
           if (!is.null(gsea)){
             gsea@result <- gsea@result[order(gsea@result$p.adjust, decreasing=FALSE),] # Sort by most signiicant
-            gsea@result <- head(gsea@result, n=8) # retain only top to plot
-            plt <- dotplot(gsea, showCategory = 8, title = paste("GSEA -", n, sep=""))
+            gsea@result <- head(gsea@result, n=20) # retain only top to plot
+            plt <- dotplot(gsea, showCategory = 20, title = paste("GSEA (", ont, ") - ", n, sep=""))
             df <- plt$data
-            plt <- make_dotplot(df, title=n, ylabel="GSEA", colour=colour, n=15)
+            plt <- make_dotplot(df, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", colour=colour, n=15)
             invisible(capture.output(ggsave(filename=paste(output_prefix, 'GSEA_', ont, '_', n, '.png', sep=''), plot=plt, dpi=320)))
             
             # Write annotations to csv
