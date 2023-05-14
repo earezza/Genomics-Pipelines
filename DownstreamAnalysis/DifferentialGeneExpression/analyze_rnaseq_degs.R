@@ -243,22 +243,30 @@ for (c in colnames(combs)){
     # GO Annotation
     tryCatch(
       {
-        compGO <- compareCluster(geneCluster=genes[n],
-                                 OrgDb=annoDb,
-                                 fun="enrichGO",
-                                 ont='ALL',
-                                 keyType="SYMBOL", #ENSEMBL
-                                 pvalueCutoff=0.05,
-                                 pAdjustMethod="BH",
-                                 readable=TRUE
-        ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-        if (!is.null(compGO)){
-          compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
-          plt <- dotplot(compGO, showCategory = 8, title = paste("GO -", n, sep=""))
-          invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_annotation_', n, '.png', sep=''), plot=plt, dpi=320)))
-          # Write annotations to csv
-          write.table(as.data.frame(compGO), file=paste(output_prefix, 'GO_annotation_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+        for (ont in c('ALL', 'CC', 'MF', 'BP')){
+          
+          compGO <- compareCluster(geneCluster=genes[n],
+                                   OrgDb=annoDb,
+                                   fun="enrichGO",
+                                   keyType="SYMBOL", #ENSEMBL
+                                   pvalueCutoff=0.05,
+                                   pAdjustMethod="BH",
+                                   readable=TRUE,
+                                   ont=ont
+          ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+          # Only output if there's results
+          if (!is.null(compGO)){
+            compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
+            #plt <- dotplot(compGO, showCategory = 8, title = paste("GO -", n, sep=""))
+            plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO - ", n, sep=""), ylabel="GO Term", colour=colour, n=15)
+            invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_', ont, '_', n, '.png', sep=''), plot=plt, dpi=320)))
+            # Write annotations to csv
+            write.table(as.data.frame(compGO), file=paste(output_prefix, 'GO_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+          
+          }
+          
         }
+        
       },error = function(e)
       {
         message(e)
@@ -276,7 +284,8 @@ for (c in colnames(combs)){
                                    organism=keggOrg
         ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
         if (!is.null(compKEGG)){
-          plt <- dotplot(compKEGG, showCategory = 8, title = paste("KEGG -", n, sep=""))
+          #plt <- dotplot(compKEGG, showCategory = 8, title = paste("KEGG -", n, sep=""))
+          plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', n, sep=""), ylabel="KEGG Category", colour=colour, n=15)
           invisible(capture.output(ggsave(filename=paste(output_prefix, 'KEGG_annotation_', n, '.png', sep=''), plot=plt, dpi=320)))
           
           # Write annotations to csv
@@ -295,23 +304,31 @@ for (c in colnames(combs)){
         names(original_gene_list) <- rownames(res[genes[[n]],])
         gene_list <- na.omit(original_gene_list)
         
-        gsea <- gseGO(geneList=gene_list, 
-                      ont ="ALL", 
-                      keyType = "SYMBOL", 
-                      nPerm = 10000, 
-                      minGSSize = 3, 
-                      maxGSSize = 800, 
-                      pvalueCutoff = 0.05, 
-                      verbose = TRUE, 
-                      OrgDb = annoDb, 
-                      pAdjustMethod = "BH"
-        )
-        if (!is.null(gsea)){
-          plt <- dotplot(gsea, showCategory = 8, title = paste("GSEA -", n, sep=""))
-          invisible(capture.output(ggsave(filename=paste(output_prefix, 'GSEA_annotation_', n, '.png', sep=''), plot=plt, dpi=320)))
+        for (ont in c('ALL', 'CC', 'MF', 'BP')){
+        
+          gsea <- gseGO(geneList=gene_list, 
+                        ont = ont, 
+                        keyType = "SYMBOL", 
+                        nPerm = 10000, 
+                        minGSSize = 3, 
+                        maxGSSize = 800, 
+                        pvalueCutoff = 0.05, 
+                        verbose = TRUE, 
+                        OrgDb = annoDb, 
+                        pAdjustMethod = "BH"
+          )
+          if (!is.null(gsea)){
+            gsea@result <- gsea@result[order(gsea@result$p.adjust, decreasing=FALSE),] # Sort by most signiicant
+            gsea@result <- head(gsea@result, n=8) # retain only top to plot
+            plt <- dotplot(gsea, showCategory = 8, title = paste("GSEA -", n, sep=""))
+            df <- plt$data
+            plt <- make_dotplot(df, title=n, ylabel="GSEA", colour=colour, n=15)
+            invisible(capture.output(ggsave(filename=paste(output_prefix, 'GSEA_', ont, '_', n, '.png', sep=''), plot=plt, dpi=320)))
+            
+            # Write annotations to csv
+            write.table(as.data.frame(compKEGG), file=paste(output_prefix, 'GSEA_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+          }
           
-          # Write annotations to csv
-          write.table(as.data.frame(compKEGG), file=paste(output_prefix, 'GSEA_annotation_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
         }
       },error = function(e)
       {
