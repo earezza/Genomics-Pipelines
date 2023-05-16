@@ -29,6 +29,8 @@ Description:
             ...bam
             ...bai (alignment+index files (should always be together), required for many analysis tools)
         
+        
+        For CUT&Tag, ChIP-Seq, ATAC-Seq...
         Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/
             ...bw (normalized bigwigs for viewing coverage in genome browsers)
             
@@ -39,6 +41,9 @@ Description:
        
         Analysis_Results/Peaks/
             ..._summits.bed (peak summits from MACS, useful in downstream analysis)
+            
+        For RNA-Seq...
+        
     
 @author: earezza
 """
@@ -92,7 +97,7 @@ parser.add_argument('-adapters', '--adapters', help='Adapter sequences, see http
 parser.add_argument('-qctrim', '--qctrim', help='If flagged, will apply QC trimming to raw reads (min length 20, score > 20, remove first 11 bases)', action='store_true')
 parser.add_argument('-stranded', '--stranded', help='If flagged, will create bam and coverage mapping to forward and reverse strands separately, intended for RNA-Seq', action='store_true')
 parser.add_argument('-technique', '--technique', help='Technique type for data',
-                    type=str, default='cnt', choices=['cnt', 'chipseq', 'rnaseq', 'mnaseseq'])
+                    type=str, default='cnt', choices=['cnt', 'chipseq', 'rnaseq', 'mnaseseq', 'atacseq'])
 parser.add_argument('-reads_type', '--reads_type', help='Technique type for data',
                     type=str, default='paired', choices=['paired', 'single'])
 parser.add_argument('-spikein', '--spikein', help='Spikein type', type=str, choices=['Amp', 'Bacteria'], default='Amp')
@@ -751,6 +756,11 @@ def Compileresults_filtering():
 
 # Step 11: get bam coverage signal (bigwigs)
 def GetBigwigs_BamCoverage():
+    
+    # Skip for RNA-Seq data
+    if args.technique == 'rnaseq':
+        return True
+    
     if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs'):
         os.mkdir(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs')
     if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized'):
@@ -842,6 +852,11 @@ def GetBigwigs_BamCoverage():
         
 # Step 12: map spike-in reads to genome
 def Map2Spikein_Bowtie2():
+    
+    # Skip for RNA-Seq data
+    if args.technique == 'rnaseq':
+        return True
+    
     if not os.path.exists(OUT_DIR+'logs/Spike_Alignment'):
         os.mkdir(OUT_DIR+'logs/Spike_Alignment')
     if not os.path.exists(OUT_DIR+'logs/Spike_Alignment/bowtie2'):
@@ -904,6 +919,11 @@ def Map2Spikein_Bowtie2():
 
 # Step 13: obtain spike-in alignment stats
 def Collect_Spikealignment_stats():
+    
+    # Skip for RNA-Seq data
+    if args.technique == 'rnaseq':
+        return True
+    
     if not os.path.exists(OUT_DIR+'logs/Spike_Alignment/dupstats'):
         os.mkdir(OUT_DIR+'logs/Spike_Alignment/dupstats')
     if not os.path.exists(OUT_DIR+'logs/Spike_Alignment/flagstat'):
@@ -947,6 +967,11 @@ def Collect_Spikealignment_stats():
     
 # Step 14: quality check spike-in alignment stats
 def Compileresults_Spike():
+    
+    # Skip for RNA-Seq data
+    if args.technique == 'rnaseq':
+        return True
+    
     if not os.path.exists(OUT_DIR+'Analysis_Results/Spikein_alignment'):
         os.mkdir(OUT_DIR+'Analysis_Results/Spikein_alignment')
     passed = True
@@ -973,6 +998,11 @@ def Compileresults_Spike():
 
 # Step 15: get normalization/scaling factors for spike-in
 def CalcNormFactors():
+    
+    # Skip for RNA-Seq data
+    if args.technique == 'rnaseq':
+        return True
+    
     if not os.path.exists(OUT_DIR+'Analysis_Results/Spikein_normalized_bws_bdgs'):
         os.mkdir(OUT_DIR+'Analysis_Results/Spikein_normalized_bws_bdgs')
     if not os.path.exists(OUT_DIR+'Analysis_Results/Spikein_alignment/Spike_alignment_%s_data'%args.logfile.rstrip('.log')):
@@ -1016,6 +1046,11 @@ def CalcNormFactors():
     
 # Step 16: get bam coverage signal (bigwigs) normalized with scaling factors obtained in prior step
 def GetNormBwsBdgs_BamCoverage():
+    
+    # Skip for RNA-Seq data
+    if args.technique == 'rnaseq':
+        return True
+    
     if not os.path.exists(OUT_DIR+'logs/Spikein_normalized_bws_bdgs'):
         os.mkdir(OUT_DIR+'logs/Spikein_normalized_bws_bdgs')
     if not os.path.exists(OUT_DIR+'Analysis_Results/Spikein_normalized_bws_bdgs/Normalized_bigwigs'):
@@ -1074,6 +1109,11 @@ def GetNormBwsBdgs_BamCoverage():
 
 # Step 17: call peaks from bigwigs
 def Peak_Calling():
+    
+    # Skip for RNA-Seq data
+    if args.technique == 'rnaseq':
+        return True
+    
     if not os.path.exists(OUT_DIR+'logs/Peaks'):
         os.mkdir(OUT_DIR+'logs/Peaks')
     if not os.path.exists(OUT_DIR+'Analysis_Results/Peaks'):
