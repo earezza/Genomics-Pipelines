@@ -36,6 +36,7 @@ option_list = list(
   make_option(c("-r", "--result_dir"), type="character", default="DEG_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-f", "--filter"), action="store_true", type="logical", default=FALSE, help="Flag to filter read counts (removes 0 counts, then removes genes in bottom 10th percentile of counts for those in < 3 samples)", metavar="character"),
   make_option(c("--min_count"), type="integer", default=1, help="Minimum counts to include if filtering", metavar="integer"),
+  make_option(c("--min_basemean"), type="double", default=10, help="Minimum baseMean of normalized counts to include if filtering", metavar="integer"),
   make_option(c("--lfc"), type="double", default=0.6, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer")
 );
 opt_parser = OptionParser(option_list=option_list);
@@ -140,23 +141,25 @@ for (c in colnames(combs)){
     
     # Get percentile ranges of counts
     cat("Percentiles of genes count sums over all samples:\n")
-    quantile(rowSums(counts(dds)), probs = c(0, 0.1, 0.25, 0.5, 0.75, 0.9, 1))
+    cat(quantile(rowSums(counts(dds)), probs = c(0, 0.1, 0.25, 0.5, 0.75, 0.9, 1)), "\n")
     
-    # Remove 0 counts to avoid 0-bias and disregard irrelevant genes
+    # Remove 0 counts (sum of all samples' counts) to avoid 0-bias and disregard irrelevant genes
     keep <- rowSums(counts(dds)) >= opt$min_count
     dds <- dds[keep,]
     cat("Percentiles after removing genes with sum(counts) <", opt$min_count, "\n")
     quantile(rowSums(counts(dds)), probs = c(0, 0.1, 0.25, 0.5, 0.75, 0.9, 1))
-    # Get relevant percentiles
-    quant <- quantile(rowSums(counts(dds)), probs = c(0, 0.1, 0.25, 0.5, 0.75, 0.9, 1))
-    # Remove genes with <= 0.1 percentile counts
-    cat("Removing genes with sum(counts) <=", quant[[2]])
-    keep <- rowSums(counts(dds)) > quant[[2]]
-    dds <- dds[keep,]
-    # Keep genes only where there are at least 3 samples having at least that count
-    cat("Removing genes with sum(counts) <=", quant[[2]], "in at least", round(length(colnames(dds))/4), "samples\n")
-    keep <- rowSums(counts(dds) > quant[[2]]) >= round(length(colnames(dds))/4)
-    dds <- dds[keep,]
+    
+    # # Get relevant percentiles
+    # quant <- quantile(rowSums(counts(dds)), probs = c(0, 0.1, 0.25, 0.5, 0.75, 0.9, 1))
+    # # Remove genes with <= 0.1 percentile counts
+    # cat("Removing genes with sum(counts) <=", quant[[2]])
+    # keep <- rowSums(counts(dds)) > quant[[2]]
+    # dds <- dds[keep,]
+    
+    # Keep genes only where there are at least 3 samples having at least that count (removes outliers)
+    # cat("Removing genes with sum(counts) <=", quant[[2]], "in at least", round(length(colnames(dds))/4), "samples\n")
+    # keep <- rowSums(counts(dds) > quant[[2]]) >= round(length(colnames(dds))/4)
+    # dds <- dds[keep,]
     
     cat("Genes and samples after filtering raw counts:\n", dim(dds), "\n")
   }
@@ -179,11 +182,20 @@ for (c in colnames(combs)){
   
   #resLFC <- lfcShrink(dds, coef=resultsNames(dds)[-1], type="apeglm")
   
-  # Filter out normalized low-expressed genes (bottom 10th percentile) by baseMean
-  cat("Genes and samples before filtering normalized genes:\n", dim(res), "\n")
-  quant <- quantile(res$baseMean, probs = c(0, 0.1, 0.25, 0.5, 0.75, 0.9, 1))
-  res <- res[res$baseMean >= quant[[2]], ]
-  cat("Genes and samples after filtering normalized genes:\n", dim(res), "\n")
+  # Filter out normalized low-expressed genes (bottom 10th percentile) by baseMean  REMOVE ALL < 10 baseMean
+  if (opt$filter){
+    # cat("Genes and samples before filtering normalized genes:\n", dim(res), "\n")
+    # quant <- quantile(res$baseMean, probs = c(0, 0.1, 0.25, 0.5, 0.75, 0.9, 1))
+    # cat("Removing genes with baseMean expression in bottom 10th percentile <=", quant[[2]], "\n")
+    # res <- res[res$baseMean >= quant[[2]], ]
+    # cat("Genes and samples after filtering normalized genes:\n", dim(res), "\n")
+    
+    # Remove any genes below minimum baseMean
+    cat("Genes and samples before filtering normalized genes:\n", dim(res), "\n")
+    cat("Removing genes with baseMean expression <", opt$min_basemean, "\n")
+    res <- res[res$baseMean >= opt$min_basemean, ]
+    cat("Genes and samples after filtering normalized genes:\n", dim(res), "\n")
+  }
   
   # Generate plots
   png(paste(output_prefix, 'MAplot.png', sep=''))
