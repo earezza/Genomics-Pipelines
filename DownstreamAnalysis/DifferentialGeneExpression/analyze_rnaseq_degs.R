@@ -34,7 +34,7 @@ option_list = list(
   make_option(c("-s", "--sampleinfo"), type="character", help="File containing samples and their experimental conditions info (row names must match matrix file column names)", metavar="character"),
   make_option(c("-o", "--organism"), type="character", default="mouse", help="Organism to annotate genes (mouse or human)", metavar="character"),
   make_option(c("-r", "--result_dir"), type="character", default="DEG_Analysis/", help="Directory name for saving output results", metavar="character"),
-  make_option(c("-f", "--filter"), action="store_true", type="logical", default=FALSE, help="Flag to filter read counts (removes 0 counts, then removes genes in bottom 10th percentile of counts for those in < 3 samples)", metavar="character"),
+  make_option(c("-f", "--filter"), action="store_true", type="logical", default=FALSE, help="Flag to filter read counts (removes genes < min_count from raw matrix, then removes genes < min_baseMean after normalizing", metavar="character"),
   make_option(c("--min_count"), type="integer", default=1, help="Minimum counts to include if filtering", metavar="integer"),
   make_option(c("--min_basemean"), type="double", default=10, help="Minimum baseMean of normalized counts to include if filtering", metavar="integer"),
   make_option(c("--lfc"), type="double", default=0.6, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer")
