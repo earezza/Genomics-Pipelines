@@ -104,9 +104,9 @@ parser.add_argument('-spikein', '--spikein', help='Spikein type', type=str, choi
 parser.add_argument('-no_spikein', '--no_spikein', help='If no spikein, skip steps for normalizing to spikein', action='store_true')
 parser.add_argument('-cleanup', '--cleanup', help='If cleanup, remove all intermediate files keeping only final .bw and .bed files', action='store_true')
 # Program and reference genome locations
-parser.add_argument('-PicardLoc', '--PicardLoc', help='Location of picard.jar', type=str, default="java -jar /home/earezza/projects/def-jdilwort/earezza/picard.jar")
-parser.add_argument('-SEACRLoc', '--SEACRLoc', help='Location of SEACR .sh', type=str, default="/home/earezza/projects/def-jdilwort/earezza/SEACR/SEACR_1.3.sh")
-parser.add_argument('-genome_index', '--genome_index', help='Location of genome index files for mapping reads (bowtie2 from iGenomes)', type=str, default="/home/earezza/projects/def-jdilwort/earezza/CnT_pipeline_snakemake/Reference_files/Mus_musculus/UCSC/mm10/Sequence/Bowtie2Index/genome")
+parser.add_argument('-PicardLoc', '--PicardLoc', help='Location of picard.jar', type=str, default="java -jar "+os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+"/picard.jar")
+parser.add_argument('-SEACRLoc', '--SEACRLoc', help='Location of SEACR .sh', type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+"/SEACR/SEACR_1.3.sh")
+parser.add_argument('-genome_index', '--genome_index', help='Location of genome index files for mapping reads (bowtie2 from iGenomes)', type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+"/Reference_files/Mus_musculus/UCSC/mm10/Sequence/Bowtie2Index/genome")
 # Usually unchanged command line options for programs
 parser.add_argument('-spike_align', '--spike_align', help='Command input options for spikein alignment', type=str, default="-p 8 --end-to-end --very-sensitive --no-overlap --no-dovetail --no-mixed --no-discordant --phred33 -I 10 -X 700")
 parser.add_argument('-bamCov_default', '--bamCov_default', help='Command input default for bamCoverage', type=str, default="--binSize 1 --ignoreForNormalization 'chrM' --extendReads --numberOfProcessors max")
@@ -120,8 +120,8 @@ parser.add_argument('-samtools_flags', '--samtools_flags', help='Command input o
 #parser.add_argument('-mnase', '--mnase', help='If MNase-seq data, apply --MNase bam coverage option', action='store_true')
 
 # Spikein reference index files
-parser.add_argument('-spikein_index_amp', '--spikein_index_amp', help="Source of reference files for Amp spikein index file", type=str, default='/home/earezza/projects/def-jdilwort/earezza/CnT_pipeline_snakemake/Reference_files/Spikein_indices/Amp_pbluescript/Amp_index/Amp_pBlue')
-parser.add_argument('-spikein_index_Ecoli', '--spikein_index_Ecoli', help="Source of reference files for Amp spikein index file", type=str, default='/home/earezza/projects/def-jdilwort/earezza/CnT_pipeline_snakemake/Reference_files/Spikein_indices/EcoliK12_index/EcoliK12Index/EcoliK12')
+parser.add_argument('-spikein_index_amp', '--spikein_index_amp', help="Source of reference files for Amp spikein index file", type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+'/Reference_files/Spikein_indices/Amp_pbluescript/Amp_index/Amp_pBlue')
+parser.add_argument('-spikein_index_Ecoli', '--spikein_index_Ecoli', help="Source of reference files for Amp spikein index file", type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+'/Reference_files/Spikein_indices/EcoliK12_index/EcoliK12Index/EcoliK12')
 args = parser.parse_args()
 
 # Define constants
