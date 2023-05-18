@@ -1175,7 +1175,7 @@ def Peak_Calling():
                 
                 passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s.stringent.bed'%r)
                 
-        # =========== MACS2 peak calling - spike-in ==========
+        # =========== MACS peak calling - spike-in ==========
         if args.reads_type == 'paired':
             bamformat = 'BAMPE'
         elif args.reads_type == 'single':
@@ -1184,13 +1184,13 @@ def Peak_Calling():
         # If control reads given
         if len(args.controls) >= 1:
             for c in args.controls:
-                logger.info('MACS2 - Using control %s'%c)
+                logger.info('MACS - Using control %s'%c)
                 for r in fastqfiles:
                     if c != r:
                         if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r):
                             continue
                         try:
-                            result = subprocess.run(('macs2 callpeak -t %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -c %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s'%(OUT_DIR, r, OUT_DIR, c, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                            result = subprocess.run(('macs3 callpeak -t %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -c %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s'%(OUT_DIR, r, OUT_DIR, c, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r)), shell=True, capture_output=True, text=True)
                             logger.info(result.stdout.rstrip('\n'))
                             logger.warning(result.stderr.rstrip('\n'))
                         except Exception as e:
@@ -1198,12 +1198,12 @@ def Peak_Calling():
                             passed = False
                         passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r)
         else:
-            logger.info('MACS2 - No control')
+            logger.info('MACS3 - No control')
             for r in fastqfiles:
                 if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r):
                     continue
                 try:
-                    result = subprocess.run(('macs2 callpeak -t %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('macs3 callpeak -t %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
@@ -1305,7 +1305,7 @@ def Peak_Calling():
                     passed = False
                 passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s.stringent.bed'%r)
         
-        # ========== MACS2 peak calling - NO spike-in ==========
+        # ========== MACS peak calling - NO spike-in ==========
         if args.reads_type == 'paired':
             bamformat = 'BAMPE'
         elif args.reads_type == 'single':
@@ -1314,13 +1314,13 @@ def Peak_Calling():
         # If control reads given
         if len(args.controls) >= 1:
             for c in args.controls:
-                logger.info('MACS2 - Using control %s'%c)
+                logger.info('MACS - Using control %s'%c)
                 for r in fastqfiles:
                     if c != r:
                         if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r):
                             continue
                         try:
-                            result = subprocess.run(('macs2 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -c %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s'%(OUT_DIR, r, OUT_DIR, c, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                            result = subprocess.run(('macs3 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -c %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s'%(OUT_DIR, r, OUT_DIR, c, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r)), shell=True, capture_output=True, text=True)
                             logger.info(result.stdout.rstrip('\n'))
                             logger.warning(result.stderr.rstrip('\n'))
                         except Exception as e:
@@ -1328,12 +1328,12 @@ def Peak_Calling():
                             passed = False
                         passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r)
         else:
-            logger.info('MACS2 - No control')
+            logger.info('MACS - No control')
             for r in fastqfiles:
                 if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r):
                     continue
                 try:
-                    result = subprocess.run(('macs2 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('macs3 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
