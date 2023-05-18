@@ -1,10 +1,12 @@
 ## Description  
 Pipeline to process raw reads from next-generation sequencing experiments (CUT&Tag, ChIP-Seq, ATAC-Seq, RNA-Seq, MNase-Seq, etc...).  
+<strong>This should be run on an HPC platform such as ComputeCanada.</strong>  
 ___  
 ## Initial Setup  
 #### These steps need to be performed once:  
+Note: Automatic setup if you only download (or copy/paste) and run ./ngs_setup.sh which takes several minutes to complete.
 <ol>  
-  <li>Copy/paste provided files (or download or clone git if possible, etc...) to your working directory (on HPC platform)</li>  
+  <li>Download/clone this https://github.com/earezza/Genomics-Pipelines to your working directory</li>  
   <li>Load Python  
     <ul>  
       <li>module load python/3.9</li>  
@@ -24,10 +26,12 @@ ___
       <li>pip install -r cc_requirements.txt</li>  
     </ul>  
   </li>  
+  <li>Download Picard https://broadinstitute.github.io/picard/ to your working directory</li>  
+  <li>Download/clone SEACR https://github.com/FredHutch/SEACR to your working directory</li>  
+  <li>Download/clone GoPeaks https://github.com/maxsonBraunLab/gopeaks to your working directory</li>  
   <li>Download the appropriate species/assembly genome index files to your working directory (see below for sources)</li>  
-  <li>Download Picard https://broadinstitute.github.io/picard/ to your working directory and modify -PicardLoc in ngs_processing_pipeline.py to your path of picard.jar</li>  
-</ol>  
-
+</ol>    
+  
 #### These steps will be performed any time new data comes in:  
 <ol>  
   <li>Upload (or download) your .fastq.gz read files to their respective directories</li>  
@@ -45,19 +49,15 @@ ___
 ___  
 
 ## Software Required  
-<a href="https://www.bioinformatics.babraham.ac.uk/projects/fastqc/">FastQC</a>  
-<a href="https://multiqc.info/">MultiQC</a>  
-<a href="http://bowtie-bio.sourceforge.net/bowtie2/index.shtml">Bowtie2</a>   
-<a href="https://daehwankimlab.github.io/hisat2/">Hisat2</a>  
-<a href="https://broadinstitute.github.io/picard/">Picard</a>  
-<a href="http://www.htslib.org/">Samtools</a>  
+<a href="https://www.bioinformatics.babraham.ac.uk/projects/fastqc/">FastQC</a> <a href="https://multiqc.info/">MultiQC</a>  
+<a href="http://bowtie-bio.sourceforge.net/bowtie2/index.shtml">Bowtie2</a> <a href="https://daehwankimlab.github.io/hisat2/">Hisat2</a>  
+<a href="https://broadinstitute.github.io/picard/">Picard</a> <a href="http://www.htslib.org/">Samtools</a>  
 <a href="https://deeptools.readthedocs.io/en/develop/">Deeptools</a>  
-<a href="https://github.com/FredHutch/SEACR">SEACR</a>  
-<a href="https://github.com/macs3-project/MACS">MACS</a>    
-<a href="https://github.com/maxsonBraunLab/gopeaks">GoPeaks</a>  
+<a href="https://github.com/FredHutch/SEACR">SEACR</a> <a href="https://github.com/macs3-project/MACS">MACS</a> <a href="https://github.com/maxsonBraunLab/gopeaks">GoPeaks</a>  
   
-On ComputeCanada (or other HPC platform), many of these programs are already available and you just have to load them. You can use the cc_modules_to_load.txt file shown below as a reference. Picard, SEACR, and GoPeaks will need to be manually downloaded and installed to your working directory.  
-
+On ComputeCanada (or other HPC platform), many of these programs are already available and you just have to load them. You can use the cc_modules_to_load.txt file shown below as a reference.  
+  
+### Loading software modules on ComputeCanada  
 For python environment:  
 >module load python>=3.8.2 scipy-stack/2021a  
   
@@ -94,7 +94,6 @@ Hisat2 <a href="https://daehwankimlab.github.io/hisat2/download/">genome index f
 If blacklisted regions wish to be removed in bamCoverage, you can find these files <a href="https://github.com/Boyle-Lab/Blacklist">here.</a>  
 ___  
 ## Usage  
-<strong>Be sure to edit file paths in ngs_processing_pipeline.py for -PicardLoc, -SEACRLoc, -genome_index etc...</strong>  
 File name convention to run properly should follow hyphens "-" only between words and an underscore "_" before R1/R2 in filenames.  
 
 &emsp;e.g.:  
@@ -120,13 +119,13 @@ Place .fastq.gz files for a sample replicate into a folder.
   
 #### 2. Run command-line execution (see default options)    
 &emsp;e.g. RNA-Seq:  
-> python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --technique rnaseq --species Mus --length 100 --reads_type paired --genome_index hisat_genomes_index/UCSC/mm10/genome --no_spikein -adapters 1 -qctrim -outdir RAW_READS/  
+> python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --technique rnaseq --species Mus --length 100 --reads_type paired --genome_index hisat_genomes_index/UCSC/mm10/genome --no_spikein -qctrim -outdir RAW_READS/  
 
 &emsp;e.g. Other:  
-> python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --species Mus --length 100 --reads_type paired --genome_index mm10/Bowtie2Index/genome --no_spikein -adapters 1 -qctrim -outdir RAW_READS/   
+> python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --species Mus --length 100 --reads_type paired --genome_index mm10/Bowtie2Index/genome --no_spikein -qctrim -outdir RAW_READS/   
 
 &emsp;e.g. Merge single-end replicates with "--merge" option:  
-> python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --species Mus --length 100 --reads_type single --genome_index mm10/Bowtie2Index/genome --no_spikein -adapters 1 -qctrim -outdir RAW_READS/ --merge  
+> python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --species Mus --length 100 --reads_type single --genome_index mm10/Bowtie2Index/genome --no_spikein -qctrim -outdir RAW_READS/ --merge  
 ___ 
 ### Important output files  
 &emsp;logs/  
