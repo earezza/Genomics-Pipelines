@@ -2,7 +2,7 @@
 Pipeline to process raw reads from next-generation sequencing experiments (CUT&Tag, ChIP-Seq, ATAC-Seq, RNA-Seq, MNase-Seq, etc...).  
 <strong>This should be run on an HPC platform such as ComputeCanada.</strong>  
 ___  
-## Initial Setup  
+## Setup  
 #### These steps need to be performed once:  
 Note: Automatic setup if you only download (or copy/paste) and run ./ngs_setup.sh which takes several minutes to complete.
 <ol>  
@@ -46,46 +46,9 @@ Note: Automatic setup if you only download (or copy/paste) and run ./ngs_setup.s
     </ul>  
   </li>  
 </ol>  
-___  
-
-## Software Required  
-<a href="https://www.bioinformatics.babraham.ac.uk/projects/fastqc/">FastQC</a> <a href="https://multiqc.info/">MultiQC</a>  
-<a href="http://bowtie-bio.sourceforge.net/bowtie2/index.shtml">Bowtie2</a> <a href="https://daehwankimlab.github.io/hisat2/">Hisat2</a>  
-<a href="https://broadinstitute.github.io/picard/">Picard</a> <a href="http://www.htslib.org/">Samtools</a>  
-<a href="https://deeptools.readthedocs.io/en/develop/">Deeptools</a>  
-<a href="https://github.com/FredHutch/SEACR">SEACR</a> <a href="https://github.com/macs3-project/MACS">MACS</a> <a href="https://github.com/maxsonBraunLab/gopeaks">GoPeaks</a>  
-  
-On ComputeCanada (or other HPC platform), many of these programs are already available and you just have to load them. You can use the cc_modules_to_load.txt file shown below as a reference.  
-  
-### Loading software modules on ComputeCanada  
-For python environment:  
->module load python>=3.8.2 scipy-stack/2021a  
-  
-For NGS tools:  
->module load samtools>=1.11 r>=4.2.1 bowtie2>=2.4.1 fastqc>=0.11.9 hisat2  
-
-For featureCounts:  
->module load subread  
-
-Meme Suite for motifs:  
->module load StdEnv/2020 gcc/9.3.0 openmpi/4.0.3  
->module load meme/5.4.1  
-
-Extra tools converting filetypes e.g. bigwigtobedgraph:  
->module load nixpkgs/16.09  gcc/7.3.0  
->module load kentutils/20180716  
-
-Bedtools:  
->module load bedtools/2.30.0  
-
-Additionally, create a virtualenv using the provided cc_requirements.txt file if used on ComputeCanada, this environment must be loaded to run the script.  
->virutalenv ngsENV  
->source ngsENV/bin/activate  
->pip install -r cc_requirements.txt  
-  
-Example .sh scripts are also provided as templates for running on ComputeCanada or HPC platforms.  
 
 ___  
+  
 ## Reference Genome Files  
 Bowtie2 <a href="https://bowtie-bio.sourceforge.net/bowtie2/manual.shtml">genome index files</a>  for alignment (on right under Indexes). Alternatively, you can download from <a href="https://support.illumina.com/sequencing/sequencing_software/igenome.html">iGenomes.</a>  
 Hisat2 <a href="https://daehwankimlab.github.io/hisat2/download/">genome index files</a> for RNA-Seq alignment.  
@@ -99,7 +62,7 @@ File name convention to run properly should follow hyphens "-" only between word
 &emsp;e.g.:  
 &emsp;&emsp;<strong>CORRECT:</strong> one-file-of-reads_R1.fastq.gz  
 &emsp;&emsp;<strong>NOT CORRECT:</strong> one_file-of_reads-R1.fastq.gz  
-___  
+  
 #### 1. Prepare files  
 Place .fastq.gz files for a sample replicate into a folder.  
 
@@ -117,7 +80,7 @@ Place .fastq.gz files for a sample replicate into a folder.
 &emsp;&emsp;&emsp;read_3.fastq.gz  
 &emsp;&emsp;&emsp;read_4.fastq.gz 
   
-#### 2. Run command-line execution (see default options)    
+#### 2. Run command-line execution (see defaulted options with --help)    
 &emsp;e.g. RNA-Seq:  
 > python ngs_processing_pipeline.py -logfile RAW_READS.log -reads RAW_READS/ --technique rnaseq --species Mus --length 100 --reads_type paired --genome_index hisat_genomes_index/UCSC/mm10/genome --no_spikein -qctrim -outdir RAW_READS/  
 
@@ -170,3 +133,39 @@ ___
 <img src="ngs_pipeline.png" alt="Pipeline Process">    
 
 ___     
+## Software Tools  
+<a href="https://www.bioinformatics.babraham.ac.uk/projects/fastqc/">FastQC</a> <a href="https://multiqc.info/">MultiQC</a>  
+<a href="http://bowtie-bio.sourceforge.net/bowtie2/index.shtml">Bowtie2</a> <a href="https://daehwankimlab.github.io/hisat2/">Hisat2</a>  
+<a href="https://broadinstitute.github.io/picard/">Picard</a> <a href="http://www.htslib.org/">Samtools</a>  
+<a href="https://deeptools.readthedocs.io/en/develop/">Deeptools</a>  
+<a href="https://github.com/FredHutch/SEACR">SEACR</a> <a href="https://github.com/macs3-project/MACS">MACS</a> <a href="https://github.com/maxsonBraunLab/gopeaks">GoPeaks</a>  
+  
+On ComputeCanada (or other HPC platform), many of these programs are already available and you just have to load them. You can use the cc_modules_to_load.txt file shown below as a reference.  
+  
+### Loading software modules on ComputeCanada  
+For python environment:  
+>module load python>=3.8.2 scipy-stack/2021a  
+  
+For NGS tools:  
+>module load samtools>=1.11 r>=4.2.1 bowtie2>=2.4.1 fastqc>=0.11.9 hisat2  
+
+For featureCounts:  
+>module load subread  
+
+Meme Suite for motifs:  
+>module load StdEnv/2020 gcc/9.3.0 openmpi/4.0.3  
+>module load meme/5.4.1  
+
+Extra tools converting filetypes e.g. bigwigtobedgraph:  
+>module load nixpkgs/16.09  gcc/7.3.0  
+>module load kentutils/20180716  
+
+Bedtools:  
+>module load bedtools/2.30.0  
+
+Additionally, create a virtualenv using the provided cc_requirements.txt file if used on ComputeCanada, this environment must be loaded to run the script.  
+>virutalenv ngsENV  
+>source ngsENV/bin/activate  
+>pip install -r cc_requirements.txt  
+  
+Example .sh scripts are also provided as templates for running on ComputeCanada or HPC platforms.  
