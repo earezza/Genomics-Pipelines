@@ -6,7 +6,7 @@
 date
 
 # --- Download GitHub ---
-git clone https://github.com/Dilworth-Laboratory/Genomics-Pipelines.git
+#git clone https://github.com/Dilworth-Laboratory/Genomics-Pipelines.git
 cp Genomics-Pipelines/Process-NGS-RawReads/ngs_processing_pipeline.py .
 cp Genomics-Pipelines/Process-NGS-RawReads/ngs_pipeline_*.sh .
 
