@@ -16,4 +16,4 @@ rm *=*
 
 files=(SAMPLE_FOLDER_1 SAMPLE_FOLDER_2 SAMPLE_FOLDER_3)
 
-python ngs_processing_pipeline.py -logfile ${files[SLURM_ARRAY_TASK_ID]}.log -reads ~/scratch/${files[SLURM_ARRAY_TASK_ID]}/ --technique cnt --species Mus --length 100 --reads_type paired --genome_index Reference_files/Mus_musculus/UCSC/mm10/Sequence/Bowtie2Index/genome --no_spikein -adapters 1 -outdir ~/scratch/${files[$SLURM_ARRAY_TASK_ID]}/
+python ngs_processing_pipeline.py -logfile ${files[SLURM_ARRAY_TASK_ID]}.log -reads ~/scratch/${files[SLURM_ARRAY_TASK_ID]}/ --technique cnt --species Mus --length 100 --reads_type paired --genome_index Reference_Files/bowtie2/Mus_musculus/UCSC/mm10/Sequence/Bowtie2Index/genome --no_spikein -adapters 1 -outdir ~/scratch/${files[$SLURM_ARRAY_TASK_ID]}/
