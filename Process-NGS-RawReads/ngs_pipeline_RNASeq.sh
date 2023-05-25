@@ -16,4 +16,4 @@ rm *=*
 
 files=(SAMPLE_FOLDER_1 SAMPLE_FOLDER_2 SAMPLE_FOLDER_3)
 
-python ngs_processing_pipeline.py -logfile ${files[SLURM_ARRAY_TASK_ID]}.log -reads ~/scratch/${files[SLURM_ARRAY_TASK_ID]}/ --technique rnaseq --species Homo --length 100 --reads_type paired --genome_index ~/scratch/hisat_genomes_index/NCBI/grch38/genome --no_spikein -adapters 1 -qctrim -outdir ~/scratch/${files[$SLURM_ARRAY_TASK_ID]}/
+python ngs_processing_pipeline.py -logfile ${files[SLURM_ARRAY_TASK_ID]}.log -reads Reference_Files/hisat2/mm10//genome --no_spikein -adapters 1 -qctrim -outdir ~/scratch/${files[$SLURM_ARRAY_TASK_ID]}/
