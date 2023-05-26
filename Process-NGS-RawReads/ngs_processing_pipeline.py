@@ -102,7 +102,7 @@ parser.add_argument('-reads_type', '--reads_type', help='Technique type for data
                     type=str, default='paired', choices=['paired', 'single'])
 parser.add_argument('-spikein', '--spikein', help='Spikein type', type=str, choices=['Amp', 'Bacteria'], default='Amp')
 parser.add_argument('-no_spikein', '--no_spikein', help='If no spikein, skip steps for normalizing to spikein', action='store_true')
-parser.add_argument('-cleanup', '--cleanup', help='If cleanup, remove all intermediate files keeping only final .bw and .bed files', action='store_true')
+parser.add_argument('-cleanup', '--cleanup', help='If cleanup, remove all intermediate files keeping only QC and final .bam, .bw, and .bed files', action='store_true')
 # Program and reference genome locations
 parser.add_argument('-PicardLoc', '--PicardLoc', help='Location of picard.jar', type=str, default="java -jar "+os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+"/picard.jar")
 parser.add_argument('-SEACRLoc', '--SEACRLoc', help='Location of SEACR .sh', type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+"/SEACR/SEACR_1.3.sh")
@@ -1384,7 +1384,7 @@ def Clean_up():
     logger.addHandler(file_handler)
     passed = True
     if args.cleanup:
-        logger.info("Removing files except for bigwigs/bigbeds")
+        logger.info("Removing files except for QC/bigwigs/bigbeds/bam")
         try:
             result = subprocess.run(('rm %sAnalysis_Results/Spikein_normalized_bws_bdgs/Spike_align_stats_%s.csv'%(OUT_DIR, args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
@@ -1400,9 +1400,9 @@ def Clean_up():
             logger.warning(result.stderr.rstrip('\n'))
             result = subprocess.run(('rm %sAnalysis_Results/Trimming/PostTrimming_QC_%s.html'%(OUT_DIR, args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
-            logger.warning(result.stderr.rstrip('\n'))
-            result = subprocess.run(('rm %sAnalysis_Results/QC_Rawreads/Rawreads_QC_%s.html'%(OUT_DIR, args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
-            logger.info(result.stdout.rstrip('\n'))
+            #logger.warning(result.stderr.rstrip('\n'))
+            #result = subprocess.run(('rm %sAnalysis_Results/QC_Rawreads/Rawreads_QC_%s.html'%(OUT_DIR, args.logfile.rstrip('.log'))), shell=True, capture_output=True, text=True)
+            #logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
             result = subprocess.run(('rm %s*.out'), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
@@ -1417,9 +1417,9 @@ def Clean_up():
                 logger.warning(result.stderr.rstrip('\n'))
                 result = subprocess.run(('rm %sAll_output/Spike_mapped_reads/%s*'%(OUT_DIR, f)), shell=True, capture_output=True, text=True)
                 logger.info(result.stdout.rstrip('\n'))
-                logger.warning(result.stderr.rstrip('\n'))
-                result = subprocess.run(('rm %sAll_output/Processed_reads/%s*'%(OUT_DIR, f)), shell=True, capture_output=True, text=True)
-                logger.info(result.stdout.rstrip('\n'))
+                #logger.warning(result.stderr.rstrip('\n'))
+                #result = subprocess.run(('rm %sAll_output/Processed_reads/%s*'%(OUT_DIR, f)), shell=True, capture_output=True, text=True)
+                #logger.info(result.stdout.rstrip('\n'))
                 logger.warning(result.stderr.rstrip('\n'))
                 result = subprocess.run(('rm %slogs/filtered_bams/%s*'%(OUT_DIR, f)), shell=True, capture_output=True, text=True)
                 logger.info(result.stdout.rstrip('\n'))
@@ -1440,7 +1440,7 @@ def Clean_up():
                 logger.exception(e)
                 passed = False
     else:
-        logger.info("Keeping all generated files.\nCheck disk space and manually remove large reads, .bam, and .bai files if desired.")
+        logger.info("Keeping all generated files.\nCheck disk space and manually remove large files if desired.")
         '''
         logger.info("Removing intermediate large reads, .bam, and .bai files")
         for f in fastqfiles:
