@@ -106,7 +106,7 @@ parser.add_argument('-cleanup', '--cleanup', help='If cleanup, remove all interm
 # Program and reference genome locations
 parser.add_argument('-PicardLoc', '--PicardLoc', help='Location of picard.jar', type=str, default="java -jar "+os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+"/picard.jar")
 parser.add_argument('-SEACRLoc', '--SEACRLoc', help='Location of SEACR .sh', type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+"/SEACR/SEACR_1.3.sh")
-parser.add_argument('-genome_index', '--genome_index', help='Location of genome index files for mapping reads', type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/Reference_Files/bowtie2/Mus_musculus/UCSC/mm10/Sequence/Bowtie2Index/genome")
+parser.add_argument('-genome_index', '--genome_index', help='Location of genome index files for mapping reads', type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/Reference_Files/bowtie2/Mus_musculus/UCSC/mm10/Sequence/Bowtie2Index/genome')
 # Usually unchanged command line options for programs
 parser.add_argument('-spike_align', '--spike_align', help='Command input options for spikein alignment', type=str, default="-p 8 --end-to-end --very-sensitive --no-overlap --no-dovetail --no-mixed --no-discordant --phred33 -I 10 -X 700")
 parser.add_argument('-bamCov_default', '--bamCov_default', help='Command input default for bamCoverage', type=str, default="--binSize 1 --ignoreForNormalization 'chrM' --extendReads --numberOfProcessors max")
