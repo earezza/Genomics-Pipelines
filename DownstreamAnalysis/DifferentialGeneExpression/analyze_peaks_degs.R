@@ -357,7 +357,7 @@ for (p in names(unique_peaks)){
   tagMatrix <- getTagMatrix(unique_peaks[[p]], windows=promoters)
   if (length(tagMatrix) == 0){
     cat("No peaks at promoter sites for", p, "\n")
-    break
+    #break
   }else{
     tagMatrices[[p]] <- tagMatrix
     cat(dim(tagMatrix)[[1]], "peaks at promoter sites for", p, "\n")
