@@ -106,7 +106,7 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
     theme_linedraw() +
     theme(axis.text.y = element_text(colour=rev(head(df$ycolour, n=n)))) +
     scale_color_gradient(low = "black", high = colour) +
-    ggtitle(title)
+    ggtitle(title) 
   plt$labels$x <- "-log(p.adjust)"
   plt$labels$y <- ylabel
   plt$labels$size <- "GenePercentage"
@@ -353,9 +353,6 @@ invisible(capture.output(ggsave(filename=paste(output_prefix, 'genome_peaks_spli
 
 # Plot peaks related to TSS sites
 tagMatrices <- list()
-png(paste(output_prefix, 'raw_TSS_heatmap_peaks.png', sep=''))
-par(mfrow=c(1, length(unique(dba.show(dbObj.consensus)$Condition))), mar = c(2, 4, 4, 2))
-par(mar=c(5,4,4,2) + 0.1)
 for (p in names(unique_peaks)){
   tagMatrix <- getTagMatrix(unique_peaks[[p]], windows=promoters)
   if (length(tagMatrix) == 0){
@@ -364,13 +361,15 @@ for (p in names(unique_peaks)){
   }else{
     tagMatrices[[p]] <- tagMatrix
     cat(dim(tagMatrix)[[1]], "peaks at promoter sites for", p, "\n")
-    tagHeatmap(tagMatrix, xlim=c(-3000, 3000), xlab="bp at TSS", ylab="Peaks",
-               color=conditions_colour_code[[p]]) 
-    title(main=paste('Peaks at Promoters', p, sep=" - "), 
-          sub=paste(dim(tagMatrix)[[1]], "peaks", sep=' '))
+    plt <- tagHeatmap(tagMatrix, 
+               xlab="bp at TSS", 
+               ylab="Peaks", 
+               title=paste(dim(tagMatrix)[[1]],'Peaks at Promoters', p, sep=" - "),
+               palette=if_else(conditions_colour_code[[p]] == "#00BFC4", 'Greens', 'Reds'), 
+    )
+    invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_heatmap_', p, '_peaks.png', sep=''), plot=plt, dpi=320)))
   }
 }
-invisible(capture.output(dev.off()))
 
 # Plot TSS profile of peaks
 plt <- plotAvgProf(tagMatrices, xlim=c(-3000, 3000), conf=0.95, resample=1000) +
@@ -392,66 +391,82 @@ for (p in names(peaks)){
   anno <- annotatePeak(peaks[[p]], 
                        TxDb=txdb,
                        annoDb=annoDb)
+  
+  plt <- upsetplot(anno, vennpie=TRUE) + ggtitle(p)
+  invisible(capture.output(ggsave(paste(output_prefix, '_', p, '_annotated_peaks.png', sep=''), plot=plt, dpi=320, bg='white')))
+  
   peakAnnoList[[p]] <- anno
   
   # Write annotation to file
   write.table(anno, file=paste(output_prefix, 'annotated_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+  
+  tryCatch(
+    {
+      genes <- list()
+      genes[[p]] <- anno@anno$geneId
+      names(genes) = sub("_", "\n", names(genes))
+      
+      # fun is "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" 
+      compKEGG <- compareCluster(geneCluster=genes,
+                                 fun="enrichKEGG",
+                                 pvalueCutoff=0.05,
+                                 pAdjustMethod="BH",
+                                 organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+      if (!is.null(compKEGG)){
+        #plt <- dotplot(compKEGG, showCategory = 10, title = "KEGG Pathway Enrichment Analysis")
+        plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=conditions_colour_code[[p]], n=15)
+        invisible(capture.output(ggsave(filename=paste(output_prefix, p, '_annotated_kegg_analysis.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+        
+        # Write annotations to csv
+        write.table(as.data.frame(compKEGG), file=paste(output_prefix, p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+      }
+    },error = function(e)
+    {
+      message(e)
+    }
+  )
+  
+  for (ont in c('ALL', 'CC', 'MF', 'BP')){
+    tryCatch(
+      {
+        genes <- list()
+        genes[[p]] <- anno@anno$SYMBOL
+        names(genes) = sub("_", "\n", names(genes))
+        
+        compGO <- compareCluster(geneCluster=genes,
+                                 keyType='SYMBOL',
+                                 OrgDb=annoDb,
+                                 fun="enrichGO",
+                                 ont=ont,
+                                 pvalueCutoff=0.05,
+                                 pAdjustMethod="BH",
+                                 readable=TRUE
+        ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+        if (!is.null(compGO)){
+          compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
+          #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
+          plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=conditions_colour_code[[p]], n=15)
+          invisible(capture.output(ggsave(filename=paste(output_prefix, '_', p, '_annotated_go_analysis', '_', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+          
+          # Write annotations to csv
+          write.table(as.data.frame(compGO), file=paste(output_prefix, '_', p, 'annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+        }
+      },error = function(e)
+      {
+        message(e)
+      }
+    )
+    
+  }
 }
 
-png(paste(output_prefix, 'peaks_annotation_distribution.png', sep=''))
-plotAnnoBar(peakAnnoList)
-invisible(capture.output(dev.off()))
+plt <- plotAnnoBar(peakAnnoList)
+invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_distribution.png', sep=''), plot=plt, dpi=320)))
 
-png(paste(output_prefix, 'peaks_annotation_TSS_distribution.png', sep=''))
-plotDistToTSS(peakAnnoList)
-invisible(capture.output(dev.off()))
+plt <- plotDistToTSS(peakAnnoList)
+invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution.png', sep=''), plot=plt, dpi=320)))
 
-genes = lapply(peakAnnoList, function(i) as.data.frame(i)$geneId)
-names(genes) = sub("_", "\n", names(genes))
 
-tryCatch(
-  {
-    # fun is "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" 
-    compKEGG <- compareCluster(geneCluster=genes,
-                               fun="enrichKEGG",
-                               pvalueCutoff=0.05,
-                               pAdjustMethod="BH",
-                               organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-    if (!is.null(compKEGG)){
-      plt <- dotplot(compKEGG, showCategory = 10, title = "KEGG Pathway Enrichment Analysis")
-      invisible(capture.output(ggsave(filename=paste(output_prefix, 'annotated_kegg_analysis.png', sep=''), plot=plt, dpi=320)))
-      
-      # Write annotations to csv
-      write.table(as.data.frame(compKEGG), file=paste(output_prefix, 'annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-    }
-  },error = function(e)
-  {
-    message(e)
-  }
-)
-
-tryCatch(
-  {
-    compGO <- compareCluster(geneCluster=genes,
-                             OrgDb=annoDb,
-                             fun="enrichGO",
-                             ont='ALL',
-                             pvalueCutoff=0.05,
-                             pAdjustMethod="BH",
-                             readable=TRUE
-    ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-    if (!is.null(compGO)){
-      compGO@compareClusterResult$Ontology <- go2ont(compGO@compareClusterResult$ID)
-      plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
-      invisible(capture.output(ggsave(filename=paste(output_prefix, 'annotated_go_analysis.png', sep=''), plot=plt, dpi=320)))
-      # Write annotations to csv
-      write.table(as.data.frame(compGO), file=paste(output_prefix, 'annotated_GO.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-    }
-  },error = function(e)
-  {
-    message(e)
-  }
-)
 # ========= END OF OCCUPANCY ANALYSIS =========
 
 
@@ -601,9 +616,15 @@ for (m in c(DBA_DESEQ2, DBA_EDGER)){
       #png(paste(output_prefix, 'analyzed_venn_', m, '.png', sep=''))
       #dba.plotVenn(dbObj.analyzed, method=m, contrast=1, bDB=TRUE, bGain=TRUE, bLoss=TRUE, bAll=FALSE)
       #invisible(capture.output(dev.off()))
-      v <- dba.plotVenn(dbObj.analyzed, method=m, contrast=1, 
-                        bDB=TRUE, bGain=TRUE, bLoss=TRUE, bAll=FALSE,
-                        main=paste("Binding Sites - ", m, sep=''))
+      tryCatch(
+        {
+          v <- dba.plotVenn(dbObj.analyzed, method=m, contrast=1, 
+                            bDB=TRUE, bGain=TRUE, bLoss=TRUE, bAll=FALSE,
+                            main=paste("Binding Sites - ", m, sep=''))
+        }, error=function(e){
+          message('Peaksets do not meet specified criteria for venn')
+        }
+      )
       png(paste(output_prefix, 'analyzed_venn_', m, '.png', sep=''))
       grid.newpage()
       g = draw.pairwise.venn(area1=length(v$onlyA)+length(v$inAll), 
@@ -615,8 +636,8 @@ for (m in c(DBA_DESEQ2, DBA_EDGER)){
                              cat.dist = c(0,0))
       grid.arrange(gTree(children=g), top=textGrob("Binding Sites", gp=gpar(cex=1.5, fontface='bold')),
                    bottom=textGrob(m, gp=gpar(cex=1.5)))
-      invisible(capture.output(dev.off()))
       
+      invisible(capture.output(dev.off()))
       
     }, error=function(e){
       message("No figure\n", e)
@@ -734,7 +755,7 @@ for (report in names(reports)){
       profiles_significant <- dba.plotProfile(dbObj.analyzed, merge=c(DBA_REPLICATE), normalize=TRUE, 
                                               sites=GRanges(out %>% dplyr::filter(FDR < 0.05))
       )
-      png(paste(output_prefix, 'analyzed_profiles_', m,'.png', sep=''))
+      png(paste(output_prefix, 'analyzed_profiles_', report,'.png', sep=''))
       dba.plotProfile(profiles_significant, matrices_color=profile_colors, all_color_scales_equal=FALSE, 
                       decreasing=FALSE, 
                       #group_anno_color=unlist(unname(conditions_colour_code))
@@ -743,7 +764,7 @@ for (report in names(reports)){
     }, error=function(e){
       message("No figure\n", e)
       invisible(capture.output(dev.off()))
-      invisible(file.remove(paste(output_prefix, 'analyzed_profiles_', m,'.png', sep='')))
+      invisible(file.remove(paste(output_prefix, 'analyzed_profiles_', report,'.png', sep='')))
     }
   )
   
@@ -764,26 +785,94 @@ for (report in names(reports)){
   names(gpeaks) <- c(dbObj.contrast$contrasts[[1]]$name1, dbObj.contrast$contrasts[[1]]$name2)
   
   # Plot peaks gained/lost over genome between conditions
-  plt <- covplot(gpeaks, title=paste("Peaks over Genome", report, sep=' - '), weightCol='Fold') + 
-    scale_color_manual(values=rev(c(colours[1:length(unique_peaks)]))) + 
-    scale_fill_manual(values=rev(c(colours[1:length(unique_peaks)])))
-  invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_merged_peaks.png', sep=''), plot=plt, dpi=320)))
-  plt <- plt + facet_grid(chr ~ .id)
-  invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_peaks.png', sep=''), plot=plt, dpi=320)))
-  
+  tryCatch(
+      {
+        plt <- covplot(gpeaks, title=paste("Peaks over Genome", report, sep=' - '), weightCol='Fold') + 
+          scale_color_manual(values=rev(c(colours[1:length(unique_peaks)]))) + 
+          scale_fill_manual(values=rev(c(colours[1:length(unique_peaks)])))
+        invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_merged_peaks.png', sep=''), plot=plt, dpi=320)))
+        plt <- plt + facet_grid(chr ~ .id)
+        invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_peaks.png', sep=''), plot=plt, dpi=320)))
+        }, error=function(e){
+          message("No figure\n", e)
+      }
+    )
   
   # ========= Get Annotations =========
   peakAnnoList <- list()
   for (p in names(gpeaks)){
-    cat("\nAnnotating", p, "\n")
-    anno <- annotatePeak(gpeaks[[p]], 
-                         TxDb=txdb,
-                         annoDb=annoDb)
-    peakAnnoList[[p]] <- anno
-    
-    # Write annotation to file
-    write.table(anno, file=paste(output_prefix, 'annotated_', report, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+    if (length(gpeaks[[p]]) > 0){
+      cat("\nAnnotating", p, "\n")
+      anno <- annotatePeak(gpeaks[[p]], 
+                           TxDb=txdb,
+                           annoDb=annoDb)
+      peakAnnoList[[p]] <- anno
+      
+      plt <- upsetplot(anno, vennpie=TRUE) + ggtitle(p)
+      invisible(capture.output(ggsave(paste(output_prefix, '_', report, '_', p, '_annotated_peaks.png', sep=''), plot=plt, dpi=320, bg='white')))
+      
+      # Write annotation to file
+      write.table(anno, file=paste(output_prefix, 'annotated_', report, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+  
+      tryCatch(
+        {
+          genes <- list()
+          genes[[p]] <- anno@anno$geneId
+          names(genes) = sub("_", "\n", names(genes))
+          
+          # fun is "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" 
+          compKEGG <- compareCluster(geneCluster=genes,
+                                     fun="enrichKEGG",
+                                     pvalueCutoff=0.05,
+                                     pAdjustMethod="BH",
+                                     organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+          
+          if (!is.null(compKEGG)){
+            plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=conditions_colour_code[[p]], n=15)
+            invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_kegg_analysis.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+            
+            # Write annotations to csv
+            write.table(as.data.frame(compKEGG), file=paste(output_prefix, report, '_', p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+          }
+        },error = function(e)
+        {
+          message(e)
+        }
+      )
+      
+      for (ont in c('ALL', 'CC', 'MF', 'BP')){
+        tryCatch(
+          {
+            compGO <- compareCluster(geneCluster=genes,
+                                     OrgDb=annoDb,
+                                     fun="enrichGO",
+                                     ont=ont,
+                                     pvalueCutoff=0.05,
+                                     pAdjustMethod="BH",
+                                     readable=TRUE
+            ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+            
+            if (!is.null(compGO)){
+              compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
+              #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
+              plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=conditions_colour_code[[p]], n=15)
+              invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_go_analysis', '_', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+              
+              # Write annotations to csv
+              write.table(as.data.frame(compGO), file=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+              }
+          },error = function(e)
+          {
+            message(e)
+          }
+        )
+      }
+    }
+    else{
+      cat("No peaks to annotate for", p, '\n')
+    }
   }
+  
   
   plt <- plotAnnoBar(peakAnnoList)
   invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
@@ -791,54 +880,6 @@ for (report in names(reports)){
   plt <- plotDistToTSS(peakAnnoList)
   invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
   
-  
-  genes = lapply(peakAnnoList, function(i) as.data.frame(i)$geneId)
-  names(genes) = sub("_", "\n", names(genes))
-  
-  tryCatch(
-    {
-      # fun is "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" 
-      compKEGG <- compareCluster(geneCluster=genes,
-                                 fun="enrichKEGG",
-                                 pvalueCutoff=0.05,
-                                 pAdjustMethod="BH",
-                                 organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-      
-      if (!is.null(compKEGG)){
-        plt <- dotplot(compKEGG, showCategory = 10, title = paste("KEGG Pathway Enrichment Analysis", report, sep=' - '))
-        invisible(capture.output(ggsave(filename=paste(output_prefix, 'annotated_kegg_analysis_', report, '.png', sep=''), plot=plt, dpi=320)))
-        # Write annotations to csv
-        write.table(as.data.frame(compKEGG), file=paste(output_prefix, 'annotated_KEGG_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-      }
-    },error = function(e)
-    {
-      message(e)
-    }
-  )
-  
-  tryCatch(
-    {
-      compGO <- compareCluster(geneCluster=genes,
-                               OrgDb=annoDb,
-                               fun="enrichGO",
-                               ont='ALL',
-                               pvalueCutoff=0.05,
-                               pAdjustMethod="BH",
-                               readable=TRUE
-      ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-      
-      if (!is.null(compGO)){
-        compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
-        plt <- dotplot(compGO, showCategory = 10, title = paste("GO Pathway Enrichment Analysis", report, sep=' - '))
-        invisible(capture.output(ggsave(filename=paste(output_prefix, 'annotated_go_analysis_', report, '.png', sep=''), plot=plt, dpi=320)))
-        # Write annotations to csv
-        write.table(as.data.frame(compGO), file=paste(output_prefix, 'annotated_GO_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-      }
-    },error = function(e)
-    {
-      message(e)
-    }
-  )
 }
 
 
@@ -895,25 +936,94 @@ gpeaks <- GenomicRanges::GRangesList(Gained=gained, Lost=lost)
 names(gpeaks) <- c(dbObj.contrast$contrasts[[1]]$name1, dbObj.contrast$contrasts[[1]]$name2)
 
 # Plot peaks gained/lost over genome between conditions
-plt <- covplot(gpeaks, title=paste("Peaks over Genome", report, sep=' - '), ) + #weightCol='Fold') + 
-  scale_color_manual(values=rev(c(colours[1:length(unique_peaks)]))) + 
-  scale_fill_manual(values=rev(c(colours[1:length(unique_peaks)])))
-invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_merged_peaks.png', sep=''), plot=plt, dpi=320)))
-plt <- plt + facet_grid(chr ~ .id)
-invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_peaks.png', sep=''), plot=plt, dpi=320)))
+tryCatch(
+  {
+    plt <- covplot(gpeaks, title=paste("Peaks over Genome", report, sep=' - '), ) + #weightCol='Fold') + 
+      scale_color_manual(values=rev(c(colours[1:length(unique_peaks)]))) + 
+      scale_fill_manual(values=rev(c(colours[1:length(unique_peaks)])))
+    invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_merged_peaks.png', sep=''), plot=plt, dpi=320)))
+    plt <- plt + facet_grid(chr ~ .id)
+    invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_peaks.png', sep=''), plot=plt, dpi=320)))
+  }, error=function(e){
+    message("No figure\n", e)
+    invisible(capture.output(dev.off()))
+  }
+)
 
 
 # ========= Get Annotations =========
 peakAnnoList <- list()
 for (p in names(gpeaks)){
-  cat("\nAnnotating", p, "\n")
-  anno <- annotatePeak(gpeaks[[p]], 
-                       TxDb=txdb,
-                       annoDb=annoDb)
-  peakAnnoList[[p]] <- anno
-  
-  # Write annotation to file
-  write.table(anno, file=paste(output_prefix, 'annotated_', report, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+  if (length(gpeaks[[p]]) > 0){
+    cat("\nAnnotating", p, "\n")
+    anno <- annotatePeak(gpeaks[[p]], 
+                         TxDb=txdb,
+                         annoDb=annoDb)
+    peakAnnoList[[p]] <- anno
+    
+    plt <- upsetplot(anno, vennpie=TRUE) + ggtitle(p)
+    invisible(capture.output(ggsave(paste(output_prefix, '_', report, '_', p, '_annotated_peaks.png', sep=''), plot=plt, dpi=320, bg='white')))
+    
+    # Write annotation to file
+    write.table(anno, file=paste(output_prefix, 'annotated_', report, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+    
+    tryCatch(
+      {
+        genes <- list()
+        genes[[p]] <- anno@anno$geneId
+        names(genes) = sub("_", "\n", names(genes))
+        
+        # fun is "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" 
+        compKEGG <- compareCluster(geneCluster=genes,
+                                   fun="enrichKEGG",
+                                   pvalueCutoff=0.05,
+                                   pAdjustMethod="BH",
+                                   organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+        
+        if (!is.null(compKEGG)){
+          plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=conditions_colour_code[[p]], n=15)
+          invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_kegg_analysis.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+          
+          # Write annotations to csv
+          write.table(as.data.frame(compKEGG), file=paste(output_prefix, report, '_', p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+        }
+      },error = function(e)
+      {
+        message(e)
+      }
+    )
+    
+    for (ont in c('ALL', 'CC', 'MF', 'BP')){
+      tryCatch(
+        {
+          compGO <- compareCluster(geneCluster=genes,
+                                   OrgDb=annoDb,
+                                   fun="enrichGO",
+                                   ont=ont,
+                                   pvalueCutoff=0.05,
+                                   pAdjustMethod="BH",
+                                   readable=TRUE
+          ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+          
+          if (!is.null(compGO)){
+            compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
+            #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
+            plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=conditions_colour_code[[p]], n=15)
+            invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_go_analysis', '_', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+            
+            # Write annotations to csv
+            write.table(as.data.frame(compGO), file=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+          }
+        },error = function(e)
+        {
+          message(e)
+        }
+      )
+    }
+  }
+  else{
+    cat("No peaks to annotate for", p, '\n')
+  }
 }
 
 plt <- plotAnnoBar(peakAnnoList)
@@ -922,50 +1032,4 @@ invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_
 plt <- plotDistToTSS(peakAnnoList)
 invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
 
-
-genes = lapply(peakAnnoList, function(i) as.data.frame(i)$geneId)
-names(genes) = sub("_", "\n", names(genes))
-
-tryCatch(
-  {
-    # fun is "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" 
-    compKEGG <- compareCluster(geneCluster=genes,
-                               fun="enrichKEGG",
-                               pvalueCutoff=0.05,
-                               pAdjustMethod="BH",
-                               organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-    
-    if (!is.null(compKEGG)){
-      plt <- dotplot(compKEGG, showCategory = 10, title = paste("KEGG Pathway Enrichment Analysis", report, sep=' - '))
-      invisible(capture.output(ggsave(filename=paste(output_prefix, 'annotated_kegg_analysis_', report, '.png', sep=''), plot=plt, dpi=320)))
-      # Write annotations to csv
-      write.table(as.data.frame(compKEGG), file=paste(output_prefix, 'annotated_KEGG_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-    }
-  },error = function(e)
-  {
-    message(e)
-  }
-)
-tryCatch(
-  {
-    compGO <- compareCluster(geneCluster=genes,
-                             OrgDb=annoDb,
-                             fun="enrichGO",
-                             ont='ALL',
-                             pvalueCutoff=0.05,
-                             pAdjustMethod="BH",
-                             readable=TRUE
-    ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-    
-    if (!is.null(compGO)){
-      compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
-      plt <- dotplot(compGO, showCategory = 10, title = paste("GO Pathway Enrichment Analysis", report, sep=' - '))
-      invisible(capture.output(ggsave(filename=paste(output_prefix, 'annotated_go_analysis_', report, '.png', sep=''), plot=plt, dpi=320)))
-      # Write annotations to csv
-      write.table(as.data.frame(compGO), file=paste(output_prefix, 'annotated_GO_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-    }
-  },error = function(e)
-  {
-    message(e)
-  }
-)
+cat('\nFINISHED!\n')
