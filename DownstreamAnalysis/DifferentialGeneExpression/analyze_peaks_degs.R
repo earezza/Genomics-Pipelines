@@ -13,6 +13,7 @@ suppressWarnings(suppressPackageStartupMessages({
   library(EnsDb.Rnorvegicus.v79)
   library(org.Hs.eg.db)
   library(org.Mm.eg.db)
+  library(org.Rn.eg.db)
   #library(reshape2)
   library(ReactomePA)
   library(clusterProfiler)
