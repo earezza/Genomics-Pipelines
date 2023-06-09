@@ -5,10 +5,12 @@ suppressWarnings(suppressPackageStartupMessages({
   #library(profileplyr)
   library(ChIPseeker)
   library(TxDb.Mmusculus.UCSC.mm10.knownGene)
-  library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+  library(TxDb.Rnorvegicus.UCSC.rn6.refGene)
   #library(ensembldb)
   library(EnsDb.Hsapiens.v86)
   library(EnsDb.Mmusculus.v79)
+  library(EnsDb.Rnorvegicus.v79)
   library(org.Hs.eg.db)
   library(org.Mm.eg.db)
   #library(reshape2)
@@ -27,7 +29,7 @@ suppressWarnings(suppressPackageStartupMessages({
 option_list = list(
   make_option(c("-f", "--file"), type="character", default=NULL, help="DiffBind-formatted sample sheet", metavar="character"),
   make_option(c("-s", "--fragmentsizes"), type="character", default=NULL, help="File with bam fragment sizes generated from bamPEFragmentSize, otherwise determined via vulcan", metavar="character"),
-  make_option(c("-o", "--organism"), type="character", default="mouse", help="Organism to annotate genes at peaks, human or mouse (default)", metavar="character"),
+  make_option(c("-o", "--organism"), type="character", default="mouse", help="Organism to annotate genes at peaks, human (hg38) or mouse (mm10, default) or rat (rn6)", metavar="character"),
   make_option(c("-r", "--result_dir"), type="character", default="Peaks_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character")
 );
@@ -74,11 +76,24 @@ if (opt$organism == "mouse"){
   }else if (opt$database == "ensemble"){
     txdb <- EnsDb.Hsapiens.v86
     seqlevelsStyle(txdb) <- "UCSC" # format ensembl genes using UCSC style
-  }
+  } 
   else{
     stop("Invalid choice of annotation database")
   }
-} else{
+} else if (opt$organism == "rat"){
+  annoDb <- "org.Rn.eg.db"
+  keggOrg <- "rno"
+  if (opt$database == "ucsc"){
+    txdb <- TxDb.Rnorvegicus.UCSC.rn6.refGene
+  }else if (opt$database == "ensemble"){
+    txdb <- EnsDb.Rnorvegicus.v79
+    seqlevelsStyle(txdb) <- "UCSC" # format ensembl genes using UCSC style
+  } 
+  else{
+    stop("Invalid choice of annotation database")
+  }
+}
+else{
   stop("Invalid choice of organism")
 }
 
