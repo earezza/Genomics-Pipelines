@@ -11,11 +11,14 @@ suppressWarnings(suppressPackageStartupMessages({
   library(TxDb.Mmusculus.UCSC.mm10.knownGene)
   library(TxDb.Hsapiens.UCSC.hg19.knownGene)
   library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+  library(TxDb.Rnorvegicus.UCSC.rn6.refGene)
   #library(ensembldb)
   #library(EnsDb.Hsapiens.v86)
   #library(EnsDb.Mmusculus.v79)
+  #library(EnsDb.Rnorvegicus.v79)
   library(org.Hs.eg.db)
   library(org.Mm.eg.db)
+  library(org.Rn.eg.db)
   library(optparse)
 }))
 
@@ -32,7 +35,7 @@ suppressWarnings(suppressPackageStartupMessages({
 option_list = list(
   make_option(c("-c", "--countsfile"), type="character", help="Count matrix file", metavar="character"),
   make_option(c("-s", "--sampleinfo"), type="character", help="File containing samples and their experimental conditions info (row names must match matrix file column names)", metavar="character"),
-  make_option(c("-o", "--organism"), type="character", default="mouse", help="Organism to annotate genes (mouse or human)", metavar="character"),
+  make_option(c("-o", "--organism"), type="character", default="mouse", help="Organism to annotate genes (mouse (mm10) or human (hg38) or rat (rn6))", metavar="character"),
   make_option(c("-r", "--result_dir"), type="character", default="DEG_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-f", "--filter"), action="store_true", type="logical", default=FALSE, help="Flag to filter read counts (removes genes < min_count from raw matrix, then removes genes < min_baseMean after normalizing", metavar="character"),
   make_option(c("--min_count"), type="integer", default=1, help="Minimum counts to include if filtering", metavar="integer"),
@@ -56,6 +59,9 @@ if (tolower(opt$organism) == "mouse"){
 } else if (tolower(opt$organism) == "human"){
   annoDb <- "org.Hs.eg.db"
   keggOrg <- "hsa"
+} else if (tolower(opt$organism) == "rat"){
+  annoDb <- "org.Rn.eg.db"
+  keggOrg <- "rno"
 } else{
   stop("Invalid choice of organism")
 }
@@ -246,6 +252,8 @@ for (c in colnames(combs)){
       genes_entrez[[n]] <- mapIds(org.Hs.eg.db, keys = genes[[n]], column = "ENTREZID", keytype = "SYMBOL")
     }else if (tolower(opt$organism) == "mouse"){
       genes_entrez[[n]] <- mapIds(org.Mm.eg.db, keys = genes[[n]], column = "ENTREZID", keytype = "SYMBOL")
+    }else if (tolower(opt$organism) == "rat"){
+      genes_entrez[[n]] <- mapIds(org.Rn.eg.db, keys = genes[[n]], column = "ENTREZID", keytype = "SYMBOL")
     }
   }
   
