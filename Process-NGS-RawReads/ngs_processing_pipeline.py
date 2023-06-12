@@ -201,7 +201,7 @@ TARGETS = set([ f for f in fastqfiles if f not in IGGREADS ])
 # https://deeptools.readthedocs.io/en/latest/content/feature/effectiveGenomeSize.html
 EGS_GRCh38 = {'50': '2701495761', '75': '2747877777', '100': '2805636331', '150': '2862010578', '200': '2887553303'}
 EGS_GRCm38 = {'50': '2308125349', '75': '2407883318', '100': '2467481108', '150': '2494787188', '200': '2520869189'}
-EGS_Rnor6 = {'50': '', '75': '', '100': '', '150': '', '200': ''}
+EGS_Rnor6 = {'50': '2375372135', '75': '2440746491', '100': '2480029900', '150': '2477334634', '200': '2478552171'}
 if args.species == 'Mus':
     EGS = EGS_GRCm38
     EFFECTIVEGENOMESIZE = EGS[args.length]
