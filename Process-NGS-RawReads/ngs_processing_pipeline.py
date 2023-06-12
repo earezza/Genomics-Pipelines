@@ -89,12 +89,13 @@ parser.add_argument('-logfile', '--logfile', help='Name of .log file', type=str,
 parser.add_argument('-outdir', '--outdir', help='Path of directory to store results', type=str, default="./")
 parser.add_argument('-reads', '--reads', help='Path to directory containing reads (R1, R2, and md5sum.txt files)', type=str)
 parser.add_argument('-merge', '--merge', help='If flagged, will produce a merged result from input files in addition to individual replicates/reads', action='store_true')
-parser.add_argument('-species', '--species', help='Species of reads (Mus for mouse, Homo for human)', type=str, choices=['Mus', 'Homo'], default='Mus')
+parser.add_argument('-species', '--species', help='Species of reads (Mus for mouse, Homo for human, Rat for rat)', type=str, choices=['Mus', 'Homo', 'Rat'], default='Mus')
 parser.add_argument('-length', '--length', help='Read length', type=str, default='100', choices=['50', '75', '100', '150', '200'])
 parser.add_argument('-controls', '--controls', help='Control reads for peaks calling', default=[], nargs='+')
 parser.add_argument('-adapters', '--adapters', help='Adapter sequences, see https://support-docs.illumina.com/SHARE/AdapterSeq/Content/SHARE/AdapterSeq/Nextera/SequencesNXTILMPrepAndPCR.htm',
                     type=int, default=1, choices=[1, 2, 3, 4, 5])
 parser.add_argument('-qctrim', '--qctrim', help='If flagged, will apply QC trimming to raw reads (min length 20, score > 20, remove first 11 bases)', action='store_true')
+parser.add_argument('-polyAtrim', '--polyAtrim', help='If flagged, will apply poly-A trimming to reads after trimming adapters (as per cutadapt recommendation)', action='store_true')
 parser.add_argument('-stranded', '--stranded', help='If flagged, will create bam and coverage mapping to forward and reverse strands separately, intended for RNA-Seq', action='store_true')
 parser.add_argument('-technique', '--technique', help='Technique type for data',
                     type=str, default='cnt', choices=['cnt', 'chipseq', 'rnaseq', 'mnaseseq', 'atacseq'])
@@ -104,7 +105,7 @@ parser.add_argument('-spikein', '--spikein', help='Spikein type', type=str, choi
 parser.add_argument('-no_spikein', '--no_spikein', help='If no spikein, skip steps for normalizing to spikein', action='store_true')
 parser.add_argument('-cleanup', '--cleanup', help='If cleanup, remove all intermediate files keeping only QC and final .bam, .bw, and .bed files', action='store_true')
 # Program and reference genome locations
-parser.add_argument('-PicardLoc', '--PicardLoc', help='Location of picard.jar', type=str, default="java -jar "+os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+"/picard.jar")
+parser.add_argument('-PicardLoc', '--PicardLoc', help='Location of picard.jar', type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+"/picard.jar")
 parser.add_argument('-SEACRLoc', '--SEACRLoc', help='Location of SEACR .sh', type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+"/SEACR/SEACR_1.3.sh")
 parser.add_argument('-genome_index', '--genome_index', help='Location of genome index files for mapping reads', type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/Reference_Files/bowtie2/Mus_musculus/UCSC/mm10/Sequence/Bowtie2Index/genome')
 # Usually unchanged command line options for programs
@@ -200,11 +201,15 @@ TARGETS = set([ f for f in fastqfiles if f not in IGGREADS ])
 # https://deeptools.readthedocs.io/en/latest/content/feature/effectiveGenomeSize.html
 EGS_GRCh38 = {'50': '2701495761', '75': '2747877777', '100': '2805636331', '150': '2862010578', '200': '2887553303'}
 EGS_GRCm38 = {'50': '2308125349', '75': '2407883318', '100': '2467481108', '150': '2494787188', '200': '2520869189'}
+EGS_Rnor6 = {'50': '', '75': '', '100': '', '150': '', '200': ''}
 if args.species == 'Mus':
     EGS = EGS_GRCm38
     EFFECTIVEGENOMESIZE = EGS[args.length]
 if args.species == 'Homo':
     EGS = EGS_GRCh38
+    EFFECTIVEGENOMESIZE = EGS[args.length]
+if args.species == 'Rat':
+    EGS = EGS_Rnor6
     EFFECTIVEGENOMESIZE = EGS[args.length]
 
 # Reference index file for spikein
@@ -296,25 +301,7 @@ def md5sum_check():
             md5sumfile.drop_duplicates(inplace=True)
             md5sumfile.to_csv('md5sum.txt', sep=' ', header=None, index=False)
             os.chdir(ROOT_DIR)
-        '''
-        # Re-read formatted filenames
-        global read_files
-        #read_files = [ f for f in os.listdir(args.reads) if '.fastq.gz' in f and ('_R1' in f or '_R2' in f) and '.md5' not in f ]
-        read_files = [ f for f in os.listdir(args.reads) if '.fastq.gz' in f and '.md5' not in f ]
-        read_files.sort()
-        
-        global reads
-        global fastqfiles
-        if args.reads_type == "paired":
-            reads = set(np.array([ [ t for t in r.replace('.fastq.gz', '').split('_') if t[0] == 'R' ] for r in read_files ]).flatten())
-            fastqfiles = set([ r.replace('.fastq.gz', '').split('_')[0] for r in read_files ])
-        else:
-            #reads = set([ r.replace('.fastq.gz', '') for r in read_files ])
-            reads = {''}
-            fastqfiles = set([ r.replace('.fastq.gz', '') for r in read_files ])
-            
-        os.chdir(READS_DIR)
-        '''
+
     try:
         # Re-read formatted filenames
         global read_files
@@ -486,8 +473,20 @@ def AdapterTrim_Cutadapt():
             except Exception as e:
                 logger.exception(e)
                 passed = False
+                
+            # Trim poly-A
+            if args.technique == 'rnaseq' & args.polyAtrim:
+                try:
+                    result = subprocess.run(('cutadapt --cores=0 %s %s -o %sAll_output/Trimmed_reads/%s_Trimmed_R1.fastq -p %sAll_output/Trimmed_reads/%s_Trimmed_R2.fastq %sAll_output/Trimmed_reads/%s_Trimmed_R1.fastq.gz %sAll_output/Trimmed_reads/%s_Trimmed_R2.fastq.gz'%(TRIM, '-poly-a', OUT_DIR, f, OUT_DIR, f, OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+                
             passed = passed and os.path.exists(OUT_DIR+'All_output/Trimmed_reads/%s_Trimmed_R1.fastq'%(f))
             passed = passed and os.path.exists(OUT_DIR+'All_output/Trimmed_reads/%s_Trimmed_R2.fastq'%(f))
+            
         # For Single-end reads
         else:
             if os.path.exists(OUT_DIR+'All_output/Trimmed_reads/%s_Trimmed.fastq'%(f)):
@@ -499,6 +498,17 @@ def AdapterTrim_Cutadapt():
             except Exception as e:
                 logger.exception(e)
                 passed = False
+                
+            # Trim poly-A
+            if args.technique == 'rnaseq' & args.polyAtrim:
+                try:
+                    result = subprocess.run(('cutadapt --cores=0 %s %s -o %sAll_output/Trimmed_reads/%s_Trimmed.fastq %sAll_output/Trimmed_reads/%s_Trimmed.fastq.gz'%(TRIM, '-poly-a', OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+                
             passed = passed and os.path.exists(OUT_DIR+'All_output/Trimmed_reads/%s_Trimmed.fastq'%(f))
             
     return passed
@@ -565,7 +575,7 @@ def Map_Genome():
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
         try:
-            result = subprocess.run(('%s SortSam -I %sAll_output/Mapped_reads/%s.bam -O %sAll_output/Mapped_reads/%s.coordsorted.bam -SORT_ORDER coordinate'%(args.PicardLoc, OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('java -jar %s SortSam -I %sAll_output/Mapped_reads/%s.bam -O %sAll_output/Mapped_reads/%s.coordsorted.bam -SORT_ORDER coordinate'%(args.PicardLoc, OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
         except Exception as e:
@@ -589,7 +599,7 @@ def Map_Genome():
         bams_input = "I=%sAll_output/Mapped_reads/"%OUT_DIR + (" I=%sAll_output/Mapped_reads/"%(OUT_DIR)).join(bams)
         merged_bam = args.reads.split('/')[-2]
         try:
-            result = subprocess.run(('%s MergeSamFiles %s O=%sAll_output/Mapped_reads/%s.coordsorted.bam'%(args.PicardLoc, bams_input, OUT_DIR, merged_bam)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('java -jar %s MergeSamFiles %s O=%sAll_output/Mapped_reads/%s.coordsorted.bam'%(args.PicardLoc, bams_input, OUT_DIR, merged_bam)), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
         except Exception as e:
@@ -629,7 +639,7 @@ def Collect_alignment_stats():
         if os.path.exists(OUT_DIR+'logs/primary_alignment/PostAlignmentStats/dupstats/%s.dupMarked.bam'%f) and os.path.exists(OUT_DIR+'logs/primary_alignment/PostAlignmentStats/dupstats/%s_picard.dupMark.txt'%f):
             continue
         try:
-            result = subprocess.run(('%s MarkDuplicates -I %sAll_output/Mapped_reads/%s.coordsorted.bam -O %slogs/primary_alignment/PostAlignmentStats/dupstats/%s.dupMarked.bam -METRICS_FILE %slogs/primary_alignment/PostAlignmentStats/dupstats/%s_picard.dupMark.txt'%(args.PicardLoc, OUT_DIR, f, OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('java -jar %s MarkDuplicates -I %sAll_output/Mapped_reads/%s.coordsorted.bam -O %slogs/primary_alignment/PostAlignmentStats/dupstats/%s.dupMarked.bam -METRICS_FILE %slogs/primary_alignment/PostAlignmentStats/dupstats/%s_picard.dupMark.txt'%(args.PicardLoc, OUT_DIR, f, OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
         except Exception as e:
@@ -698,7 +708,7 @@ def Filtering_bams_PicardSamtools():
             logger.exception(e)
             passed = False
         try:
-            result = subprocess.run(('%s MarkDuplicates -I %sAll_output/Processed_reads/%s.Mapped.MAPQ10.bam -O %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -REMOVE_DUPLICATES true -METRICS_FILE %slogs/filtered_bams/%s_picard.rmDup.txt'%(args.PicardLoc, OUT_DIR, f, OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('java -jar %s MarkDuplicates -I %sAll_output/Processed_reads/%s.Mapped.MAPQ10.bam -O %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -REMOVE_DUPLICATES true -METRICS_FILE %slogs/filtered_bams/%s_picard.rmDup.txt'%(args.PicardLoc, OUT_DIR, f, OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
         except Exception as e:
@@ -758,8 +768,8 @@ def Compileresults_filtering():
 def GetBigwigs_BamCoverage():
     
     # Skip for RNA-Seq data
-    if args.technique == 'rnaseq':
-        return True
+    #if args.technique == 'rnaseq':
+    #    return True
     
     if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs'):
         os.mkdir(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs')
@@ -778,76 +788,119 @@ def GetBigwigs_BamCoverage():
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
         
-        # RPGC normalized without duplicates
-        if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bw'%f):
-            try:
-                result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
-                logger.info(result.stdout.rstrip('\n'))
-                logger.warning(result.stderr.rstrip('\n'))
-            except Exception as e:
-                logger.exception(e)
-                passed = False
-        # RPGC normalized without duplicates bedgraph for peaks
-        if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bedgraph'%f):
-            try:
-                result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bedgraph %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
-                logger.info(result.stdout.rstrip('\n'))
-                logger.warning(result.stderr.rstrip('\n'))
-            except Exception as e:
-                logger.exception(e)
-                passed = False
-        # CPM normalized without duplicates
-        if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw'%f):
-            try:
-                result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_CPM, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
-                logger.info(result.stdout.rstrip('\n'))
-                logger.warning(result.stderr.rstrip('\n'))
-            except Exception as e:
-                logger.exception(e)
-                passed = False
-        # Get CPM bedgraph
-        if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bedgraph'%f):
-            try:
-                result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bedgraph %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
-                logger.info(result.stdout.rstrip('\n'))
-                logger.warning(result.stderr.rstrip('\n'))
-            except Exception as e:
-                logger.exception(e)
-                passed = False
+        # Skip for RNA-Seq data
+        if args.technique == 'rnaseq':
             
-        # No normalization without duplicates
-        if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bw'%f):
-            try:
-                result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bw %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
-                logger.info(result.stdout.rstrip('\n'))
-                logger.warning(result.stderr.rstrip('\n'))
-            except Exception as e:
-                logger.exception(e)
-                passed = False
-        # No normalization without duplicates bedgraph for peaks
-        if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bedgraph'%f):
-            try:
-                result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bedgraph %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
-                logger.info(result.stdout.rstrip('\n'))
-                logger.warning(result.stderr.rstrip('\n'))
-            except Exception as e:
-                logger.exception(e)
-                passed = False
-            
-        # No normalization with duplicates
-        if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm_wDups.bw'%f):
-            try:
-                result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.bam -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm_wDups.bw %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
-                logger.info(result.stdout.rstrip('\n'))
-                logger.warning(result.stderr.rstrip('\n'))
-            except Exception as e:
-                logger.exception(e)
-                passed = False
+            # CPM normalized with duplicates and not stranded
+            if not args.stranded:
+                if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw'%f):
+                    try:
+                        result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.bam -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_CPM, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                        logger.info(result.stdout.rstrip('\n'))
+                        logger.warning(result.stderr.rstrip('\n'))
+                    except Exception as e:
+                        logger.exception(e)
+                        passed = False
+                
+                passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw'%f)
+                        
+            if args.stranded:
+                # Forward strand bw
+                if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.forward.bw'%f):
+                    try:
+                        result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.bam --filterRNAstrand forward -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.forward.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_CPM, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                        logger.info(result.stdout.rstrip('\n'))
+                        logger.warning(result.stderr.rstrip('\n'))
+                    except Exception as e:
+                        logger.exception(e)
+                        passed = False
+                # Reverse strand bw
+                if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.reverse.bw'%f):
+                    try:
+                        result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.bam --filterRNAstrand reverse -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.reverse.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_CPM, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                        logger.info(result.stdout.rstrip('\n'))
+                        logger.warning(result.stderr.rstrip('\n'))
+                    except Exception as e:
+                        logger.exception(e)
+                        passed = False
+                
+                passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.forward.bw'%f)
+                passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.reverse.bw'%f)
         
-        passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bw'%f)
-        passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bw'%f)
-        passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm_wDups.bw'%f)
-        passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw'%f)
+        else:
+        
+            # RPGC normalized without duplicates
+            if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bw'%f):
+                try:
+                    result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+            # RPGC normalized without duplicates bedgraph for peaks
+            if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bedgraph'%f):
+                try:
+                    result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bedgraph %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+            # CPM normalized without duplicates
+            if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw'%f):
+                try:
+                    result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_CPM, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+            # Get CPM bedgraph
+            if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bedgraph'%f):
+                try:
+                    result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bedgraph %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+                
+            # No normalization without duplicates
+            if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bw'%f):
+                try:
+                    result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bw %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+            # No normalization without duplicates bedgraph for peaks
+            '''
+            if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bedgraph'%f):
+                try:
+                    result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bedgraph %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+            '''
+            # No normalization with duplicates
+            if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm_wDups.bw'%f):
+                try:
+                    result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.bam -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm_wDups.bw %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_min)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+        
+            passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bw'%f)
+            passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bw'%f)
+            passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm_wDups.bw'%f)
+            passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw'%f)
+            
     return passed
         
 # Step 12: map spike-in reads to genome
@@ -897,7 +950,7 @@ def Map2Spikein_Bowtie2():
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
         try:
-            result = subprocess.run(('%s SortSam -I %sAll_output/Spike_mapped_reads/%s.bam -O %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -SORT_ORDER coordinate'%(args.PicardLoc, OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('java -jar %s SortSam -I %sAll_output/Spike_mapped_reads/%s.bam -O %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -SORT_ORDER coordinate'%(args.PicardLoc, OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
         except Exception as e:
@@ -942,7 +995,7 @@ def Collect_Spikealignment_stats():
         #    logger.info('No spikein, skipping step.')
         #    break
         try:
-            result = subprocess.run(('%s MarkDuplicates -I %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -O %slogs/Spike_Alignment/dupstats/%s.dupMarked.bam -METRICS_FILE %slogs/Spike_Alignment/dupstats/%s_picard.dupMark.txt'%(args.PicardLoc, OUT_DIR, f, OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
+            result = subprocess.run(('java -jar %s MarkDuplicates -I %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -O %slogs/Spike_Alignment/dupstats/%s.dupMarked.bam -METRICS_FILE %slogs/Spike_Alignment/dupstats/%s_picard.dupMark.txt'%(args.PicardLoc, OUT_DIR, f, OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
             logger.info(result.stdout.rstrip('\n'))
             logger.warning(result.stderr.rstrip('\n'))
         except Exception as e:
@@ -1289,6 +1342,7 @@ def Peak_Calling():
                     logger.exception(e)
                     passed = False
                 # Non-norm, no duplicates, bedgraph peaks
+                '''
                 try:
                     result = subprocess.run(('bash %s %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bedgraph 0.05 non stringent %sAnalysis_Results/Peaks/%s'%(args.SEACRLoc, OUT_DIR, r, OUT_DIR, r)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
@@ -1303,6 +1357,7 @@ def Peak_Calling():
                 except Exception as e:
                     logger.exception(e)
                     passed = False
+                '''
                 passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s.stringent.bed'%r)
         
         # ========== MACS peak calling - NO spike-in ==========
