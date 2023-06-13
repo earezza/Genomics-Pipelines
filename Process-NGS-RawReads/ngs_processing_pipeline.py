@@ -475,7 +475,7 @@ def AdapterTrim_Cutadapt():
                 passed = False
                 
             # Trim poly-A
-            if args.technique == 'rnaseq' and args.polyAtrim:
+            if args.polyAtrim:
                 try:
                     result = subprocess.run(('cutadapt --cores=0 %s -o %sAll_output/Trimmed_reads/%s_Trimmed_R1.fastq -p %sAll_output/Trimmed_reads/%s_Trimmed_R2.fastq %sAll_output/Trimmed_reads/%s_Trimmed_R1.fastq %sAll_output/Trimmed_reads/%s_Trimmed_R2.fastq'%('--poly-a', OUT_DIR, f, OUT_DIR, f, OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
@@ -500,7 +500,7 @@ def AdapterTrim_Cutadapt():
                 passed = False
                 
             # Trim poly-A
-            if args.technique == 'rnaseq' and args.polyAtrim:
+            if args.polyAtrim:
                 try:
                     result = subprocess.run(('cutadapt --cores=0 %s %s -o %sAll_output/Trimmed_reads/%s_Trimmed.fastq %sAll_output/Trimmed_reads/%s_Trimmed.fastq'%(TRIM, '--poly-a', OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
