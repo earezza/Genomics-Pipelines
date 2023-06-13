@@ -461,29 +461,37 @@ def AdapterTrim_Cutadapt():
         formatter = logging.Formatter('%(levelname)s : %(name)s : %(message)s')
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
-        
+
         # For paired-end reads
         if args.reads_type == "paired":
             if os.path.exists(OUT_DIR+'All_output/Trimmed_reads/%s_Trimmed_R1.fastq'%(f)) and os.path.exists(OUT_DIR+'All_output/Trimmed_reads/%s_Trimmed_R2.fastq'%(f)):
                 continue
-            try:
-                result = subprocess.run(('cutadapt --cores=0 %s %s -o %sAll_output/Trimmed_reads/%s_Trimmed_R1.fastq -p %sAll_output/Trimmed_reads/%s_Trimmed_R2.fastq %s_R1.fastq.gz %s_R2.fastq.gz'%(TRIM, ADAPTERS, OUT_DIR, f, OUT_DIR, f, READS_DIR+'/'+f, READS_DIR+'/'+f)), shell=True, capture_output=True, text=True)
-                logger.info(result.stdout.rstrip('\n'))
-                logger.warning(result.stderr.rstrip('\n'))
-            except Exception as e:
-                logger.exception(e)
-                passed = False
                 
-            # Trim poly-A
+            # Trim adapters, then poly-A (if flagged)
             if args.polyAtrim:
                 try:
-                    result = subprocess.run(('cutadapt --cores=0 %s -o %sAll_output/Trimmed_reads/%s_Trimmed_R1.fastq -p %sAll_output/Trimmed_reads/%s_Trimmed_R2.fastq %sAll_output/Trimmed_reads/%s_Trimmed_R1.fastq %sAll_output/Trimmed_reads/%s_Trimmed_R2.fastq'%('--poly-a', OUT_DIR, f, OUT_DIR, f, OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('cutadapt --cores=0 %s %s -o %sAll_output/Trimmed_reads/%s_adaptTrimmed_R1.fastq -p %sAll_output/Trimmed_reads/%s_adaptTrimmed_R2.fastq %s_R1.fastq.gz %s_R2.fastq.gz'%(TRIM, ADAPTERS, OUT_DIR, f, OUT_DIR, f, READS_DIR+'/'+f, READS_DIR+'/'+f)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
                     logger.exception(e)
                     passed = False
-                
+                try:
+                    result = subprocess.run(('cutadapt --cores=0 %s -o %sAll_output/Trimmed_reads/%s_Trimmed_R1.fastq -p %sAll_output/Trimmed_reads/%s_Trimmed_R2.fastq %sAll_output/Trimmed_reads/%s_adaptTrimmed_R1.fastq %sAll_output/Trimmed_reads/%s_adaptTrimmed_R2.fastq'%('--poly-a', OUT_DIR, f, OUT_DIR, f, OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+            else:
+                try:
+                    result = subprocess.run(('cutadapt --cores=0 %s %s -o %sAll_output/Trimmed_reads/%s_Trimmed_R1.fastq -p %sAll_output/Trimmed_reads/%s_Trimmed_R2.fastq %s_R1.fastq.gz %s_R2.fastq.gz'%(TRIM, ADAPTERS, OUT_DIR, f, OUT_DIR, f, READS_DIR+'/'+f, READS_DIR+'/'+f)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+                    
             passed = passed and os.path.exists(OUT_DIR+'All_output/Trimmed_reads/%s_Trimmed_R1.fastq'%(f))
             passed = passed and os.path.exists(OUT_DIR+'All_output/Trimmed_reads/%s_Trimmed_R2.fastq'%(f))
             
@@ -491,18 +499,26 @@ def AdapterTrim_Cutadapt():
         else:
             if os.path.exists(OUT_DIR+'All_output/Trimmed_reads/%s_Trimmed.fastq'%(f)):
                 continue
-            try:
-                result = subprocess.run(('cutadapt --cores=0 %s %s -o %sAll_output/Trimmed_reads/%s_Trimmed.fastq %s.fastq.gz'%(TRIM, ADAPTERS, OUT_DIR, f, READS_DIR+'/'+f)), shell=True, capture_output=True, text=True)
-                logger.info(result.stdout.rstrip('\n'))
-                logger.warning(result.stderr.rstrip('\n'))
-            except Exception as e:
-                logger.exception(e)
-                passed = False
                 
-            # Trim poly-A
+            # # Trim adapters, then poly-A (if flagged)
             if args.polyAtrim:
                 try:
-                    result = subprocess.run(('cutadapt --cores=0 %s %s -o %sAll_output/Trimmed_reads/%s_Trimmed.fastq %sAll_output/Trimmed_reads/%s_Trimmed.fastq'%(TRIM, '--poly-a', OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('cutadapt --cores=0 %s %s -o %sAll_output/Trimmed_reads/%s_adaptTrimmed.fastq %s.fastq.gz'%(TRIM, ADAPTERS, OUT_DIR, f, READS_DIR+'/'+f)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+                try:
+                    result = subprocess.run(('cutadapt --cores=0 %s %s -o %sAll_output/Trimmed_reads/%s_Trimmed.fastq %sAll_output/Trimmed_reads/%s_adaptTrimmed.fastq'%(TRIM, '--poly-a', OUT_DIR, f, OUT_DIR, f)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+            else:
+                try:
+                    result = subprocess.run(('cutadapt --cores=0 %s %s -o %sAll_output/Trimmed_reads/%s_Trimmed.fastq %s.fastq.gz'%(TRIM, ADAPTERS, OUT_DIR, f, READS_DIR+'/'+f)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
