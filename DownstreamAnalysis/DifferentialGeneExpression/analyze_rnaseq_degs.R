@@ -260,6 +260,14 @@ for (c in colnames(combs)){
   # ============= GO and KEGG Annotations ==============
   for (n in names(genes)){
     
+    if (n == combs[[c]][1]){
+      colour <- 'green'
+    }else if (n== combs[[c]][2]){
+      colour <- 'red'
+    }else{
+      colour <- "#56B1F7"
+    }
+    
     # GO Annotation
     tryCatch(
       {
@@ -282,7 +290,7 @@ for (c in colnames(combs)){
             invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_', ont, '_', n, '.png', sep=''), plot=plt, dpi=320)))
             # Write annotations to csv
             write.table(as.data.frame(compGO), file=paste(output_prefix, 'GO_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-          
+            
           }
           
         }
@@ -325,7 +333,7 @@ for (c in colnames(combs)){
         gene_list <- na.omit(original_gene_list)
         
         for (ont in c('ALL', 'CC', 'MF', 'BP')){
-        
+          
           gsea <- gseGO(geneList=gene_list, 
                         ont = ont, 
                         keyType = "SYMBOL", 
