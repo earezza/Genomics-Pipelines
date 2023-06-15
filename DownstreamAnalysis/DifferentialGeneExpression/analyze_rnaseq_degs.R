@@ -331,13 +331,13 @@ for (c in colnames(combs)){
         original_gene_list <- res[genes[[n]],]$log2FoldChange
         names(original_gene_list) <- rownames(res[genes[[n]],])
         gene_list <- na.omit(original_gene_list)
+        gene_list <- gene_list[order(gene_list, decreasing=TRUE)]
         
         for (ont in c('ALL', 'CC', 'MF', 'BP')){
           
           gsea <- gseGO(geneList=gene_list, 
                         ont = ont, 
                         keyType = "SYMBOL", 
-                        nPerm = 10000, 
                         minGSSize = 3, 
                         maxGSSize = 800, 
                         pvalueCutoff = 0.05, 
