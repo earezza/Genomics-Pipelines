@@ -95,6 +95,27 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
   return(plt)
 }
 
+make_volcanoplot <- function(res, condition1, condition2, threshold){
+  df <- as.data.frame(res)
+  df$DEG <- "No"
+  df[df$log2FoldChange >= threshold, ]$DEG <- condition1
+  df[df$log2FoldChange <= (0-threshold), ]$DEG <- condition2
+  
+  # make volcano plot, the significant genes will be labeled in red
+  plt <- ggplot(df) +
+    geom_point(aes(x = log2FoldChange, 
+                   y = -log10(padj), 
+                   color = DEG
+                   )
+               ) +
+    scale_color_manual(values = c("green", "black", "red")) +
+    ggtitle(paste(condition1, ' vs ', condition2, sep='')) + 
+    xlab("log2 fold change") +
+    ylab("-log10 adjusted p-value")
+  
+  return(plt)
+}
+
 # =========== Load Input Files ============
 count_mtx <- as.matrix(read.csv(opt$countsfile, sep=",", row.names=1, check.names=FALSE))
 sampleinfo <- read.csv(opt$sampleinfo, row.names=1)
@@ -212,6 +233,9 @@ for (c in colnames(combs)){
   #png(paste(output_prefix, 'resLFC_MAplot.png', sep=''))
   #plotMA(resLFC, ylim=c(-2,2))
   #invisible(capture.output(dev.off()))
+  
+  plt <- make_volcanoplot(res, combs[[c]][1], combs[[c]][2], opt$lfc)
+  invisible(capture.output(ggsave(filename=paste(output_prefix, '_DESeq2_', comparison, '_volcano.png', sep=''), plot=plt, dpi=320)))
   
   #png(paste(output_prefix, 'res_genecount_minpadj.png', sep=''))
   #plotCounts(dds, gene=which.min(res$padj), intgroup="Condition")
