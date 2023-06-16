@@ -10,7 +10,7 @@ suppressWarnings(suppressPackageStartupMessages({
   library(ggplot2)
   library(EnhancedVolcano)
   library(TxDb.Mmusculus.UCSC.mm10.knownGene)
-  library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+  #library(TxDb.Hsapiens.UCSC.hg19.knownGene)
   library(TxDb.Hsapiens.UCSC.hg38.knownGene)
   library(TxDb.Rnorvegicus.UCSC.rn6.refGene)
   #library(ensembldb)
@@ -135,15 +135,16 @@ make_volcanoplot <- function(res, condition1, condition2, lfc_threshold, padj_th
   return(plt)
 }
 
-pheatmap(dds@assays@data$counts,
-         cluster_rows = T,
-         show_rownames = T,
-         annotation = meta,
-         border_color = NA,
-         fontsize = 10,
-         scale = "row",
-         fontsize_row = 8,
-         height = 20)
+
+# pheatmap(dds@assays@data$counts,
+#          cluster_rows = T,
+#          show_rownames = T,
+#          annotation = meta,
+#          border_color = NA,
+#          fontsize = 10,
+#          scale = "row",
+#          fontsize_row = 8,
+#          height = 20)
 
 
 
@@ -273,6 +274,9 @@ for (c in colnames(combs)){
   #png(paste(output_prefix, 'res_genecount_minpadj.png', sep=''))
   #plotCounts(dds, gene=which.min(res$padj), intgroup="Condition")
   #invisible(capture.output(dev.off()))
+  
+  #hist(res$padj[res$log2FoldChange >= 0.6], breaks = 0:20/20, col = "darkgreen", border = "white")
+  #hist(res$padj[res$log2FoldChange <= -0.6], breaks = 0:20/20, col = "darkred", border = "white")
   
   vsd <- vst(dds, blind=FALSE)
   png(paste(output_prefix, 'PCAplot.png', sep=''))
