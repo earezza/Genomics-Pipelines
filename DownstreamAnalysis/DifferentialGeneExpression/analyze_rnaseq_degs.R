@@ -8,6 +8,7 @@ suppressWarnings(suppressPackageStartupMessages({
   library(DESeq2)
   library(clusterProfiler)
   library(ggplot2)
+  library(EnhancedVolcano)
   library(TxDb.Mmusculus.UCSC.mm10.knownGene)
   library(TxDb.Hsapiens.UCSC.hg19.knownGene)
   library(TxDb.Hsapiens.UCSC.hg38.knownGene)
@@ -95,26 +96,56 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
   return(plt)
 }
 
-make_volcanoplot <- function(res, condition1, condition2, threshold){
+make_volcanoplot <- function(res, condition1, condition2, lfc_threshold, padj_threshold){
   df <- as.data.frame(res)
-  df$DEG <- "No"
-  df[df$log2FoldChange >= threshold, ]$DEG <- condition1
-  df[df$log2FoldChange <= (0-threshold), ]$DEG <- condition2
   
-  # make volcano plot, the significant genes will be labeled in red
-  plt <- ggplot(df) +
-    geom_point(aes(x = log2FoldChange, 
-                   y = -log10(padj), 
-                   color = DEG
-                   )
-               ) +
-    scale_color_manual(values = c("green", "black", "red")) +
-    ggtitle(paste(condition1, ' vs ', condition2, sep='')) + 
-    xlab("log2 fold change") +
-    ylab("-log10 adjusted p-value")
+  keyvals <- ifelse(df$log2FoldChange <= (0-lfc_threshold), 'darkred', 'black')
+  keyvals <- ifelse(df$log2FoldChange <= (0-lfc_threshold) & df$padj <= padj_threshold, 'red', keyvals)
+  keyvals <- ifelse(df$log2FoldChange >= lfc_threshold, 'darkgreen', keyvals)
+  keyvals <- ifelse(df$log2FoldChange >= lfc_threshold & df$padj <= padj_threshold, 'green', keyvals)
   
+  keyvals[is.na(keyvals)] <- 'black'
+  names(keyvals)[keyvals == 'darkgreen'] <- condition1
+  names(keyvals)[keyvals == 'green'] <- paste(condition1, 'significant', sep=' ')
+  names(keyvals)[keyvals == 'black'] <- 'Not DEG'
+  names(keyvals)[keyvals == 'darkred'] <- condition2
+  names(keyvals)[keyvals == 'red'] <- paste(condition2, 'significant', sep=' ')
+  
+  plt <- EnhancedVolcano(df, 
+                  x = 'log2FoldChange', 
+                  y = 'padj', 
+                  xlab = "Log2FoldChange",
+                  ylab = "-Log(adjusted p-value)",
+                  caption = paste0("Total = ", nrow(df), " genes\n", 
+                                   condition1, " = ", nrow(subset(df, log2FoldChange >= lfc_threshold)), ' DEGs\n',
+                                   condition2, " = ", nrow(subset(df, log2FoldChange <= (0-lfc_threshold))), ' DEGS'
+                                   ),
+                  colCustom = keyvals,
+                  lab = rownames(df),
+                  title = paste(condition1, ' vs ', condition2, sep=''),
+                  subtitle = 'DESeq2 Results',
+                  pCutoff = padj_threshold,
+                  FCcutoff = lfc_threshold,
+                  cutoffLineType = 'dashed',
+                  legendLabels=c('Not sig.','Log2FC','p-value','p-value & Log2FC'),
+                  labSize = 4,
+                  legendPosition = 'top',
+                  legendLabSize = 12,
+                  )
   return(plt)
 }
+
+pheatmap(dds@assays@data$counts,
+         cluster_rows = T,
+         show_rownames = T,
+         annotation = meta,
+         border_color = NA,
+         fontsize = 10,
+         scale = "row",
+         fontsize_row = 8,
+         height = 20)
+
+
 
 # =========== Load Input Files ============
 count_mtx <- as.matrix(read.csv(opt$countsfile, sep=",", row.names=1, check.names=FALSE))
@@ -207,8 +238,6 @@ for (c in colnames(combs)){
   res[['FoldChange']] <- 2^abs(res[['log2FoldChange']])*(res[['log2FoldChange']]/abs(res[['log2FoldChange']]))
   write.table(res[order(res$log2FoldChange, decreasing=TRUE), ], file=paste(output_prefix, "DESeq2_FullResult_", comparison, ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
-  #resLFC <- lfcShrink(dds, coef=resultsNames(dds)[-1], type="apeglm")
-  
   # Filter out normalized low-expressed genes (bottom 10th percentile) by baseMean  REMOVE ALL < 10 baseMean
   if (opt$filter){
     # cat("Genes and samples before filtering normalized genes:\n", dim(res), "\n")
@@ -226,15 +255,19 @@ for (c in colnames(combs)){
   
   # Generate plots
   png(paste(output_prefix, 'MAplot.png', sep=''))
-  plotMA(res)
+  plotMA(res, ylim=c(-2,2), ylab='log2foldchange', alpha=0.1)
+  title(main = comparison, sub="blue if adjusted pvalue < 0.1", cex.sub=0.8)
   abline(h=c((0-opt$lfc), opt$lfc), col="red", lwd=2)
   invisible(capture.output(dev.off()))
   
-  #png(paste(output_prefix, 'resLFC_MAplot.png', sep=''))
-  #plotMA(resLFC, ylim=c(-2,2))
-  #invisible(capture.output(dev.off()))
+  resLFC <- lfcShrink(dds, coef=resultsNames(dds)[-1], type="apeglm")
+  png(paste(output_prefix, 'shrunkMAplot.png', sep=''))
+  plotMA(resLFC, ylim=c(-2,2), ylab='log2foldchange', alpha=0.1)
+  title(main = comparison, sub="blue if adjusted pvalue < 0.1", cex.sub=0.8)
+  abline(h=c((0-opt$lfc), opt$lfc), col="red", lwd=2)
+  invisible(capture.output(dev.off()))
   
-  plt <- make_volcanoplot(res, combs[[c]][1], combs[[c]][2], opt$lfc)
+  plt <- make_volcanoplot(res, combs[[c]][1], combs[[c]][2], opt$lfc, 0.1)
   invisible(capture.output(ggsave(filename=paste(output_prefix, 'Volcanoplot.png', sep=''), plot=plt, dpi=320)))
   
   #png(paste(output_prefix, 'res_genecount_minpadj.png', sep=''))
@@ -352,6 +385,7 @@ for (c in colnames(combs)){
     # GSEA
     tryCatch(
       {
+        res <- res[order(res$log2FoldChange, decreasing=TRUE),]
         original_gene_list <- res[genes[[n]],]$log2FoldChange
         names(original_gene_list) <- rownames(res[genes[[n]],])
         gene_list <- na.omit(original_gene_list)
