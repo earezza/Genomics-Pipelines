@@ -235,7 +235,7 @@ for (c in colnames(combs)){
   #invisible(capture.output(dev.off()))
   
   plt <- make_volcanoplot(res, combs[[c]][1], combs[[c]][2], opt$lfc)
-  invisible(capture.output(ggsave(filename=paste(output_prefix, '_DESeq2_', comparison, '_volcano.png', sep=''), plot=plt, dpi=320)))
+  invisible(capture.output(ggsave(filename=paste(output_prefix, 'Volcanoplot.png', sep=''), plot=plt, dpi=320)))
   
   #png(paste(output_prefix, 'res_genecount_minpadj.png', sep=''))
   #plotCounts(dds, gene=which.min(res$padj), intgroup="Condition")
