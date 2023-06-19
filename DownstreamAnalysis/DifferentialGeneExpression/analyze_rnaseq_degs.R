@@ -136,10 +136,13 @@ make_volcanoplot <- function(res, condition1, condition2, lfc_threshold, padj_th
 }
 
 
-# pheatmap(dds@assays@data$counts,
+# library(pheatmap)
+# genes_sig <- normalized_count_mtx# %>% 
+#   #dplyr::filter(gene %in% sigOE$gene)
+# 
+# pheatmap(normalized_count_mtx,
 #          cluster_rows = T,
 #          show_rownames = T,
-#          annotation = meta,
 #          border_color = NA,
 #          fontsize = 10,
 #          scale = "row",
@@ -344,7 +347,7 @@ for (c in colnames(combs)){
                                    ont=ont
           ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
           # Only output if there's results
-          if (!is.null(compGO)){
+          if ((!is.null(compGO)) & (dim(compGO@compareClusterResult)[1] > 0)){
             compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
             #plt <- dotplot(compGO, showCategory = 8, title = paste("GO -", n, sep=""))
             plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term", colour=colour, n=15)
@@ -372,7 +375,7 @@ for (c in colnames(combs)){
                                    pAdjustMethod="BH",
                                    organism=keggOrg
         ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-        if (!is.null(compKEGG)){
+        if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
           #plt <- dotplot(compKEGG, showCategory = 8, title = paste("KEGG -", n, sep=""))
           plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', n, sep=""), ylabel="KEGG Category", colour=colour, n=15)
           invisible(capture.output(ggsave(filename=paste(output_prefix, 'KEGG_annotation_', n, '.png', sep=''), plot=plt, dpi=320)))
@@ -407,7 +410,7 @@ for (c in colnames(combs)){
                         OrgDb = annoDb, 
                         pAdjustMethod = "BH"
           )
-          if (!is.null(gsea)){
+          if ((!is.null(gsea)) & (dim(gsea@result)[1] > 0)){
             gsea@result <- gsea@result[order(gsea@result$p.adjust, decreasing=FALSE),] # Sort by most signiicant
             gsea@result <- head(gsea@result, n=20) # retain only top to plot
             plt <- dotplot(gsea, showCategory = 20, title = paste("GSEA (", ont, ") - ", n, sep=""))
@@ -416,7 +419,7 @@ for (c in colnames(combs)){
             invisible(capture.output(ggsave(filename=paste(output_prefix, 'GSEA_', ont, '_', n, '.png', sep=''), plot=plt, dpi=320)))
             
             # Write annotations to csv
-            write.table(as.data.frame(compKEGG), file=paste(output_prefix, 'GSEA_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+            write.table(as.data.frame(gsea$result), file=paste(output_prefix, 'GSEA_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
           }
           
         }
