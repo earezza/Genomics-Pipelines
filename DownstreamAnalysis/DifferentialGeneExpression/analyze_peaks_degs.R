@@ -93,8 +93,7 @@ if (opt$organism == "mouse"){
   else{
     stop("Invalid choice of annotation database")
   }
-}
-else{
+} else{
   stop("Invalid choice of organism")
 }
 
@@ -378,10 +377,10 @@ for (p in names(unique_peaks)){
     tagMatrices[[p]] <- tagMatrix
     cat(dim(tagMatrix)[[1]], "peaks at promoter sites for", p, "\n")
     plt <- tagHeatmap(tagMatrix, 
-               xlab="bp at TSS", 
-               ylab="Peaks", 
-               title=paste(dim(tagMatrix)[[1]],'Peaks at Promoters', p, sep=" - "),
-               palette=if_else(conditions_colour_code[[p]] == "#00BFC4", 'Greens', 'Reds'), 
+                      xlab="bp at TSS", 
+                      ylab="Peaks", 
+                      title=paste(dim(tagMatrix)[[1]],'Peaks at Promoters', p, sep=" - "),
+                      palette=if_else(conditions_colour_code[[p]] == "#00BFC4", 'Greens', 'Reds'), 
     )
     invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_heatmap_', p, '_peaks.png', sep=''), plot=plt, dpi=320)))
   }
@@ -428,7 +427,7 @@ for (p in names(peaks)){
                                  pvalueCutoff=0.05,
                                  pAdjustMethod="BH",
                                  organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-      if (!is.null(compKEGG)){
+      if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
         #plt <- dotplot(compKEGG, showCategory = 10, title = "KEGG Pathway Enrichment Analysis")
         plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=conditions_colour_code[[p]], n=15)
         invisible(capture.output(ggsave(filename=paste(output_prefix, p, '_annotated_kegg_analysis.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
@@ -458,7 +457,7 @@ for (p in names(peaks)){
                                  pAdjustMethod="BH",
                                  readable=TRUE
         ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-        if (!is.null(compGO)){
+        if ((!is.null(compGO)) & (dim(compGO@compareClusterResult)[1] > 0)){
           compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
           #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
           plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=conditions_colour_code[[p]], n=15)
@@ -802,17 +801,17 @@ for (report in names(reports)){
   
   # Plot peaks gained/lost over genome between conditions
   tryCatch(
-      {
-        plt <- covplot(gpeaks, title=paste("Peaks over Genome", report, sep=' - '), weightCol='Fold') + 
-          scale_color_manual(values=rev(c(colours[1:length(unique_peaks)]))) + 
-          scale_fill_manual(values=rev(c(colours[1:length(unique_peaks)])))
-        invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_merged_peaks.png', sep=''), plot=plt, dpi=320)))
-        plt <- plt + facet_grid(chr ~ .id)
-        invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_peaks.png', sep=''), plot=plt, dpi=320)))
-        }, error=function(e){
-          message("No figure\n", e)
-      }
-    )
+    {
+      plt <- covplot(gpeaks, title=paste("Peaks over Genome", report, sep=' - '), weightCol='Fold') + 
+        scale_color_manual(values=rev(c(colours[1:length(unique_peaks)]))) + 
+        scale_fill_manual(values=rev(c(colours[1:length(unique_peaks)])))
+      invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_merged_peaks.png', sep=''), plot=plt, dpi=320)))
+      plt <- plt + facet_grid(chr ~ .id)
+      invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_peaks.png', sep=''), plot=plt, dpi=320)))
+    }, error=function(e){
+      message("No figure\n", e)
+    }
+  )
   
   # ========= Get Annotations =========
   peakAnnoList <- list()
@@ -829,7 +828,7 @@ for (report in names(reports)){
       
       # Write annotation to file
       write.table(anno, file=paste(output_prefix, 'annotated_', report, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-  
+      
       tryCatch(
         {
           genes <- list()
@@ -843,7 +842,7 @@ for (report in names(reports)){
                                      pAdjustMethod="BH",
                                      organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
           
-          if (!is.null(compKEGG)){
+          if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
             plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=conditions_colour_code[[p]], n=15)
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_kegg_analysis.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
             
@@ -876,7 +875,7 @@ for (report in names(reports)){
               
               # Write annotations to csv
               write.table(as.data.frame(compGO), file=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-              }
+            }
           },error = function(e)
           {
             message(e)
@@ -996,7 +995,7 @@ for (p in names(gpeaks)){
                                    pAdjustMethod="BH",
                                    organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
         
-        if (!is.null(compKEGG)){
+        if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
           plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=conditions_colour_code[[p]], n=15)
           invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_kegg_analysis.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
           
@@ -1021,7 +1020,7 @@ for (p in names(gpeaks)){
                                    readable=TRUE
           ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
           
-          if (!is.null(compGO)){
+          if ((!is.null(compGO)) & (dim(compGO@compareClusterResult)[1] > 0)){
             compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
             #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
             plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=conditions_colour_code[[p]], n=15)
