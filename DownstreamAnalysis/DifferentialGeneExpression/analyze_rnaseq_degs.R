@@ -135,19 +135,51 @@ make_volcanoplot <- function(res, condition1, condition2, lfc_threshold, padj_th
   return(plt)
 }
 
+make_pheatmapplot <- function(anno, res, colour="PiYG", num_terms=20, num_genes=40, lfc=0.6, dendro=TRUE, sort_genes=TRUE, title="", xlabel="Gene", ylabel="Term"){
 
-# library(pheatmap)
-# genes_sig <- normalized_count_mtx# %>% 
-#   #dplyr::filter(gene %in% sigOE$gene)
-# 
-# pheatmap(normalized_count_mtx,
-#          cluster_rows = T,
-#          show_rownames = T,
-#          border_color = NA,
-#          fontsize = 10,
-#          scale = "row",
-#          fontsize_row = 8,
-#          height = 20)
+  # colour should be "Reds", "Greens", "Blues", or "PiYG"
+  if ("ONTOLOGY" %in% colnames(anno)){
+    anno$Description <- paste(anno$ONTOLOGY, anno$Description, sep=' - ')
+  }
+  
+  # Take top n terms (most significant, already sorted by padj)
+  df <- head(anno[order(anno$p.adjust, decreasing=FALSE), ], n=num_terms)
+
+  # Create dataframe (matrix) of annotation terms vs genes with gene's associated log2FoldChange
+  d <- data.frame()
+  for (a in df$Description){
+    gene_group <- strsplit(df[df$Description == a, ]$geneID, '/')[[1]]
+    d[gene_group, a] <- res[gene_group, ]$log2FoldChange
+  }
+  # Sort by genes instead of by term (i.e. number of times gene found in all top terms)
+  if (sort_genes){
+    d <- d[names(sort(rowSums(is.na(d)))), ]
+    xlabel <- paste(xlabel, "(Most Frequent in Top Terms)")
+  }
+  # Set NA to 0
+  d[is.na(d)] <- 0
+  
+  # Plot
+  setHook("grid.newpage", function() pushViewport(viewport(x=0,y=0.05,width=0.95, height=0.95, name="vp", just=c("left","bottom"))), action="prepend")
+  pheatmap(t(head(d, n=num_genes)), 
+                  border_color = "grey90",
+                  color = colorRampPalette(brewer.pal(n = 11, name = colour))(100), # "Reds, Greens, Blues, RdYlGn for DEGs
+                  fontsize_row = 8,
+                  fontsize_col = 8,
+                  na_col = "white",
+                  breaks = seq( -round(2^lfc), round(2^lfc), length.out = 101),
+                  cluster_rows = dendro,
+                  cluster_cols = dendro,
+                  main = title,
+  ) 
+  setHook("grid.newpage", NULL, "replace")
+  grid.text("log2FoldChange", x=0.95, y=0.90, gp=gpar(fontsize=10))
+  grid.text(xlabel, y=0.01, gp=gpar(fontsize=16))
+  grid.text(ylabel, x=1, rot=270, gp=gpar(fontsize=16))
+  plt <- grid.grab()
+  
+  return(plt)
+}
 
 
 
