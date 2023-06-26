@@ -21,6 +21,9 @@ suppressWarnings(suppressPackageStartupMessages({
   library(org.Hs.eg.db)
   library(org.Mm.eg.db)
   library(org.Rn.eg.db)
+  library(RColorBrewer)
+  library(pheatmap)
+  library(grid)
   library(optparse)
 }))
 
@@ -150,8 +153,8 @@ make_heatmapplot <- function(res, condition1, condition2, n = 50){
   return(plt)
 }
 
-make_pheatmapplot <- function(anno, res, colour="PiYG", num_terms=20, num_genes=40, lfc=0.6, dendro=TRUE, sort_genes=TRUE, title="", xlabel="Gene", ylabel="Term"){
-
+make_pheatmapplot <- function(anno, res, anno_type="GO", organism='mouse', heat_colour="PiYG", num_terms=25, num_genes=50, lfc=0.6, dendro=TRUE, sort_genes=TRUE, title="", xlabel="Gene", ylabel="Term"){
+  
   # colour should be "Reds", "Greens", "Blues", or "PiYG"
   if ("ONTOLOGY" %in% colnames(anno)){
     anno$Description <- paste(anno$ONTOLOGY, anno$Description, sep=' - ')
@@ -159,11 +162,21 @@ make_pheatmapplot <- function(anno, res, colour="PiYG", num_terms=20, num_genes=
   
   # Take top n terms (most significant, already sorted by padj)
   df <- head(anno[order(anno$p.adjust, decreasing=FALSE), ], n=num_terms)
-
+  
   # Create dataframe (matrix) of annotation terms vs genes with gene's associated log2FoldChange
   d <- data.frame()
   for (a in df$Description){
     gene_group <- strsplit(df[df$Description == a, ]$geneID, '/')[[1]]
+    # For KEGG to convert EntrezID to gene Symbol
+    if (anno_type == "KEGG"){
+      if (tolower(organism) == "human"){
+        gene_group <- mapIds(org.Hs.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
+      }else if (tolower(organism) == "mouse"){
+        gene_group <- mapIds(org.Mm.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
+      }else if (tolower(organism) == "rat"){
+        gene_group <- mapIds(org.Rn.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
+      }
+    }
     d[gene_group, a] <- res[gene_group, ]$log2FoldChange
   }
   # Sort by genes instead of by term (i.e. number of times gene found in all top terms)
@@ -174,23 +187,33 @@ make_pheatmapplot <- function(anno, res, colour="PiYG", num_terms=20, num_genes=
   # Set NA to 0
   d[is.na(d)] <- 0
   
+  range_max <- round(max(apply(d, 2, max)))
+  range_min <- round(min(apply(d, 2, min)))
+  #breaks <- seq( -round(2^lfc), round(2^lfc), length.out = 101)
+  breaks <- seq( -abs((max(range_min, -round(2^lfc)))), min(range_max, round(2^lfc)), length.out = 101)
+  if (range_max == 0){
+    color <- rev(colorRampPalette(brewer.pal(n = 11, name = heat_colour))(100))
+  }else{
+    color <- colorRampPalette(brewer.pal(n = 11, name = heat_colour))(100)
+  }
+  
   # Plot
   setHook("grid.newpage", function() pushViewport(viewport(x=0,y=0.05,width=0.95, height=0.95, name="vp", just=c("left","bottom"))), action="prepend")
   pheatmap(t(head(d, n=num_genes)), 
-                  border_color = "grey90",
-                  color = colorRampPalette(brewer.pal(n = 11, name = colour))(100), # "Reds, Greens, Blues, RdYlGn for DEGs
-                  fontsize_row = 8,
-                  fontsize_col = 8,
-                  na_col = "white",
-                  breaks = seq( -round(2^lfc), round(2^lfc), length.out = 101),
-                  cluster_rows = dendro,
-                  cluster_cols = dendro,
-                  main = title,
+           border_color = "grey90",
+           color = color, # "Reds, Greens, Blues, RdYlGn for DEGs
+           fontsize_row = 5,
+           fontsize_col = 5,
+           na_col = "white",
+           breaks = breaks,
+           cluster_rows = dendro,
+           cluster_cols = dendro,
+           main = title,
   ) 
   setHook("grid.newpage", NULL, "replace")
-  grid.text("log2FoldChange", x=0.95, y=0.90, gp=gpar(fontsize=10))
-  grid.text(xlabel, y=0.01, gp=gpar(fontsize=16))
-  grid.text(ylabel, x=1, rot=270, gp=gpar(fontsize=16))
+  grid.text("log2FoldChange", x=0.95, y=0.875, gp=gpar(fontsize=8))
+  grid.text(xlabel, y=0, gp=gpar(fontsize=14))
+  grid.text(ylabel, x=1, y=0.35,  rot=270, gp=gpar(fontsize=14))
   plt <- grid.grab()
   
   return(plt)
@@ -458,6 +481,10 @@ for (c in colnames(combs)){
             # Write annotations to csv
             write.table(as.data.frame(compGO), file=paste(output_prefix, 'GO_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
             
+            plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term")
+            invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_', ont, '_', n, '_pheatmap_by_gene.png', sep=''), plot=plt, dpi=320)))
+            plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term")
+            invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_', ont, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
           }
           
         }
@@ -485,6 +512,11 @@ for (c in colnames(combs)){
           
           # Write annotations to csv
           write.table(as.data.frame(compKEGG), file=paste(output_prefix, 'KEGG_annotation_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+          
+          plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
+          invisible(capture.output(ggsave(filename=paste(output_prefix, 'KEGG_annotation_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
+          plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
+          invisible(capture.output(ggsave(filename=paste(output_prefix, 'KEGG_annotation_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
         }
       },error = function(e)
       {
@@ -523,6 +555,11 @@ for (c in colnames(combs)){
             
             # Write annotations to csv
             write.table(as.data.frame(gsea$result), file=paste(output_prefix, 'GSEA_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+            
+            plt <- make_pheatmapplot(df, res, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", heat_colour=heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE)
+            invisible(capture.output(ggsave(filename=paste(output_prefix, 'GSEA_', ont, '_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
+            plt <- make_pheatmapplot(df, res, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", heat_colour=heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE)
+            invisible(capture.output(ggsave(filename=paste(output_prefix, 'GSEA_', ont, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
           }
           
         }
