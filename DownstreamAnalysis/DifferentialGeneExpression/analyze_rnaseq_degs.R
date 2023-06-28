@@ -191,11 +191,12 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", organism='mouse', heat_
   range_max <- round(max(apply(d, 2, max)))
   range_min <- round(min(apply(d, 2, min)))
   #breaks <- seq( -round(2^lfc), round(2^lfc), length.out = 101)
-  breaks <- seq( -abs((max(range_min, -round(2^lfc)))), min(range_max, round(2^lfc)), length.out = 101)
+  breaks <- seq( -abs((max(range_min, -round(lfc)))), min(range_max, round(lfc)), length.out = 101)
+  #breaks <- seq( -abs((max(range_min, -round(2^lfc)))), min(range_max, round(2^lfc)), length.out = 101)
   if (range_max == 0){
-    color <- rev(colorRampPalette(brewer.pal(n = 11, name = heat_colour))(100))
+    color <- rev(colorRampPalette(brewer.pal(n = 11, name = heat_colour))(101))
   }else{
-    color <- colorRampPalette(brewer.pal(n = 11, name = heat_colour))(100)
+    color <- colorRampPalette(brewer.pal(n = 11, name = heat_colour))(101)
   }
   
   # Plot
