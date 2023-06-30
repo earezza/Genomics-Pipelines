@@ -453,10 +453,13 @@ for (c in colnames(combs)){
     
     if (n == combs[[c]][1]){
       colour <- 'green'
+      heat_colour <- "Greens"
     }else if (n== combs[[c]][2]){
       colour <- 'red'
+      heat_colour <- "Reds"
     }else{
       colour <- "#56B1F7"
+      heat_colour <- "PiYG"
     }
     
     # GO Annotation
