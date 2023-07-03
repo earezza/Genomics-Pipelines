@@ -23,6 +23,9 @@ suppressWarnings(suppressPackageStartupMessages({
   library(VennDiagram)
   library(eulerr)
   require(gridExtra)
+  library(RColorBrewer)
+  library(pheatmap)
+  library(grid)
   library(optparse)
 }))
 
@@ -32,7 +35,8 @@ option_list = list(
   make_option(c("-s", "--fragmentsizes"), type="character", default=NULL, help="File with bam fragment sizes generated from bamPEFragmentSize, otherwise determined via vulcan", metavar="character"),
   make_option(c("-o", "--organism"), type="character", default="mouse", help="Organism to annotate genes at peaks, human (hg38) or mouse (mm10, default) or rat (rn6)", metavar="character"),
   make_option(c("-r", "--result_dir"), type="character", default="Peaks_Analysis/", help="Directory name for saving output results", metavar="character"),
-  make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character")
+  make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
+  make_option(c("-a", "--add_replicates"), action="store_true", type="logical", default=FALSE, help="Flag to add all peaks together from replicates instead of only taking their consensuspeaks", metavar="character"),
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -320,6 +324,11 @@ for (c in unique(dbObj$samples$Condition)) {
 invisible(capture.output(dev.off()))
 
 # ========= Get Consensus Peaks =========
+if (opt$add_replicates == TRUE){
+  rep_overlaps <- 1 # add all peaks from replicates
+}else{
+  rep_overlaps <- 2 # add only consensus peaks (peaks must be in at least 2 replicates)
+}
 # If using peaks from multiple peak callers (defined in Factor column of samplesheet)
 if (length(unique(dbObj$samples$Factor)) > 1){
   # Get consensus overlaps in peaksets for each condition (peaks must be overlapping in 2/3rds of peak callers)
@@ -328,7 +337,7 @@ if (length(unique(dbObj$samples$Factor)) > 1){
   dbObj.caller_consensus <- dba(dbObj.total, mask=dbObj.total$masks$Consensus, minOverlap=1)
   if (length(unique(dbObj$samples$Replicate)) > 1){
     # Get consensus between replicates for each condition (peaks must be overlapping in at least 2 replicates)
-    dbObj.final <- dba.peakset(dbObj.caller_consensus, consensus=c(DBA_CONDITION), minOverlap=2)
+    dbObj.final <- dba.peakset(dbObj.caller_consensus, consensus=c(DBA_CONDITION), minOverlap=rep_overlaps)
     maskname <- names(dbObj.final$masks)[grepl('Replicate.1-2', names(dbObj.final$masks))]
     # resulting consensus between replicates
     if (length(maskname) == 1){
@@ -341,7 +350,7 @@ if (length(unique(dbObj$samples$Factor)) > 1){
   }
 }else{
   # consensus between replicates
-  dbObj.total <- dba.peakset(dbObj.noblacklist, consensus=c(DBA_CONDITION), minOverlap=2)
+  dbObj.total <- dba.peakset(dbObj.noblacklist, consensus=c(DBA_CONDITION), minOverlap=rep_overlaps)
   maskname <- names(dbObj.total$masks)[grepl('Replicate.1-2', names(dbObj.total$masks))]
   if (length(maskname) == 1){
     dbObj.consensus <- dba(dbObj.total, mask=dbObj.total$masks[[maskname]], minOverlap=1)
