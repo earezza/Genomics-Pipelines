@@ -265,12 +265,14 @@ output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
 
 # Average for each sample
 fragment_size <- 1:length(read.csv(samplesheet)$SampleID)
+frag_sizes <- list()
 for (b in unique(read.csv(samplesheet)$Condition)){
   for (r in unique(read.csv(samplesheet)$Replicate)){
     png(paste(output_prefix, 'fragment_length_', b, '-', r, '.png', sep=""))
     mean_fragment_size <- average_fragment_length(read.csv(samplesheet)$bamReads[[which(read.csv(samplesheet)$Condition == b)[1]]], plot=TRUE)
     for (i in which(read.csv(samplesheet)$Condition == b & read.csv(samplesheet)$Replicate == r)){
       fragment_size[i] <- mean_fragment_size
+      frag_sizes[[b]] <- mean_fragment_size
     }
     invisible(capture.output(dev.off())) 
   }
@@ -385,6 +387,26 @@ if (length(unique(dbObj$samples$Factor)) > 1){
   }
 }
 dbObj.consensus
+
+
+
+# Add fragment sizes to new objects (helps to later run affinity analysis)
+for (c in unique(dbObj$samples$Condition)){
+  for (i in 1:length(dbObj.caller_consensus$mask[[c]])){
+    if (dbObj.caller_consensus$mask[[c]][[i]]){
+      dbObj.caller_consensus$config$fragmentSize[i] <- frag_sizes[[c]]
+    }
+  }
+}
+for (c in unique(dbObj$samples$Condition)){
+  for (i in 1:length(dbObj.consensus$mask[[c]])){
+    if (dbObj.consensus$mask[[c]][[i]]){
+      dbObj.consensus$config$fragmentSize[i] <- frag_sizes[[c]]
+    }
+  }
+}
+
+
 
 # Re-sort colours if condition orders changed after consensus (occurs when one condition has only 1 replicate, consensus must be added manually...)
 # dbObj.consensus <- dba(dbObj.final, mask=(dbObj.final$masks$`Replicate.1-2` | dbObj.final$masks$CONDITION_WITH_ONE_REPLICATE), minOverlap=1)
@@ -518,6 +540,9 @@ for (p in names(peaks)){
 # ========= Get Annotations =========
 peakAnnoList <- list()
 for (p in names(peaks)){
+  colour <- conditions_colour_code[[p]]
+  heat_colour <- conditions_colour_code[[p]]
+  
   cat("\nAnnotating", p)
   anno <- annotatePeak(peaks[[p]], 
                        TxDb=txdb,
@@ -545,7 +570,7 @@ for (p in names(peaks)){
                                  organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
       if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
         #plt <- dotplot(compKEGG, showCategory = 10, title = "KEGG Pathway Enrichment Analysis")
-        plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=conditions_colour_code[[p]], n=15)
+        plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
         invisible(capture.output(ggsave(filename=paste(output_prefix, p, '_annotated_kegg_analysis.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
         
         # Write annotations to csv
@@ -577,8 +602,8 @@ for (p in names(peaks)){
         if ((!is.null(compGO)) & (dim(compGO@compareClusterResult)[1] > 0)){
           compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
           #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
-          plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=conditions_colour_code[[p]], n=15)
-          invisible(capture.output(ggsave(filename=paste(output_prefix, '_', p, '_annotated_go_analysis', '_', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+          plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=colour, n=15)
+          invisible(capture.output(ggsave(filename=paste(output_prefix, '_', p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
           
           # Write annotations to csv
           write.table(as.data.frame(compGO), file=paste(output_prefix, '_', p, 'annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
@@ -602,8 +627,15 @@ invisible(capture.output(gc()))
 
 # ========= END OF OCCUPANCY ANALYSIS =========
 
-
-
+# Free up memory
+rm(dbObj.final)
+rm(dbObj.total)
+rm(plt)
+rm(anno)
+rm(peakAnnoList)
+rm(compKEGG)
+rm(compGO)
+invisible(capture.output(gc()))
 
 # ========= START OF AFFINITY ANALYSIS =========
 # The consensus peaks determined above are used here
@@ -636,7 +668,11 @@ output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
 # ========= Count Reads from bams for All Relevant Consensus Peaks =========
 #(recommend to use ‘summits=100‘ for ATAC-seq).
 if (length(unique(dbObj$samples$Factor)) > 1){
-  
+  for (n in names(dbObj.caller_consensus$config)){
+    if (n != 'fragmentSize'){
+      dbObj.caller_consensus$config[[n]] <- unique(dbObj.caller_consensus$config[[n]])
+    }
+  }
   dbObj.counted <- dba.count(dbObj.caller_consensus, bUseSummarizeOverlaps=TRUE, 
                              peaks=consensus_peaks, 
                              minOverlap=1, 
@@ -651,6 +687,11 @@ if (length(unique(dbObj$samples$Factor)) > 1){
                              #bParallel=dbObj.noblacklist$config$RunParallel
   )
 }else{
+  for (n in names(dbObj.noblacklist$config)){
+    if (n != 'fragmentSize'){
+      dbObj.noblacklist$config[[n]] <- unique(dbObj.noblacklist$config[[n]])
+    }
+  }
   dbObj.counted <- dba.count(dbObj.noblacklist, bUseSummarizeOverlaps=TRUE, 
                              peaks=consensus_peaks, 
                              minOverlap=1, 
@@ -687,7 +728,6 @@ tryCatch(
                                 libFun=mean, bRetrieve=FALSE)
   }
 )
-
 cat("After normalizing:\n")
 dbObj.norm
 
@@ -948,6 +988,9 @@ for (report in names(reports)){
   # ========= Get Annotations =========
   peakAnnoList <- list()
   for (p in names(gpeaks)){
+    colour <- conditions_colour_code[[p]]
+    heat_colour <- "PiYG"
+    
     if (length(gpeaks[[p]]) > 0){
       cat("\nAnnotating", p, "\n")
       anno <- annotatePeak(gpeaks[[p]], 
@@ -980,6 +1023,26 @@ for (report in names(reports)){
             
             # Write annotations to csv
             write.table(as.data.frame(compKEGG), file=paste(output_prefix, report, '_', p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+            
+            # res <- as.data.frame(reports[[report]])
+            # names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
+            # names(res)[names(res) == 'FDR'] <- 'p.adjust'
+            # 
+            # if (tolower(opt$organism) == "human"){
+            #   row.names(res) <- mapIds(org.Hs.eg.db, keys = genes[[p]], column = "SYMBOL", keytype = "ENTREZID")
+            # }else if (tolower(opt$organism) == "mouse"){
+            #   row.names(res) <- mapIds(org.Mm.eg.db, keys = genes[[p]], column = "SYMBOL", keytype = "ENTREZID")
+            # }else if (tolower(opt$organism) == "rat"){
+            #   row.names(res) <- mapIds(org.Rn.eg.db, keys = genes, column = "SYMBOL", keytype = "ENTREZID")
+            # }
+            # 
+            # plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=0.6, dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
+            # invisible(capture.output(ggsave(filename=paste(output_prefix, 'KEGG_annotation_', p, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
+            # remove(plt)
+            # plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=0.6, dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
+            # invisible(capture.output(ggsave(filename=paste(output_prefix, 'KEGG_annotation_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+            # remove(plt)
+            
           }
         },error = function(e)
         {
@@ -1004,10 +1067,17 @@ for (report in names(reports)){
               compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
               #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
               plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=conditions_colour_code[[p]], n=15)
-              invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_go_analysis', '_', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+              invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
               
               # Write annotations to csv
               write.table(as.data.frame(compGO), file=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+              
+              # plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=0.6, dendro=TRUE, sort_genes=TRUE, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term")
+              # invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_', ont, '_', p, '_pheatmap_by_gene.png', sep=''), plot=plt, dpi=320)))
+              # remove(plt)
+              # plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=0.6, dendro=TRUE, sort_genes=FALSE, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term")
+              # invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_', ont, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+              # remove(plt)
             }
           },error = function(e)
           {
@@ -1160,7 +1230,7 @@ for (p in names(gpeaks)){
             compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
             #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
             plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=conditions_colour_code[[p]], n=15)
-            invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_go_analysis', '_', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+            invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
             
             # Write annotations to csv
             write.table(as.data.frame(compGO), file=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
