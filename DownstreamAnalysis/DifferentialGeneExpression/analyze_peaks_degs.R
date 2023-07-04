@@ -45,6 +45,7 @@ cat("Command-line options:\n")
 for (i in which(names(opt) != "help")) {
   cat(names(opt)[i], '=', paste(opt)[i], "\n")
 }
+
 if (str_sub(opt$result_dir, -1) != "/"){
   opt$result_dir = cat(opt$result_dir, '/', sep='')
 }
@@ -52,7 +53,7 @@ if (!file.exists(opt$file)){
   cat(opt$file, "does not exist...check path and current working directory.")
   q()
 }
-if (opt$organism != 'mouse' | opt$organism != 'human' | opt$organism != 'rat'){
+if (!(opt$organism %in% c('mouse', 'human', 'rat'))){
   cat(opt$organism, "not a valid choice. Must be mouse, human, or rat")
   q()
 }
@@ -274,6 +275,7 @@ for (b in unique(read.csv(samplesheet)$Condition)){
     invisible(capture.output(dev.off())) 
   }
 }
+invisible(capture.output(gc())) 
 #fragment_size <- 125 # default
 
 dbObj <- dba(sampleSheet=samplesheet, minOverlap=1,
@@ -421,6 +423,7 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
                          cat.dist = c(0,0))
   grid.arrange(gTree(children=g), top="Binding Site Overlaps", bottom=gsub('/', '', opt$result_dir))
   invisible(capture.output(dev.off()))
+  rm(g)
 }else if (length(unique(dba.show(dbObj.consensus)$Condition)) == 3){
   e = c(
     "A"=length(unique_peaks[[names(unique_peaks)[1]]]), 
@@ -442,6 +445,7 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
   plt = plot(euler(e), main=gsub('/', '', opt$result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
   invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_consensus_peaks.png', sep=''), plot=plt)))
   invisible(capture.output(dev.off()))
+  rm(e)
 }
 invisible(capture.output(gc()))
 
@@ -468,6 +472,7 @@ plt <- covplot(c(unique_peaks, shared_peaks), title="Peaks over Genome") +
 invisible(capture.output(ggsave(filename=paste(output_prefix, 'genome_peaks.png', sep=''), plot=plt, dpi=320)))
 plt <- plt + facet_grid(chr ~ .id)
 invisible(capture.output(ggsave(filename=paste(output_prefix, 'genome_peaks_split.png', sep=''), plot=plt, dpi=320)))
+rm(plt)
 invisible(capture.output(gc()))
 
 # Plot peaks related to TSS sites
@@ -476,6 +481,7 @@ for (p in names(unique_peaks)){
   tagMatrix <- getTagMatrix(unique_peaks[[p]], windows=promoters)
   if (length(tagMatrix) == 0){
     cat("No peaks at promoter sites for", p, "\n")
+    rm(tagMatrix)
     #break
   }else{
     tagMatrices[[p]] <- tagMatrix
@@ -487,16 +493,19 @@ for (p in names(unique_peaks)){
                       palette=if_else(conditions_colour_code[[p]] == "#00BFC4", 'Greens', 'Reds'), 
     )
     invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_heatmap_', p, '_peaks.png', sep=''), plot=plt, dpi=320)))
+    rm(tagMatrix)
+    invisible(capture.output(gc()))
   }
 }
 invisible(capture.output(gc()))
 
 # Plot TSS profile of peaks
-plt <- plotAvgProf(tagMatrices, xlim=c(-3000, 3000), conf=0.95, resample=1000) +
+plt <- plotAvgProf(tagMatrices, xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
   scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
   scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
 invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_profile_peaks.png', sep=''), plot=plt, dpi=320)))
 rm(tagMatrices)
+rm(plt)
 invisible(capture.output(gc()))
 
 peaks <- c(unique_peaks, shared_peaks)
