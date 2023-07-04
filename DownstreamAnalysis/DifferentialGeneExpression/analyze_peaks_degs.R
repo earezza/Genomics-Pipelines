@@ -2,19 +2,19 @@
 suppressWarnings(suppressPackageStartupMessages({
   library(DiffBind)
   library(tidyverse)
-  #library(profileplyr)
+  ##library(profileplyr)
   library(ChIPseeker)
-  library(TxDb.Mmusculus.UCSC.mm10.knownGene)
-  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
-  library(TxDb.Rnorvegicus.UCSC.rn6.refGene)
-  #library(ensembldb)
-  library(EnsDb.Hsapiens.v86)
-  library(EnsDb.Mmusculus.v79)
-  library(EnsDb.Rnorvegicus.v79)
-  library(org.Hs.eg.db)
-  library(org.Mm.eg.db)
-  library(org.Rn.eg.db)
-  #library(reshape2)
+  #library(TxDb.Mmusculus.UCSC.mm10.knownGene)
+  #library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+  #library(TxDb.Rnorvegicus.UCSC.rn6.refGene)
+  ##library(ensembldb)
+  #library(EnsDb.Hsapiens.v86)
+  #library(EnsDb.Mmusculus.v79)
+  #library(EnsDb.Rnorvegicus.v79)
+  #library(org.Hs.eg.db)
+  #library(org.Mm.eg.db)
+  #library(org.Rn.eg.db)
+  ##library(reshape2)
   library(ReactomePA)
   library(clusterProfiler)
   library(vulcan)
@@ -32,11 +32,11 @@ suppressWarnings(suppressPackageStartupMessages({
 # ======= Get command-line optional arguments =======
 option_list = list(
   make_option(c("-f", "--file"), type="character", default=NULL, help="DiffBind-formatted sample sheet", metavar="character"),
-  make_option(c("-s", "--fragmentsizes"), type="character", default=NULL, help="File with bam fragment sizes generated from bamPEFragmentSize, otherwise determined via vulcan", metavar="character"),
+  make_option(c("-s", "--fragmentsizes"), type="character", default=NULL, help="File with bam fragment sizes generated from bamPEFragmentSize, otherwise determined automatically via vulcan", metavar="character"),
   make_option(c("-o", "--organism"), type="character", default="mouse", help="Organism to annotate genes at peaks, human (hg38) or mouse (mm10, default) or rat (rn6)", metavar="character"),
   make_option(c("-r", "--result_dir"), type="character", default="Peaks_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
-  make_option(c("-a", "--add_replicates"), action="store_true", type="logical", default=FALSE, help="Flag to add all peaks together from replicates instead of only taking their consensuspeaks", metavar="character"),
+  make_option(c("-a", "--add_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add all peaks together from replicates instead of only taking their consensuspeaks", metavar="character")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -44,6 +44,17 @@ opt = parse_args(opt_parser);
 cat("Command-line options:\n")
 for (i in which(names(opt) != "help")) {
   cat(names(opt)[i], '=', paste(opt)[i], "\n")
+}
+if (str_sub(opt$result_dir, -1) != "/"){
+  opt$result_dir = cat(opt$result_dir, '/', sep='')
+}
+if (!file.exists(opt$file)){
+  cat(opt$file, "does not exist...check path and current working directory.")
+  q()
+}
+if (opt$organism != 'mouse' | opt$organism != 'human' | opt$organism != 'rat'){
+  cat(opt$organism, "not a valid choice. Must be mouse, human, or rat")
+  q()
 }
 
 # ========= SETUP RUN AND VARIABLES =========
@@ -62,11 +73,14 @@ if (is.null(opt$fragmentsizes)){
 
 # ========= Get database references for annotations =========
 if (opt$organism == "mouse"){
+  library(TxDb.Mmusculus.UCSC.mm10.knownGene)
+  library(org.Mm.eg.db)
   annoDb <- "org.Mm.eg.db"
   keggOrg <- "mmu"
   if (opt$database == "ucsc"){
     txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene
   }else if (opt$database == "ensemble"){
+    library(EnsDb.Mmusculus.v79)
     txdb <- EnsDb.Mmusculus.v79
     seqlevelsStyle(txdb) <- "UCSC" # format ensembl genes using UCSC style
   }
@@ -74,11 +88,14 @@ if (opt$organism == "mouse"){
     stop("Invalid choice of annotation database")
   }
 } else if (opt$organism == "human"){
+  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+  library(org.Hs.eg.db)
   annoDb <- "org.Hs.eg.db"
   keggOrg <- "hsa"
   if (opt$database == "ucsc"){
     txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
   }else if (opt$database == "ensemble"){
+    library(EnsDb.Hsapiens.v86)
     txdb <- EnsDb.Hsapiens.v86
     seqlevelsStyle(txdb) <- "UCSC" # format ensembl genes using UCSC style
   } 
@@ -86,11 +103,14 @@ if (opt$organism == "mouse"){
     stop("Invalid choice of annotation database")
   }
 } else if (opt$organism == "rat"){
+  library(TxDb.Rnorvegicus.UCSC.rn6.refGene)
+  library(org.Rn.eg.db)
   annoDb <- "org.Rn.eg.db"
   keggOrg <- "rno"
   if (opt$database == "ucsc"){
     txdb <- TxDb.Rnorvegicus.UCSC.rn6.refGene
   }else if (opt$database == "ensemble"){
+    library(EnsDb.Rnorvegicus.v79)
     txdb <- EnsDb.Rnorvegicus.v79
     seqlevelsStyle(txdb) <- "UCSC" # format ensembl genes using UCSC style
   } 
@@ -254,7 +274,7 @@ for (b in unique(read.csv(samplesheet)$Condition)){
     invisible(capture.output(dev.off())) 
   }
 }
-fragment_size <- 125 # default
+#fragment_size <- 125 # default
 
 dbObj <- dba(sampleSheet=samplesheet, minOverlap=1,
              config=data.frame(th=0.05,
@@ -279,6 +299,7 @@ for (i in 1:length(unique(dbObj$samples$Condition))) {
 png(paste(output_prefix, 'raw_heatmap.png', sep=""))
 dba.plotHeatmap(dbObj)
 invisible(capture.output(dev.off()))
+invisible(capture.output(gc()))
 
 # Show overlap rates for each condition
 cat("Peak overlaps in at least (1, 2, ...) replicates/callers for each condition:\n")
@@ -295,6 +316,7 @@ for (c in unique(dbObj$samples$Condition)) {
   title(main=c("Overlap Rate", c))
 }
 invisible(capture.output(dev.off()))
+invisible(capture.output(gc()))
 
 # ========= Remove Blacklisted Regions =========
 # Remove blacklisted regions to ignore irrelevant peaks (blacklisted regions from ENCODE, genome selected is based on prediction from bam files)
@@ -306,6 +328,7 @@ dbObj.noblacklist
 png(paste(output_prefix, 'raw_noblacklist_heatmap.png', sep=""))
 dba.plotHeatmap(dbObj.noblacklist)
 invisible(capture.output(dev.off()))
+invisible(capture.output(gc()))
 
 # Show overlap rates for each condition
 cat("Peak overlaps in at least (1, 2, ...) replicates/callers for each condition:\n")
@@ -322,6 +345,7 @@ for (c in unique(dbObj$samples$Condition)) {
   title(main=c("Overlap Rate", c))
 }
 invisible(capture.output(dev.off()))
+invisible(capture.output(gc()))
 
 # ========= Get Consensus Peaks =========
 if (opt$add_replicates == TRUE){
@@ -419,11 +443,13 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
   invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_consensus_peaks.png', sep=''), plot=plt)))
   invisible(capture.output(dev.off()))
 }
+invisible(capture.output(gc()))
 
 
 png(paste(output_prefix, 'raw_consensus_heatmap.png', sep=""))
 dba.plotHeatmap(dbObj.consensus)
 invisible(capture.output(dev.off()))
+invisible(capture.output(gc()))
 
 png(paste(output_prefix, 'raw_pca_condition.png', sep=""))
 dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours))
@@ -433,6 +459,7 @@ if(length(unique(dbObj$samples$Factor)) > 1){
   dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_FACTOR, label=DBA_ID)
   invisible(capture.output(dev.off()))
 }
+invisible(capture.output(gc()))
 
 # Plot peaks over genome
 plt <- covplot(c(unique_peaks, shared_peaks), title="Peaks over Genome") + 
@@ -441,6 +468,7 @@ plt <- covplot(c(unique_peaks, shared_peaks), title="Peaks over Genome") +
 invisible(capture.output(ggsave(filename=paste(output_prefix, 'genome_peaks.png', sep=''), plot=plt, dpi=320)))
 plt <- plt + facet_grid(chr ~ .id)
 invisible(capture.output(ggsave(filename=paste(output_prefix, 'genome_peaks_split.png', sep=''), plot=plt, dpi=320)))
+invisible(capture.output(gc()))
 
 # Plot peaks related to TSS sites
 tagMatrices <- list()
@@ -461,12 +489,15 @@ for (p in names(unique_peaks)){
     invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_heatmap_', p, '_peaks.png', sep=''), plot=plt, dpi=320)))
   }
 }
+invisible(capture.output(gc()))
 
 # Plot TSS profile of peaks
 plt <- plotAvgProf(tagMatrices, xlim=c(-3000, 3000), conf=0.95, resample=1000) +
   scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
   scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
 invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_profile_peaks.png', sep=''), plot=plt, dpi=320)))
+rm(tagMatrices)
+invisible(capture.output(gc()))
 
 peaks <- c(unique_peaks, shared_peaks)
 
@@ -516,6 +547,7 @@ for (p in names(peaks)){
       message(e)
     }
   )
+  invisible(capture.output(gc()))
   
   for (ont in c('ALL', 'CC', 'MF', 'BP')){
     tryCatch(
@@ -547,6 +579,7 @@ for (p in names(peaks)){
         message(e)
       }
     )
+    invisible(capture.output(gc()))
     
   }
 }
@@ -556,7 +589,7 @@ invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_
 
 plt <- plotDistToTSS(peakAnnoList)
 invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution.png', sep=''), plot=plt, dpi=320)))
-
+invisible(capture.output(gc()))
 
 # ========= END OF OCCUPANCY ANALYSIS =========
 
@@ -656,6 +689,7 @@ invisible(capture.output(dev.off()))
 png(paste(output_prefix, 'consensus_peaks_counted_normalized_pca.png', sep=''))
 dba.plotPCA(dbObj.norm, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours))
 invisible(capture.output(dev.off()))
+invisible(capture.output(gc()))
 
 # ========= Define contrasts between sample conditions (assumes 2 conditions) =========
 # Define design and contrasts explicitly
@@ -699,6 +733,7 @@ tryCatch(
     invisible(file.remove(paste(output_prefix, 'analyzed_venn.png', sep='')))
   }
 )
+invisible(capture.output(gc()))
 
 for (m in c(DBA_DESEQ2, DBA_EDGER)){
   
@@ -736,6 +771,8 @@ for (m in c(DBA_DESEQ2, DBA_EDGER)){
       invisible(file.remove(paste(output_prefix, 'analyzed_venn_', m, '.png', sep='')))
     }
   )
+  invisible(capture.output(gc()))
+  
   tryCatch(
     {
       png(paste(output_prefix, 'analyzed_volcano_', m, '.png', sep=''))
@@ -748,6 +785,8 @@ for (m in c(DBA_DESEQ2, DBA_EDGER)){
       invisible(file.remove(paste(output_prefix, 'analyzed_volcano_', m, '.png', sep='')))
     }
   )
+  invisible(capture.output(gc()))
+  
   tryCatch(
     {
       png(paste(output_prefix, 'analyzed_ma_', m, '.png', sep=''))
@@ -759,6 +798,8 @@ for (m in c(DBA_DESEQ2, DBA_EDGER)){
       invisible(file.remove(paste(output_prefix, 'analyzed_ma_', m, '.png', sep='')))
     }
   )
+  invisible(capture.output(gc()))
+  
   tryCatch(
     {
       png(paste(output_prefix, 'analyzed_box_', m, '.png', sep=''))
@@ -770,6 +811,8 @@ for (m in c(DBA_DESEQ2, DBA_EDGER)){
       invisible(file.remove(paste(output_prefix, 'analyzed_box_', m, '.png', sep='')))
     }
   )
+  invisible(capture.output(gc()))
+  
 }
 
 tryCatch(
@@ -795,6 +838,8 @@ tryCatch(
     invisible(file.remove(paste(output_prefix, 'analyzed_profile.png', sep='')))
   }
 )
+invisible(capture.output(gc()))
+
 
 # ========= Generate DE Analysis Reports =========
 reports <- list()
@@ -858,6 +903,7 @@ for (report in names(reports)){
       invisible(file.remove(paste(output_prefix, 'analyzed_profiles_', report,'.png', sep='')))
     }
   )
+  invisible(capture.output(gc()))
   
   gained <- out %>% 
     dplyr::filter(FDR < 0.05 & Fold > 0)
@@ -888,6 +934,7 @@ for (report in names(reports)){
       message("No figure\n", e)
     }
   )
+  invisible(capture.output(gc()))
   
   # ========= Get Annotations =========
   peakAnnoList <- list()
@@ -930,6 +977,7 @@ for (report in names(reports)){
           message(e)
         }
       )
+      invisible(capture.output(gc()))
       
       for (ont in c('ALL', 'CC', 'MF', 'BP')){
         tryCatch(
@@ -957,6 +1005,8 @@ for (report in names(reports)){
             message(e)
           }
         )
+        invisible(capture.output(gc()))
+        
       }
     }
     else{
@@ -970,7 +1020,7 @@ for (report in names(reports)){
   
   plt <- plotDistToTSS(peakAnnoList)
   invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
-  
+  invisible(capture.output(gc()))
 }
 
 
@@ -1040,7 +1090,7 @@ tryCatch(
     invisible(capture.output(dev.off()))
   }
 )
-
+invisible(capture.output(gc()))
 
 # ========= Get Annotations =========
 peakAnnoList <- list()
@@ -1083,6 +1133,7 @@ for (p in names(gpeaks)){
         message(e)
       }
     )
+    invisible(capture.output(gc()))
     
     for (ont in c('ALL', 'CC', 'MF', 'BP')){
       tryCatch(
@@ -1110,6 +1161,8 @@ for (p in names(gpeaks)){
           message(e)
         }
       )
+      invisible(capture.output(gc()))
+      
     }
   }
   else{
@@ -1122,5 +1175,6 @@ invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_
 
 plt <- plotDistToTSS(peakAnnoList)
 invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
+invisible(capture.output(gc()))
 
 cat('\nFINISHED!\n')
