@@ -967,6 +967,8 @@ for (report in names(reports)){
   names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
   names(res)[names(res) == 'FDR'] <- 'p.adjust'
   res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
+  res <- res[order(res$log2FoldChange, decreasing=TRUE), ]
+  
   write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   
   # Write DE result to bed files
