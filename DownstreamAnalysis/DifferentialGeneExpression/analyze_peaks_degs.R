@@ -571,7 +571,7 @@ for (p in names(peaks)){
       if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
         #plt <- dotplot(compKEGG, showCategory = 10, title = "KEGG Pathway Enrichment Analysis")
         plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
-        invisible(capture.output(ggsave(filename=paste(output_prefix, p, '_annotated_kegg_analysis.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+        invisible(capture.output(ggsave(filename=paste(output_prefix, p, '_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
         
         # Write annotations to csv
         write.table(as.data.frame(compKEGG), file=paste(output_prefix, p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
@@ -647,6 +647,28 @@ result_dir <- paste(opt$result_dir, 'Affinity_Analysis/', sep='')
 # Make new directory for analysis
 if (!file.exists(result_dir)) {
   dir.create(result_dir)
+}
+
+if (!file.exists(result_dir)) {
+  dir.create(paste(result_dir, 'DESeq2/', sep=''))
+}
+
+if (!file.exists(result_dir)) {
+  dir.create(paste(result_dir, 'edgeR/', sep=''))
+}
+
+change_dirs <- function(result_dir, samplesheet, to_swap){
+  if ((to_swap == DBA_DESEQ2) | (to_swap == 'DESeq2')){
+    output_prefix <- gsub('.csv', '_', paste(paste(result_dir, 'DESeq2/', sep=''), samplesheet, sep=""))
+    output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
+  }else if ((to_swap == DBA_DESEQ2) | (to_swap == 'DESeq2')){
+    output_prefix <- gsub('.csv', '_', paste(paste(result_dir, 'edgeR/', sep=''), samplesheet, sep=""))
+    output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
+  }else{
+    output_prefix <- gsub('.csv', '_', paste(paste(result_dir, sep=''), samplesheet, sep=""))
+    output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
+  }
+  return(output_prefix)
 }
 output_prefix <- gsub('.csv', '_', paste(paste(result_dir, sep=''), samplesheet, sep=""))
 output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
@@ -1019,7 +1041,7 @@ for (report in names(reports)){
           
           if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
             plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=conditions_colour_code[[p]], n=15)
-            invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_kegg_analysis.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+            invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
             
             # Write annotations to csv
             write.table(as.data.frame(compKEGG), file=paste(output_prefix, report, '_', p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
@@ -1202,7 +1224,7 @@ for (p in names(gpeaks)){
         
         if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
           plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=conditions_colour_code[[p]], n=15)
-          invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_kegg_analysis.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+          invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
           
           # Write annotations to csv
           write.table(as.data.frame(compKEGG), file=paste(output_prefix, report, '_', p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
