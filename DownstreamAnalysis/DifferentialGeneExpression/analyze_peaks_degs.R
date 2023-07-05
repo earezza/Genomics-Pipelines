@@ -648,30 +648,28 @@ result_dir <- paste(opt$result_dir, 'Affinity_Analysis/', sep='')
 if (!file.exists(result_dir)) {
   dir.create(result_dir)
 }
-
-if (!file.exists(result_dir)) {
+if (!file.exists(paste(result_dir, 'DESeq2/', sep=''))) {
   dir.create(paste(result_dir, 'DESeq2/', sep=''))
 }
-
-if (!file.exists(result_dir)) {
+if (!file.exists(paste(result_dir, 'edgeR/', sep=''))) {
   dir.create(paste(result_dir, 'edgeR/', sep=''))
 }
 
-change_dirs <- function(result_dir, samplesheet, to_swap){
+change_dirs <- function(res_dir, sheetname, to_swap){
   if ((to_swap == DBA_DESEQ2) | (to_swap == 'DESeq2')){
-    output_prefix <- gsub('.csv', '_', paste(paste(result_dir, 'DESeq2/', sep=''), samplesheet, sep=""))
-    output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
-  }else if ((to_swap == DBA_DESEQ2) | (to_swap == 'DESeq2')){
-    output_prefix <- gsub('.csv', '_', paste(paste(result_dir, 'edgeR/', sep=''), samplesheet, sep=""))
-    output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
+    prefix <- gsub('.csv', '_', paste(paste(res_dir, 'DESeq2/', sep=''), sheetname, sep=""))
+    prefix <- gsub("diffbind_samplesheet_", "", prefix)
+  }else if ((to_swap == DBA_EDGER) | (to_swap == 'edgeR')){
+    prefix <- gsub('.csv', '_', paste(paste(res_dir, 'edgeR/', sep=''), sheetname, sep=""))
+    prefix <- gsub("diffbind_samplesheet_", "", prefix)
   }else{
-    output_prefix <- gsub('.csv', '_', paste(paste(result_dir, sep=''), samplesheet, sep=""))
-    output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
+    prefix <- gsub('.csv', '_', paste(paste(res_dir, sep=''), sheetname, sep=""))
+    prefix <- gsub("diffbind_samplesheet_", "", prefix)
   }
-  return(output_prefix)
+  return(prefix)
 }
-output_prefix <- gsub('.csv', '_', paste(paste(result_dir, sep=''), samplesheet, sep=""))
-output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
+
+output_prefix <- change_dirs(result_dir, samplesheet, '')
 
 # Count fragments for peaks from bam files
 #dbObj.counted <- dba.count(dbObj.caller_consensus, bUseSummarizeOverlaps=TRUE, 
@@ -808,33 +806,44 @@ invisible(capture.output(gc()))
 
 for (m in c(DBA_DESEQ2, DBA_EDGER)){
   
+  output_prefix <- change_dirs(result_dir, samplesheet, m)
+  
   tryCatch(
     {
-      #png(paste(output_prefix, 'analyzed_venn_', m, '.png', sep=''))
-      #dba.plotVenn(dbObj.analyzed, method=m, contrast=1, bDB=TRUE, bGain=TRUE, bLoss=TRUE, bAll=FALSE)
-      #invisible(capture.output(dev.off()))
       tryCatch(
         {
           v <- dba.plotVenn(dbObj.analyzed, method=m, contrast=1, 
                             bDB=TRUE, bGain=TRUE, bLoss=TRUE, bAll=FALSE,
                             main=paste("Binding Sites - ", m, sep=''))
+          png(paste(output_prefix, 'analyzed_venn_', m, '.png', sep=''))
+          grid.newpage()
+          g = draw.pairwise.venn(area1=length(v$onlyA)+length(v$inAll), 
+                                 area2=length(v$onlyB)+length(v$inAll),
+                                 cross.area=length(v$inAll),
+                                 category=names(unique_peaks),
+                                 fill=unname(unlist(conditions_colour_code)),
+                                 col=NA, cex=1.5, cat.cex=1.5,
+                                 cat.dist = c(0,0))
+          grid.arrange(gTree(children=g), top=textGrob("Binding Sites", gp=gpar(cex=1.5, fontface='bold')),
+                       bottom=textGrob(m, gp=gpar(cex=1.5)))
+          
+          invisible(capture.output(dev.off()))
         }, error=function(e){
           message('Peaksets do not meet specified criteria for venn')
+          
+          tryCatch(
+            {
+              png(paste(output_prefix, 'analyzed_venn_', m, '.png', sep=''))
+              v <- dba.plotVenn(dbObj.analyzed, method=m, contrast=1, 
+                                bDB=TRUE, bGain=TRUE, bLoss=TRUE, bAll=TRUE,
+                                main=paste("Binding Sites - ", m, sep=''))
+              invisible(capture.output(dev.off()))
+            }, error=function(e){
+              message('Peaksets do not meet specified criteria for venn')
+            }
+          )
         }
       )
-      png(paste(output_prefix, 'analyzed_venn_', m, '.png', sep=''))
-      grid.newpage()
-      g = draw.pairwise.venn(area1=length(v$onlyA)+length(v$inAll), 
-                             area2=length(v$onlyB)+length(v$inAll),
-                             cross.area=length(v$inAll),
-                             category=names(unique_peaks),
-                             fill=unname(unlist(conditions_colour_code)),
-                             col=NA, cex=1.5, cat.cex=1.5,
-                             cat.dist = c(0,0))
-      grid.arrange(gTree(children=g), top=textGrob("Binding Sites", gp=gpar(cex=1.5, fontface='bold')),
-                   bottom=textGrob(m, gp=gpar(cex=1.5)))
-      
-      invisible(capture.output(dev.off()))
       
     }, error=function(e){
       message("No figure\n", e)
@@ -886,6 +895,8 @@ for (m in c(DBA_DESEQ2, DBA_EDGER)){
   
 }
 
+output_prefix <- change_dirs(result_dir, samplesheet, '')
+
 tryCatch(
   {
     profile_colors <- list()
@@ -918,6 +929,9 @@ reports[["DESeq2"]] <- dba.report(dbObj.analyzed, method=DBA_DESEQ2, contrast=1,
 reports[["edgeR"]] <- dba.report(dbObj.analyzed, method=DBA_EDGER, contrast=1, th=1)
 
 for (report in names(reports)){
+  
+  output_prefix <- change_dirs(result_dir, samplesheet, report)
+  
   # Report columns are seqnames, start, end, width, strand, Conc, Conc_Group1, Conc_Group2, Fold, p.value, FDR
   # Create bed files for each keeping only significant peaks (p<0.05)
   # Comparing those whereby Fold > 0 vs Fold < 0, indicating enrichment gain vs loss of group 1 over group 2
@@ -1124,6 +1138,7 @@ for (report in names(reports)){
   invisible(capture.output(gc()))
 }
 
+output_prefix <- change_dirs(result_dir, samplesheet, '')
 
 # For considering sites identified by DESeq2 AND edgeR
 #reports[["DESeq2_and_edgeR"]] <- c(reports[["DESeq2"]], reports[["edgeR"]])
