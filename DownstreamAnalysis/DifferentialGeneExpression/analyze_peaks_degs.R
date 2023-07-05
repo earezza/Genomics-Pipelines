@@ -178,7 +178,14 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", organism='mouse', heat_
         gene_group <- mapIds(org.Rn.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
       }
     }
-    d[gene_group, a] <- res[gene_group, ]$log2FoldChange
+    # For RNAseq degs
+    #d[gene_group, a] <- res[gene_group, ]$log2FoldChange
+    
+    # For Peaks degs
+    temp <- res[res$SYMBOL %in% gene_group, ]
+    temp <- aggregate(temp, list(temp$SYMBOL), mean)
+    row.names(temp) <- temp$Group.1
+    d[temp$Group.1, a] <- temp$log2FoldChange
   }
   # Sort by genes instead of by term (i.e. number of times gene found in all top terms)
   if (sort_genes){
@@ -943,7 +950,6 @@ for (report in names(reports)){
   print(head(out))
   print(tail(out))
   
-  
   gained <- out %>% 
     dplyr::filter(FDR < 0.05 & Fold > 0) %>% 
     dplyr::select(seqnames, start, end)
@@ -957,7 +963,11 @@ for (report in names(reports)){
   cat('\n\t', dim(lost)[[1]], 'DE peaks in', dbObj.contrast$contrasts[[1]]$name2, '(Fold-change < 0)', '\n')
   
   # Write complete report to file
-  write.table(out, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
+  res <- as.data.frame(reports[[report]])
+  names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
+  names(res)[names(res) == 'FDR'] <- 'p.adjust'
+  res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
+  write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   
   # Write DE result to bed files
   write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
@@ -1025,7 +1035,7 @@ for (report in names(reports)){
   peakAnnoList <- list()
   for (p in names(gpeaks)){
     colour <- conditions_colour_code[[p]]
-    heat_colour <- "PiYG"
+    heat_colour <- "Blues"
     
     if (length(gpeaks[[p]]) > 0){
       cat("\nAnnotating", p, "\n")
@@ -1060,24 +1070,12 @@ for (report in names(reports)){
             # Write annotations to csv
             write.table(as.data.frame(compKEGG), file=paste(output_prefix, report, '_', p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
             
-            # res <- as.data.frame(reports[[report]])
-            # names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
-            # names(res)[names(res) == 'FDR'] <- 'p.adjust'
-            # 
-            # if (tolower(opt$organism) == "human"){
-            #   row.names(res) <- mapIds(org.Hs.eg.db, keys = genes[[p]], column = "SYMBOL", keytype = "ENTREZID")
-            # }else if (tolower(opt$organism) == "mouse"){
-            #   row.names(res) <- mapIds(org.Mm.eg.db, keys = genes[[p]], column = "SYMBOL", keytype = "ENTREZID")
-            # }else if (tolower(opt$organism) == "rat"){
-            #   row.names(res) <- mapIds(org.Rn.eg.db, keys = genes, column = "SYMBOL", keytype = "ENTREZID")
-            # }
-            # 
-            # plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=0.6, dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
-            # invisible(capture.output(ggsave(filename=paste(output_prefix, 'KEGG_annotation_', p, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
-            # remove(plt)
-            # plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=0.6, dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
-            # invisible(capture.output(ggsave(filename=paste(output_prefix, 'KEGG_annotation_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
-            # remove(plt)
+            plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
+            invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_KEGG_annotation_', p, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
+            remove(plt)
+            plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
+            invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_KEGG_annotation_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+            remove(plt)
             
           }
         },error = function(e)
@@ -1108,12 +1106,12 @@ for (report in names(reports)){
               # Write annotations to csv
               write.table(as.data.frame(compGO), file=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
               
-              # plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=0.6, dendro=TRUE, sort_genes=TRUE, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term")
-              # invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_', ont, '_', p, '_pheatmap_by_gene.png', sep=''), plot=plt, dpi=320)))
-              # remove(plt)
-              # plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=0.6, dendro=TRUE, sort_genes=FALSE, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term")
-              # invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_', ont, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
-              # remove(plt)
+              plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=TRUE, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term")
+              invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_GO-', ont, '_', p, '_pheatmap_by_gene.png', sep=''), plot=plt, dpi=320)))
+              remove(plt)
+              plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=FALSE, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term")
+              invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_GO-', ont, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+              remove(plt)
             }
           },error = function(e)
           {
@@ -1128,7 +1126,6 @@ for (report in names(reports)){
       cat("No peaks to annotate for", p, '\n')
     }
   }
-  
   
   plt <- plotAnnoBar(peakAnnoList)
   invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
@@ -1171,7 +1168,11 @@ cat('\n\t', dim(gained)[[1]], 'DE peaks (positive fold-change) in', dbObj.contra
 cat('\n\t', dim(lost)[[1]], 'DE peaks (negative fold-change) in', dbObj.contrast$contrasts[[1]]$name2, '\n')
 
 # Write complete report to file
-write.table(out, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
+res <- as.data.frame(reports[[report]])
+names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
+names(res)[names(res) == 'FDR'] <- 'p.adjust'
+res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
+write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
 
 # Write DE result to bed files
 write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
@@ -1243,6 +1244,13 @@ for (p in names(gpeaks)){
           
           # Write annotations to csv
           write.table(as.data.frame(compKEGG), file=paste(output_prefix, report, '_', p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+          
+          plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
+          invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_KEGG_annotation_', p, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
+          remove(plt)
+          plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
+          invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_KEGG_annotation_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+          remove(plt)
         }
       },error = function(e)
       {
@@ -1271,6 +1279,14 @@ for (p in names(gpeaks)){
             
             # Write annotations to csv
             write.table(as.data.frame(compGO), file=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+            
+            plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=TRUE, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term")
+            invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_GO-', ont, '_', p, '_pheatmap_by_gene.png', sep=''), plot=plt, dpi=320)))
+            remove(plt)
+            plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=FALSE, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term")
+            invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_GO-', ont, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+            remove(plt)
+            
           }
         },error = function(e)
         {
