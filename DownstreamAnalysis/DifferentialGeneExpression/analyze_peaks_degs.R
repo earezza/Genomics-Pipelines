@@ -1174,6 +1174,7 @@ res <- as.data.frame(reports[[report]])
 res['log2FoldChange'] <- (res$Fold.DESeq2 + res$Fold.edgeR)/2
 res['p.adjust'] <- (res$FDR.DESeq2 + res$FDR.edgeR)/2
 res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
+res <- res[order(res$p.adjust, decreasing=FALSE), ]
 
 write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
 
