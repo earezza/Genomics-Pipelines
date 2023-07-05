@@ -1034,8 +1034,21 @@ for (report in names(reports)){
   # ========= Get Annotations =========
   peakAnnoList <- list()
   for (p in names(gpeaks)){
+    
     colour <- conditions_colour_code[[p]]
-    heat_colour <- "Blues"
+    if (colour == "#00BFC4"){
+      heat_colour <- "Blues"
+    }else if (colour == "#F8766D"){
+      heat_colour <- "Reds"
+    }else if (colour == "#7CAE00"){
+      heat_colour <- "Greens"
+    }else if (colour == "#C77CFF"){
+      heat_colour <- "BuPu"
+    }else if (colour == "#e69e02"){
+      heat_colour <- "YlOrBr"
+    }else{
+      heat_colour <- "Greys"
+    }
     
     if (length(gpeaks[[p]]) > 0){
       cat("\nAnnotating", p, "\n")
@@ -1064,7 +1077,7 @@ for (report in names(reports)){
                                      organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
           
           if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
-            plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=conditions_colour_code[[p]], n=15)
+            plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
             
             # Write annotations to csv
@@ -1100,7 +1113,7 @@ for (report in names(reports)){
             if (!is.null(compGO)){
               compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
               #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
-              plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=conditions_colour_code[[p]], n=15)
+              plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=colour, n=15)
               invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
               
               # Write annotations to csv
@@ -1216,6 +1229,22 @@ invisible(capture.output(gc()))
 # ========= Get Annotations =========
 peakAnnoList <- list()
 for (p in names(gpeaks)){
+  
+  colour <- conditions_colour_code[[p]]
+  if (colour == "#00BFC4"){
+    heat_colour <- "Blues"
+  }else if (colour == "#F8766D"){
+    heat_colour <- "Reds"
+  }else if (colour == "#7CAE00"){
+    heat_colour <- "Greens"
+  }else if (colour == "#C77CFF"){
+    heat_colour <- "BuPu"
+  }else if (colour == "#e69e02"){
+    heat_colour <- "YlOrBr"
+  }else{
+    heat_colour <- "Greys"
+  }
+  
   if (length(gpeaks[[p]]) > 0){
     cat("\nAnnotating", p, "\n")
     anno <- annotatePeak(gpeaks[[p]], 
@@ -1243,7 +1272,7 @@ for (p in names(gpeaks)){
                                    organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
         
         if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
-          plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=conditions_colour_code[[p]], n=15)
+          plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
           invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
           
           # Write annotations to csv
@@ -1278,7 +1307,7 @@ for (p in names(gpeaks)){
           if ((!is.null(compGO)) & (dim(compGO@compareClusterResult)[1] > 0)){
             compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
             #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
-            plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=conditions_colour_code[[p]], n=15)
+            plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=colour, n=15)
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
             
             # Write annotations to csv
