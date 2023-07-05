@@ -1169,9 +1169,12 @@ cat('\n\t', dim(lost)[[1]], 'DE peaks (negative fold-change) in', dbObj.contrast
 
 # Write complete report to file
 res <- as.data.frame(reports[[report]])
-names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
-names(res)[names(res) == 'FDR'] <- 'p.adjust'
+# names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
+# names(res)[names(res) == 'FDR'] <- 'p.adjust'
+res['log2FoldChange'] <- (res$Fold.DESeq2 + res$Fold.edgeR)/2
+res['p.adjust'] <- (res$FDR.DESeq2 + res$FDR.edgeR)/2
 res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
+
 write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
 
 # Write DE result to bed files
