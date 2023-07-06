@@ -37,7 +37,7 @@ option_list = list(
   make_option(c("-r", "--result_dir"), type="character", default="Peaks_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
   make_option(c("-a", "--add_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add all peaks together from replicates instead of only taking their consensuspeaks", metavar="character"),
-  make_option(c("--lfc"), type="double", default=0.6, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
+  make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
   make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="integer")
 );
 opt_parser = OptionParser(option_list=option_list);
@@ -47,6 +47,7 @@ cat("Command-line options:\n")
 for (i in which(names(opt) != "help")) {
   cat(names(opt)[i], '=', paste(opt)[i], "\n")
 }
+cat("log2FC of", opt$lfc, "equates to FC of", round(2^0.585, 2), '\n')
 
 if (str_sub(opt$result_dir, -1) != "/"){
   opt$result_dir = cat(opt$result_dir, '/', sep='')
@@ -965,6 +966,7 @@ for (report in names(reports)){
   names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
   names(res)[names(res) == 'FDR'] <- 'p.adjust'
   res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
+  
   write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   
   if (is.null(dba.report(dbObj.analyzed, method=report, contrast=1, th=opt$fdr))){
