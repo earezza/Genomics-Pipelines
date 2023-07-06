@@ -1043,11 +1043,11 @@ for (report in names(reports)){
   # Write complete DE result to files
   if (dim(gained)[1] > 0){
     gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=txdb, annoDb=annoDb)@anno)
-    write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+    write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   }
   if (dim(lost)[1] > 0){
     lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=txdb, annoDb=annoDb)@anno)
-    write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+    write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   }
   
   # Use absolute fold-change for plotting magnitude
@@ -1259,11 +1259,11 @@ lost <- out %>%
 
 if (dim(gained)[1] > 0){
   gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=txdb, annoDb=annoDb)@anno)
-  write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+  write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
 }
 if (dim(lost)[1] > 0){
   lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=txdb, annoDb=annoDb)@anno)
-  write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+  write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
 }
 
 # Use absolute fold-change for plotting magnitude
