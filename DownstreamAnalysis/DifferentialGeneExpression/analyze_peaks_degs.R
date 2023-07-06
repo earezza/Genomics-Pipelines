@@ -36,7 +36,9 @@ option_list = list(
   make_option(c("-o", "--organism"), type="character", default="mouse", help="Organism to annotate genes at peaks, human (hg38) or mouse (mm10, default) or rat (rn6)", metavar="character"),
   make_option(c("-r", "--result_dir"), type="character", default="Peaks_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
-  make_option(c("-a", "--add_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add all peaks together from replicates instead of only taking their consensuspeaks", metavar="character")
+  make_option(c("-a", "--add_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add all peaks together from replicates instead of only taking their consensuspeaks", metavar="character"),
+  make_option(c("--lfc"), type="double", default=0.6, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
+  make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="integer")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -288,7 +290,7 @@ invisible(capture.output(gc()))
 #fragment_size <- 125 # default
 
 dbObj <- dba(sampleSheet=samplesheet, minOverlap=1,
-             config=data.frame(th=0.05,
+             config=data.frame(th=opt$fdr,
                                #DataType=DBA_DATA_GRANGES, 
                                RunParallel=TRUE,
                                minQCth=15, 
@@ -965,8 +967,8 @@ for (report in names(reports)){
   res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
   write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   
-  if (is.null(dba.report(dbObj.analyzed, method=report, contrast=1, th=0.05))){
-    cat("\nNo DEGs identified by", report, "at a significance threshold of", "0.05", "skipping further analysis...\n")
+  if (is.null(dba.report(dbObj.analyzed, method=report, contrast=1, th=opt$fdr))){
+    cat("\nNo DEGs identified by", report, "at a significance threshold of", opt$fdr, "skipping further analysis...\n")
     next
   }
   
@@ -982,16 +984,16 @@ for (report in names(reports)){
   print(tail(out))
   
   gained <- out %>% 
-    dplyr::filter(FDR < 0.05 & Fold > 0) %>% 
+    dplyr::filter(FDR < opt$fdr & Fold > opt$lfc) %>% 
     dplyr::select(seqnames, start, end)
   lost <- out %>% 
-    dplyr::filter(FDR < 0.05 & Fold < 0) %>% 
+    dplyr::filter(FDR < opt$fdr & Fold < (0 - opt$lfc)) %>% 
     dplyr::select(seqnames, start, end)
   
   cat('\n', dim(out)[[1]], 'peaks in', report, 'report:\n')
   cat('\n\t', dim(gained)[[1]] + dim(lost)[[1]], 'statistically significant peaks', '( FDR <', dbObj.analyzed$config$th, ')\n')
-  cat('\n\t', dim(gained)[[1]], 'DE peaks in', dbObj.contrast$contrasts[[1]]$name1, '(Fold-change > 0)', '\n')
-  cat('\n\t', dim(lost)[[1]], 'DE peaks in', dbObj.contrast$contrasts[[1]]$name2, '(Fold-change < 0)', '\n')
+  cat('\n\t', dim(gained)[[1]], 'DE peaks in', dbObj.contrast$contrasts[[1]]$name1, '(log2Fold-change > ', opt$lfc, '\n')
+  cat('\n\t', dim(lost)[[1]], 'DE peaks in', dbObj.contrast$contrasts[[1]]$name2, '(log2Fold-change < -', opt$lfc, '\n')
   
   
   # Write DE result to bed files
@@ -1002,7 +1004,7 @@ for (report in names(reports)){
     write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
   }
   
-  # Plot profile heatmaps for all significant (FDR < 0.05) sites for each method
+  # Plot profile heatmaps for all significant (FDR < opt$fdr) sites for each method
   tryCatch(
     {
       profile_colors <- list()
@@ -1012,7 +1014,7 @@ for (report in names(reports)){
       #profile_colors <- rev(profile_colors)
       # Plots all significant sites among both conditions (will include signals)
       profiles_significant <- dba.plotProfile(dbObj.analyzed, merge=c(DBA_REPLICATE), normalize=TRUE, 
-                                              sites=GRanges(out %>% dplyr::filter(FDR < 0.05))
+                                              sites=GRanges(out %>% dplyr::filter(FDR < opt$fdr))
       )
       png(paste(output_prefix, 'analyzed_profiles_', report,'.png', sep=''))
       dba.plotProfile(profiles_significant, matrices_color=profile_colors, all_color_scales_equal=FALSE, 
@@ -1032,9 +1034,9 @@ for (report in names(reports)){
   invisible(capture.output(gc()))
   
   gained <- out %>% 
-    dplyr::filter(FDR < 0.05 & Fold > 0)
+    dplyr::filter(FDR < opt$fdr & Fold > opt$lfc)
   lost <- out %>% 
-    dplyr::filter(FDR < 0.05 & Fold < 0)
+    dplyr::filter(FDR < opt$fdr & Fold < (0 - opt$lfc))
   
   # Write complete DE result to files
   if (dim(gained)[1] > 0){
@@ -1194,8 +1196,8 @@ for (report in names(reports)){
 }
 
 # Quit if one method produced no results to avoid repeating functions...
-if (is.null(dba.report(dbObj.analyzed, method=DBA_DESEQ2, contrast=1, th=0.05)) | is.null(dba.report(dbObj.analyzed, method=DBA_EDGER, contrast=1, th=0.05))){
-  cat("\nNo DEGs identified by either DESeq2 or edgeR at a significance threshold of", "0.05", "skipping further analysis...\n")
+if (is.null(dba.report(dbObj.analyzed, method=DBA_DESEQ2, contrast=1, th=opt$fdr)) | is.null(dba.report(dbObj.analyzed, method=DBA_EDGER, contrast=1, th=opt$fdr))){
+  cat("\nNo DEGs identified by either DESeq2 or edgeR at a significance threshold of", opt$fdr, "skipping further analysis...\n")
   cat("\nFINISHED!\n")
   q()
 }
@@ -1227,16 +1229,16 @@ print(tail(out))
 
 
 gained <- out %>% 
-  dplyr::filter(FDR.DESeq2 < 0.05 & Fold.DESeq2 > 0 & FDR.edgeR < 0.05 & Fold.edgeR > 0) %>% 
+  dplyr::filter(FDR.DESeq2 < opt$fdr & Fold.DESeq2 > opt$lfc & FDR.edgeR < opt$fdr & Fold.edgeR > opt$lfc) %>% 
   dplyr::select(seqnames, start, end)
 lost <- out %>% 
-  dplyr::filter(FDR.DESeq2 < 0.05 & Fold.DESeq2 < 0 & FDR.edgeR < 0.05 & Fold.edgeR < 0) %>% 
+  dplyr::filter(FDR.DESeq2 < opt$fdr & Fold.DESeq2 < (0 - opt$lfc) & FDR.edgeR < opt$fdr & Fold.edgeR < (0 - opt$lfc)) %>% 
   dplyr::select(seqnames, start, end)
 
 cat('\n', dim(out)[[1]], 'peaks in', report, 'report:\n')
 cat('\n\t', dim(gained)[[1]] + dim(lost)[[1]], 'statistically significant peaks', '( FDR <', dbObj.analyzed$config$th, ')\n')
-cat('\n\t', dim(gained)[[1]], 'DE peaks (positive fold-change) in', dbObj.contrast$contrasts[[1]]$name1, '\n')
-cat('\n\t', dim(lost)[[1]], 'DE peaks (negative fold-change) in', dbObj.contrast$contrasts[[1]]$name2, '\n')
+cat('\n\t', dim(gained)[[1]], 'DE peaks log2FoldChange >', opt$lfc, 'in', dbObj.contrast$contrasts[[1]]$name1, '\n')
+cat('\n\t', dim(lost)[[1]], 'DE peaks log2FoldChange <', (0 - opt$lfc), 'in', dbObj.contrast$contrasts[[1]]$name2, '\n')
 
 
 # Write DE result to bed files
@@ -1248,9 +1250,9 @@ if (dim(lost)[0] > 0){
 }
 
 gained <- out %>% 
-  dplyr::filter(FDR.DESeq2 < 0.05 & Fold.DESeq2 > 0 & FDR.edgeR < 0.05 & Fold.edgeR > 0)
+  dplyr::filter(FDR.DESeq2 < opt$fdr & Fold.DESeq2 > opt$lfc & FDR.edgeR < opt$fdr & Fold.edgeR > opt$lfc)
 lost <- out %>% 
-  dplyr::filter(FDR.DESeq2 < 0.05 & Fold.DESeq2 < 0 & FDR.edgeR < 0.05 & Fold.edgeR < 0)
+  dplyr::filter(FDR.DESeq2 < opt$fdr & Fold.DESeq2 < (0 - opt$lfc) & FDR.edgeR < opt$fdr & Fold.edgeR < (0 - opt$lfc))
 
 
 if (dim(gained)[1] > 0){
