@@ -1244,10 +1244,10 @@ cat('\n\t', dim(lost)[[1]], 'DE peaks log2FoldChange <', (0 - opt$lfc), 'in', db
 
 
 # Write DE result to bed files
-if (dim(gained)[0] > 0){
+if (dim(gained)[1] > 0){
   write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
 }
-if (dim(lost)[0] > 0){
+if (dim(lost)[1] > 0){
   write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
 }
 
