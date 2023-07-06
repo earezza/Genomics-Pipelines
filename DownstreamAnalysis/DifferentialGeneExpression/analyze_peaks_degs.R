@@ -389,12 +389,13 @@ if (length(unique(dbObj$samples$Factor)) > 1){
   maskname <- names(dbObj.total$masks)[grepl('Replicate.1-2', names(dbObj.total$masks))]
   if (length(maskname) == 1){
     dbObj.consensus <- dba(dbObj.total, mask=dbObj.total$masks[[maskname]], minOverlap=1)
+    dbObj.caller_consensus <- dbObj.consensus
   }else if (length(maskname) == 2){
     dbObj.consensus <- dba(dbObj.total, mask=(dbObj.total$masks[[maskname[1]]] | dbObj.total$masks[[maskname[2]]]), minOverlap=1)
+    dbObj.caller_consensus <- dbObj.consensus
   }
 }
 dbObj.consensus
-
 
 
 # Add fragment sizes to new objects (helps to later run affinity analysis)
@@ -412,8 +413,6 @@ for (c in unique(dbObj$samples$Condition)){
     }
   }
 }
-
-
 
 # Re-sort colours if condition orders changed after consensus (occurs when one condition has only 1 replicate, consensus must be added manually...)
 # dbObj.consensus <- dba(dbObj.final, mask=(dbObj.final$masks$`Replicate.1-2` | dbObj.final$masks$CONDITION_WITH_ONE_REPLICATE), minOverlap=1)
@@ -806,7 +805,10 @@ tryCatch(
   }, error=function(e){
     message("No figure\n", e)
     invisible(capture.output(dev.off()))
-    invisible(file.remove(paste(output_prefix, 'analyzed_venn.png', sep='')))
+    if (file.exists(paste(output_prefix, 'analyzed_venn.png', sep=''))){
+      invisible(file.remove(paste(output_prefix, 'analyzed_venn.png', sep='')))
+    }
+    
   }
 )
 invisible(capture.output(gc()))
@@ -855,7 +857,10 @@ for (m in c(DBA_DESEQ2, DBA_EDGER)){
     }, error=function(e){
       message("No figure\n", e)
       invisible(capture.output(dev.off()))
-      invisible(file.remove(paste(output_prefix, 'analyzed_venn_', m, '.png', sep='')))
+      if (file.exists(paste(output_prefix, 'analyzed_venn_', m, '.png', sep=''))){
+        invisible(file.remove(paste(output_prefix, 'analyzed_venn_', m, '.png', sep='')))
+      }
+      
     }
   )
   invisible(capture.output(gc()))
@@ -869,7 +874,10 @@ for (m in c(DBA_DESEQ2, DBA_EDGER)){
     }, error=function(e){
       message("No figure\n", e)
       invisible(capture.output(dev.off()))
-      invisible(file.remove(paste(output_prefix, 'analyzed_volcano_', m, '.png', sep='')))
+      if (file.exists(paste(output_prefix, 'analyzed_volcano_', m, '.png', sep=''))){
+        invisible(file.remove(paste(output_prefix, 'analyzed_volcano_', m, '.png', sep='')))
+      }
+      
     }
   )
   invisible(capture.output(gc()))
@@ -882,7 +890,10 @@ for (m in c(DBA_DESEQ2, DBA_EDGER)){
     }, error=function(e){
       message("No figure\n", e)
       invisible(capture.output(dev.off()))
-      invisible(file.remove(paste(output_prefix, 'analyzed_ma_', m, '.png', sep='')))
+      if (file.exists(paste(output_prefix, 'analyzed_ma_', m, '.png', sep=''))){
+        invisible(file.remove(paste(output_prefix, 'analyzed_ma_', m, '.png', sep='')))
+      }
+      
     }
   )
   invisible(capture.output(gc()))
@@ -895,7 +906,10 @@ for (m in c(DBA_DESEQ2, DBA_EDGER)){
     }, error=function(e){
       message("No figure\n", e)
       invisible(capture.output(dev.off()))
-      invisible(file.remove(paste(output_prefix, 'analyzed_box_', m, '.png', sep='')))
+      if (file.exists(paste(output_prefix, 'analyzed_box_', m, '.png', sep=''))){
+        invisible(file.remove(paste(output_prefix, 'analyzed_box_', m, '.png', sep='')))
+      }
+      
     }
   )
   invisible(capture.output(gc()))
@@ -924,7 +938,10 @@ tryCatch(
   }, error=function(e){
     message("No figure\n", e)
     invisible(capture.output(dev.off()))
-    invisible(file.remove(paste(output_prefix, 'analyzed_profile.png', sep='')))
+    if (file.exists(paste(output_prefix, 'analyzed_profile.png', sep=''))){
+      invisible(file.remove(paste(output_prefix, 'analyzed_profile.png', sep='')))
+    }
+    
   }
 )
 invisible(capture.output(gc()))
@@ -967,8 +984,6 @@ for (report in names(reports)){
   names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
   names(res)[names(res) == 'FDR'] <- 'p.adjust'
   res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
-  res <- res[order(res$log2FoldChange, decreasing=TRUE), ]
-  
   write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   
   # Write DE result to bed files
@@ -997,7 +1012,10 @@ for (report in names(reports)){
     }, error=function(e){
       message("No figure\n", e)
       invisible(capture.output(dev.off()))
-      invisible(file.remove(paste(output_prefix, 'analyzed_profiles_', report,'.png', sep='')))
+      if (file.exists(paste(output_prefix, 'analyzed_profiles_', report,'.png', sep=''))){
+        invisible(file.remove(paste(output_prefix, 'analyzed_profiles_', report,'.png', sep='')))
+      }
+      
     }
   )
   invisible(capture.output(gc()))
