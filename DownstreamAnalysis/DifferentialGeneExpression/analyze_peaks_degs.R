@@ -549,7 +549,7 @@ for (p in names(peaks)){
   colour <- conditions_colour_code[[p]]
   heat_colour <- conditions_colour_code[[p]]
   
-  cat("\nAnnotating", p)
+  cat("\nAnnotating", p, '\n')
   anno <- annotatePeak(peaks[[p]], 
                        TxDb=txdb,
                        annoDb=annoDb)
@@ -567,6 +567,7 @@ for (p in names(peaks)){
       genes <- list()
       genes[[p]] <- anno@anno$geneId
       names(genes) = sub("_", "\n", names(genes))
+      cat("\nGetting", p, 'KEGG\n')
       
       # fun is "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" 
       compKEGG <- compareCluster(geneCluster=genes,
@@ -595,6 +596,7 @@ for (p in names(peaks)){
         genes <- list()
         genes[[p]] <- anno@anno$SYMBOL
         names(genes) = sub("_", "\n", names(genes))
+        cat("\nGetting", p, 'GO', ont, '\n')
         
         compGO <- compareCluster(geneCluster=genes,
                                  keyType='SYMBOL',
@@ -956,6 +958,18 @@ for (report in names(reports)){
   
   output_prefix <- change_dirs(result_dir, samplesheet, report)
   
+  # Write complete report to file
+  res <- as.data.frame(reports[[report]])
+  names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
+  names(res)[names(res) == 'FDR'] <- 'p.adjust'
+  res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
+  write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
+  
+  if (is.null(dba.report(dbObj.analyzed, method=report, contrast=1, th=0.05))){
+    cat("\nNo DEGs identified by", report, "at a significance threshold of", "0.05", "skipping further analysis...\n")
+    next
+  }
+  
   # Report columns are seqnames, start, end, width, strand, Conc, Conc_Group1, Conc_Group2, Fold, p.value, FDR
   # Create bed files for each keeping only significant peaks (p<0.05)
   # Comparing those whereby Fold > 0 vs Fold < 0, indicating enrichment gain vs loss of group 1 over group 2
@@ -979,17 +993,14 @@ for (report in names(reports)){
   cat('\n\t', dim(gained)[[1]], 'DE peaks in', dbObj.contrast$contrasts[[1]]$name1, '(Fold-change > 0)', '\n')
   cat('\n\t', dim(lost)[[1]], 'DE peaks in', dbObj.contrast$contrasts[[1]]$name2, '(Fold-change < 0)', '\n')
   
-  # Write complete report to file
-  res <- as.data.frame(reports[[report]])
-  names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
-  names(res)[names(res) == 'FDR'] <- 'p.adjust'
-  res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
-  write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   
   # Write DE result to bed files
-  write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
-  write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
-  
+  if (dim(gained)[1] > 0){
+    write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+  }
+  if (dim(lost)[1] > 0){
+    write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+  }
   
   # Plot profile heatmaps for all significant (FDR < 0.05) sites for each method
   tryCatch(
@@ -1026,8 +1037,14 @@ for (report in names(reports)){
     dplyr::filter(FDR < 0.05 & Fold < 0)
   
   # Write complete DE result to files
-  write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
-  write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+  if (dim(gained)[1] > 0){
+    gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=txdb, annoDb=annoDb)@anno)
+    write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+  }
+  if (dim(lost)[1] > 0){
+    lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=txdb, annoDb=annoDb)@anno)
+    write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+  }
   
   # Use absolute fold-change for plotting magnitude
   gained$Fold <- abs(gained$Fold)
@@ -1054,6 +1071,11 @@ for (report in names(reports)){
   # ========= Get Annotations =========
   peakAnnoList <- list()
   for (p in names(gpeaks)){
+    
+    if (length(gpeaks[[p]]) == 0){
+      cat("\nNo", p, "peaks to annotate...\n")
+      next
+    }
     
     colour <- conditions_colour_code[[p]]
     if (colour == "#00BFC4"){
@@ -1088,6 +1110,7 @@ for (report in names(reports)){
           genes <- list()
           genes[[p]] <- anno@anno$geneId
           names(genes) = sub("_", "\n", names(genes))
+          cat("\nGetting", report, p, 'KEGG\n')
           
           # fun is "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" 
           compKEGG <- compareCluster(geneCluster=genes,
@@ -1119,6 +1142,8 @@ for (report in names(reports)){
       invisible(capture.output(gc()))
       
       for (ont in c('ALL', 'CC', 'MF', 'BP')){
+        cat("\nGetting", report, p, 'GO -', ont, '\n')
+        
         tryCatch(
           {
             compGO <- compareCluster(geneCluster=genes,
@@ -1156,7 +1181,7 @@ for (report in names(reports)){
       }
     }
     else{
-      cat("No peaks to annotate for", p, '\n')
+      cat("\nNo peaks to annotate for", p, '\n')
     }
   }
   
@@ -1168,6 +1193,13 @@ for (report in names(reports)){
   invisible(capture.output(gc()))
 }
 
+# Quit if one method produced no results to avoid repeating functions...
+if (is.null(dba.report(dbObj.analyzed, method=DBA_DESEQ2, contrast=1, th=0.05)) | is.null(dba.report(dbObj.analyzed, method=DBA_EDGER, contrast=1, th=0.05))){
+  cat("\nNo DEGs identified by either DESeq2 or edgeR at a significance threshold of", "0.05", "skipping further analysis...\n")
+  cat("\nFINISHED!\n")
+  q()
+}
+
 output_prefix <- change_dirs(result_dir, samplesheet, '')
 
 # For considering sites identified by DESeq2 AND edgeR
@@ -1177,8 +1209,14 @@ df_both <- merge(as.data.frame(reports[["DESeq2"]]), as.data.frame(reports[["edg
 reports[["DESeq2_and_edgeR"]] <- GRanges(df_both)
 report <- "DESeq2_and_edgeR"
 
-#both <- dba.plotVenn(dbObj.analyzed, contrast=1, method=DBA_ALL_METHODS, bDB=TRUE)$inAll
-#out_both <- out[as.data.frame(findOverlaps(both, reports[["DESeq2_and_edgeR"]]))[["subjectHits"]], ]
+# Write complete report to file
+res <- as.data.frame(reports[[report]])
+res['log2FoldChange'] <- (res$Fold.DESeq2 + res$Fold.edgeR)/2
+res['p.adjust'] <- (res$FDR.DESeq2 + res$FDR.edgeR)/2
+res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
+res <- res[order(res$log2FoldChange, decreasing=TRUE), ]
+
+write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
 
 out <- as.data.frame(reports[[report]])
 #out <- out[as.data.frame(findOverlaps(both, reports[[report]]))[["subjectHits"]], ]
@@ -1200,29 +1238,30 @@ cat('\n\t', dim(gained)[[1]] + dim(lost)[[1]], 'statistically significant peaks'
 cat('\n\t', dim(gained)[[1]], 'DE peaks (positive fold-change) in', dbObj.contrast$contrasts[[1]]$name1, '\n')
 cat('\n\t', dim(lost)[[1]], 'DE peaks (negative fold-change) in', dbObj.contrast$contrasts[[1]]$name2, '\n')
 
-# Write complete report to file
-res <- as.data.frame(reports[[report]])
-# names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
-# names(res)[names(res) == 'FDR'] <- 'p.adjust'
-res['log2FoldChange'] <- (res$Fold.DESeq2 + res$Fold.edgeR)/2
-res['p.adjust'] <- (res$FDR.DESeq2 + res$FDR.edgeR)/2
-res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
-res <- res[order(res$log2FoldChange, decreasing=TRUE), ]
-
-write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
 
 # Write DE result to bed files
-write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
-write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+if (dim(gained)[0] > 0){
+  write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+}
+if (dim(lost)[0] > 0){
+  write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+}
 
 gained <- out %>% 
   dplyr::filter(FDR.DESeq2 < 0.05 & Fold.DESeq2 > 0 & FDR.edgeR < 0.05 & Fold.edgeR > 0)
 lost <- out %>% 
   dplyr::filter(FDR.DESeq2 < 0.05 & Fold.DESeq2 < 0 & FDR.edgeR < 0.05 & Fold.edgeR < 0)
 
-# Write complete DE result to files
-write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
-write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+
+if (dim(gained)[1] > 0){
+  gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=txdb, annoDb=annoDb)@anno)
+  write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+}
+if (dim(lost)[1] > 0){
+  lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=txdb, annoDb=annoDb)@anno)
+  write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
+}
+
 # Use absolute fold-change for plotting magnitude
 #gained$Fold <- abs(gained$Fold)
 #lost$Fold <- abs(lost$Fold)
@@ -1249,6 +1288,11 @@ invisible(capture.output(gc()))
 # ========= Get Annotations =========
 peakAnnoList <- list()
 for (p in names(gpeaks)){
+  
+  if (length(gpeaks[[p]]) == 0){
+    cat("\nNo", p, "peaks to annotate...\n")
+    next
+  }
   
   colour <- conditions_colour_code[[p]]
   if (colour == "#00BFC4"){
@@ -1283,6 +1327,7 @@ for (p in names(gpeaks)){
         genes <- list()
         genes[[p]] <- anno@anno$geneId
         names(genes) = sub("_", "\n", names(genes))
+        cat("\nGetting", report, p, 'KEGG\n')
         
         # fun is "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" 
         compKEGG <- compareCluster(geneCluster=genes,
@@ -1313,6 +1358,7 @@ for (p in names(gpeaks)){
     invisible(capture.output(gc()))
     
     for (ont in c('ALL', 'CC', 'MF', 'BP')){
+      cat("\nGetting", report, p, 'GO -', ont, '\n')
       tryCatch(
         {
           compGO <- compareCluster(geneCluster=genes,
