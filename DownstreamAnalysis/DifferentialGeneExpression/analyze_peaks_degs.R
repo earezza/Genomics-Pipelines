@@ -968,6 +968,7 @@ for (report in names(reports)){
   res <- as.data.frame(reports[[report]])
   names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
   names(res)[names(res) == 'FDR'] <- 'p.adjust'
+  res <- res[order(res$log2FoldChange, decreasing=TRUE), ]
   res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
   
   write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
@@ -1046,10 +1047,12 @@ for (report in names(reports)){
   # Write complete DE result to files
   if (dim(gained)[1] > 0){
     gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=txdb, annoDb=annoDb)@anno)
+    gained <- gained[order(gained$log2FoldChange, decreasing=TRUE), ]
     write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   }
   if (dim(lost)[1] > 0){
     lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=txdb, annoDb=annoDb)@anno)
+    lost <- lost[order(lost$log2FoldChange, decreasing=FALSE), ]
     write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   }
   
@@ -1262,10 +1265,12 @@ lost <- out %>%
 
 if (dim(gained)[1] > 0){
   gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=txdb, annoDb=annoDb)@anno)
+  gained <- gained[order(gained$log2FoldChange, decreasing=TRUE), ]
   write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
 }
 if (dim(lost)[1] > 0){
   lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=txdb, annoDb=annoDb)@anno)
+  lost <- lost[order(lost$log2FoldChange, decreasing=FALSE), ]
   write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
 }
 
