@@ -398,6 +398,7 @@ if (length(unique(dbObj$samples$Factor)) > 1){
     dbObj.caller_consensus <- dbObj.consensus
   }
 }
+dbObj.caller_consensus
 dbObj.consensus
 
 
@@ -558,7 +559,7 @@ for (p in names(peaks)){
                        annoDb=annoDb)
   
   plt <- upsetplot(anno, vennpie=TRUE) + ggtitle(p)
-  invisible(capture.output(ggsave(paste(output_prefix, '_', p, '_annotated_peaks.png', sep=''), plot=plt, dpi=320, bg='white')))
+  invisible(capture.output(ggsave(paste(output_prefix, '_', p, '_annotated_peaks_upsetplot.png', sep=''), plot=plt, dpi=320, bg='white')))
   
   peakAnnoList[[p]] <- anno
   
@@ -708,6 +709,7 @@ if (length(unique(dbObj$samples$Factor)) > 1){
                              peaks=consensus_peaks, 
                              minOverlap=1, 
                              score=DBA_SCORE_NORMALIZED,
+                             bParallel=TRUE,
                              #fragmentSize=dbObj.caller_consensus$config$fragmentSize,
                              #summits=200, filter=1, bRemoveDuplicates=FALSE, bScaleControl=TRUE,
                              #bSubControl=is.null(dbObj.noblacklist$greylist),
@@ -727,6 +729,7 @@ if (length(unique(dbObj$samples$Factor)) > 1){
                              peaks=consensus_peaks, 
                              minOverlap=1, 
                              score=DBA_SCORE_NORMALIZED,
+                             bParallel=TRUE,
                              #fragmentSize=dbObj.noblacklist$config$fragmentSize,
                              #summits=200, filter=1, bRemoveDuplicates=FALSE, bScaleControl=TRUE,
                              #bSubControl=is.null(dbObj.noblacklist$greylist),
@@ -1104,7 +1107,7 @@ for (report in names(reports)){
       peakAnnoList[[p]] <- anno
       
       plt <- upsetplot(anno, vennpie=TRUE) + ggtitle(p)
-      invisible(capture.output(ggsave(paste(output_prefix, '_', report, '_', p, '_annotated_peaks.png', sep=''), plot=plt, dpi=320, bg='white')))
+      invisible(capture.output(ggsave(paste(output_prefix, '_', report, '_', p, '_annotated_peaks_upsetplot.png', sep=''), plot=plt, dpi=320, bg='white')))
       
       # Write annotation to file
       write.table(anno, file=paste(output_prefix, 'annotated_', report, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
@@ -1321,7 +1324,7 @@ for (p in names(gpeaks)){
     peakAnnoList[[p]] <- anno
     
     plt <- upsetplot(anno, vennpie=TRUE) + ggtitle(p)
-    invisible(capture.output(ggsave(paste(output_prefix, '_', report, '_', p, '_annotated_peaks.png', sep=''), plot=plt, dpi=320, bg='white')))
+    invisible(capture.output(ggsave(paste(output_prefix, '_', report, '_', p, '_annotated_peaks_upsetplot.png', sep=''), plot=plt, dpi=320, bg='white')))
     
     # Write annotation to file
     write.table(anno, file=paste(output_prefix, 'annotated_', report, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
