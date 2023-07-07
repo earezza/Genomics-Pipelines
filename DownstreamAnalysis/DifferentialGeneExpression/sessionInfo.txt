@@ -1,54 +1,25 @@
-sessionInfo()
+R version 4.3.1 (2023-06-16)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: Ubuntu 22.04.2 LTS
 
-R version 4.2.2 Patched (2022-11-10 r83330) Platform: x86_64-pc-linux-gnu (64-bit) Running under: Ubuntu 22.04.1 LTS
+Matrix products: default
+BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.10.0 
+LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.10.0
 
-Matrix products: default BLAS: /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.10.0 LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.10.0
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C               LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
 
-locale: [1] LC_CTYPE=en_US.UTF-8 LC_NUMERIC=C LC_TIME=en_US.UTF-8 LC_COLLATE=en_US.UTF-8
-[5] LC_MONETARY=en_US.UTF-8 LC_MESSAGES=en_US.UTF-8 LC_PAPER=en_US.UTF-8 LC_NAME=C
-[9] LC_ADDRESS=C LC_TELEPHONE=C LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C
+time zone: America/New_York
+tzcode source: system (glibc)
 
-attached base packages: [1] stats4 grid stats graphics grDevices utils datasets methods base
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
 
-other attached packages: [1] optparse_1.7.3 org.Mm.eg.db_3.16.0
-[3] org.Hs.eg.db_3.16.0 TxDb.Hsapiens.UCSC.hg38.knownGene_3.16.0 [5] TxDb.Hsapiens.UCSC.hg19.knownGene_3.2.2 TxDb.Mmusculus.UCSC.mm10.knownGene_3.10.0 [7] GenomicFeatures_1.50.3 AnnotationDbi_1.60.0
-[9] ggplot2_3.4.0 clusterProfiler_4.6.0
-[11] DESeq2_1.38.3 SummarizedExperiment_1.28.0
-[13] Biobase_2.58.0 MatrixGenerics_1.10.0
-[15] matrixStats_0.63.0 GenomicRanges_1.50.2
-[17] GenomeInfoDb_1.34.6 IRanges_2.32.0
-[19] S4Vectors_0.36.1 Rsubread_2.12.2
-[21] Rgraphviz_2.42.0 graph_1.76.0
-[23] BiocGenerics_0.44.0
-
-loaded via a namespace (and not attached): [1] shadowtext_0.1.2 fastmatch_1.1-3 BiocFileCache_2.6.0 plyr_1.8.8
-[5] igraph_1.3.5 lazyeval_0.2.2 splines_4.2.2 BiocParallel_1.32.5
-[9] digest_0.6.31 yulab.utils_0.0.6 GOSemSim_2.24.0 viridis_0.6.2
-[13] GO.db_3.16.0 fansi_1.0.4 magrittr_2.0.3 memoise_2.0.1
-[17] Biostrings_2.66.0 annotate_1.76.0 graphlayouts_0.8.4 enrichplot_1.18.3
-[21] prettyunits_1.1.1 colorspace_2.1-0 blob_1.2.3 rappdirs_0.3.3
-[25] ggrepel_0.9.2 dplyr_1.0.10 crayon_1.5.2 RCurl_1.98-1.9
-[29] jsonlite_1.8.4 scatterpie_0.1.8 ape_5.6-2 glue_1.6.2
-[33] polyclip_1.10-4 gtable_0.3.1 zlibbioc_1.44.0 XVector_0.38.0
-[37] DelayedArray_0.24.0 scales_1.2.1 DOSE_3.24.2 DBI_1.1.3
-[41] Rcpp_1.0.10 viridisLite_0.4.1 xtable_1.8-4 progress_1.2.2
-[45] gridGraphics_0.5-1 tidytree_0.4.2 bit_4.0.5 getopt_1.20.3
-[49] httr_1.4.4 fgsea_1.24.0 RColorBrewer_1.1-3 ellipsis_0.3.2
-[53] pkgconfig_2.0.3 XML_3.99-0.13 farver_2.1.1 dbplyr_2.3.0
-[57] locfit_1.5-9.7 utf8_1.2.2 ggplotify_0.1.0 tidyselect_1.2.0
-[61] rlang_1.0.6 reshape2_1.4.4 munsell_0.5.0 tools_4.2.2
-[65] cachem_1.0.6 downloader_0.4 cli_3.6.0 generics_0.1.3
-[69] RSQLite_2.2.20 gson_0.0.9 stringr_1.5.0 fastmap_1.1.0
-[73] yaml_2.3.7 ggtree_3.6.2 bit64_4.0.5 tidygraph_1.2.2
-[77] purrr_1.0.1 KEGGREST_1.38.0 ggraph_2.1.0 nlme_3.1-161
-[81] aplot_0.1.9 xml2_1.3.3 biomaRt_2.54.0 compiler_4.2.2
-[85] rstudioapi_0.14 filelock_1.0.2 curl_5.0.0 png_0.1-8
-[89] treeio_1.22.0 tibble_3.1.8 tweenr_2.0.2 geneplotter_1.76.0
-[93] stringi_1.7.12 lattice_0.20-45 Matrix_1.5-1 vctrs_0.5.2
-[97] pillar_1.8.1 lifecycle_1.0.3 data.table_1.14.6 cowplot_1.1.1
-[101] bitops_1.0-7 patchwork_1.1.2 rtracklayer_1.58.0 qvalue_2.30.0
-[105] R6_2.5.1 BiocIO_1.8.0 gridExtra_2.3 codetools_0.2-18
-[109] MASS_7.3-58 assertthat_0.2.1 rjson_0.2.21 withr_2.5.0
-[113] GenomicAlignments_1.34.0 Rsamtools_2.14.0 GenomeInfoDbData_1.2.9 parallel_4.2.2
-[117] hms_1.1.2 ggfun_0.0.9 tidyr_1.3.0 HDO.db_0.99.1
-[121] ggforce_0.4.1 restfulr_0.0.15
+loaded via a namespace (and not attached):
+ [1] vctrs_0.6.2             cli_3.6.1               rlang_1.1.1             generics_0.1.3          glue_1.6.2              S4Vectors_0.38.1       
+ [7] RCurl_1.98-1.12         stats4_4.3.1            fansi_1.0.4             tibble_3.2.1            bitops_1.0-7            IRanges_2.34.0         
+[13] lifecycle_1.0.3         GenomeInfoDb_1.36.0     compiler_4.3.1          dplyr_1.1.2             pkgconfig_2.0.3         XVector_0.40.0         
+[19] rstudioapi_0.14         R6_2.5.1                tidyselect_1.2.0        utf8_1.2.3              pillar_1.9.0            parallel_4.3.1         
+[25] GenomeInfoDbData_1.2.10 GenomicRanges_1.52.0    magrittr_2.0.3          tools_4.3.1             zlibbioc_1.46.0         BiocGenerics_0.46.0    
+>
