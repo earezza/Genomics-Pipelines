@@ -795,7 +795,7 @@ cat("After defining contrast:\n")
 dbObj.contrast
 
 # ========= Analyze Affinities =========
-dbObj.analyzed <- dba.analyze(dbObj.contrast, method=DBA_ALL_METHODS)
+dbObj.analyzed <- dba.analyze(dbObj.contrast, method=DBA_ALL_METHODS, bParallel=TRUE)
 cat("After analyzing:\n")
 dbObj.analyzed
 
