@@ -316,8 +316,8 @@ for (c in colnames(combs)){
   # Write normalized values to file
   # normalized_count_mtx <- counts(dds, normalized=TRUE)
   # write.table(normalized_count_mtx, file=paste(output_prefix, "count_mtx_normalized.csv", sep=""), sep=",", quote=F, col.names=NA)
-  edge <- calcNormFactors(edge)
-  normalized_count_mtx <- cpm(edge, normalized.lib.sizes=TRUE)
+  edge <- calcNormFactors(edge, method="TMM")
+  normalized_count_mtx <- cpm(edge, normalized.lib.sizes=TRUE) # method called cpm, but uses norm factors from above with TMM
   write.table(normalized_count_mtx, file=paste(output_prefix, "count_mtx_normalized.csv", sep=""), sep=",", quote=F, col.names=NA)
   
   # Obtain DEG results and output to file
