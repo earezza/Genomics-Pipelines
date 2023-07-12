@@ -99,6 +99,8 @@ parser.add_argument('-polyAtrim', '--polyAtrim', help='If flagged, will apply po
 parser.add_argument('-stranded', '--stranded', help='If flagged, will create bam and coverage mapping to forward and reverse strands separately, intended for RNA-Seq', action='store_true')
 parser.add_argument('-technique', '--technique', help='Technique type for data',
                     type=str, default='cnt', choices=['cnt', 'chipseq', 'rnaseq', 'mnaseseq', 'atacseq'])
+parser.add_argument('-norm', '--normalize_type', help='Method for normalized bigwigs (RPGC-normalized will always ALSO be produced)',
+                    type=str, default='BPM', choices=['BPM', 'CPM', 'RPKM'])
 parser.add_argument('-reads_type', '--reads_type', help='Technique type for data',
                     type=str, default='paired', choices=['paired', 'single'])
 parser.add_argument('-spikein', '--spikein', help='Spikein type', type=str, choices=['Amp', 'Bacteria'], default='Amp')
@@ -113,7 +115,6 @@ parser.add_argument('-spike_align', '--spike_align', help='Command input options
 parser.add_argument('-bamCov_default', '--bamCov_default', help='Command input default for bamCoverage', type=str, default="--binSize 1 --ignoreForNormalization 'chrM' --extendReads --numberOfProcessors max")
 parser.add_argument('-bamCov_min', '--bamCov_min', help='Command input options for bamCoverage', type=str, default="--binSize 1 --extendReads --numberOfProcessors max")
 parser.add_argument('-bamCov_RPGC', '--bamCov_RPGC', help='Command input options for bamCoverage, reads per genomic content (1x normalization)', type=str, default="--binSize 1 --normalizeUsing 'RPGC' --ignoreForNormalization 'chrM' --extendReads --numberOfProcessors max")
-parser.add_argument('-bamCov_CPM', '--bamCov_CPM', help='Command input options for bamCoverage, number of reads per bin / number of mapped reads (in millions)', type=str, default="--binSize 1 --normalizeUsing 'CPM' --ignoreForNormalization 'chrM' --extendReads --numberOfProcessors max")
 parser.add_argument('-blacklist', '--blacklist', help='Bed file containing blacklist regions to remove in bamCoverage', type=str, default="")
 parser.add_argument('-genome_align', '--genome_align', help='Command input options for genome alignment', type=str, default="-p %s --local --very-sensitive-local --no-unal --no-mixed --no-discordant --phred33 -I 10 -X 700"%os.cpu_count())
 parser.add_argument('-samtools_mapq', '--samtools_mapq', help='Command input option for samtools view min alignment Q-score', type=str, default="-q 10")
@@ -136,13 +137,11 @@ if args.blacklist != "":
     args.bamCov_default = args.bamCov_default + ' --blackListFileName %s'%args.blacklist
     args.bamCov_min = args.bamCov_min + ' --blackListFileName %s'%args.blacklist
     args.bamCov_RPGC = args.bamCov_RPGC + ' --blackListFileName %s'%args.blacklist
-    args.bamCov_CPM = args.bamCov_CPM + ' --blackListFileName %s'%args.blacklist
     
 if args.technique == "mnaseseq":
     args.bamCov_default = args.bamCov_default + ' --MNase'
     args.bamCov_min = args.bamCov_min + ' --MNase'
     args.bamCov_RPGC = args.bamCov_RPGC + ' --MNase'
-    args.bamCov_CPM = args.bamCov_CPM + ' --MNase'
     
 if args.technique == "rnaseq":
     MAPPER = 'hisat2'
@@ -150,7 +149,6 @@ if args.technique == "rnaseq":
     args.bamCov_default = args.bamCov_default.replace("--extendReads", "")
     args.bamCov_min = args.bamCov_min.replace("--extendReads", "")
     args.bamCov_RPGC = args.bamCov_RPGC.replace("--extendReads", "")
-    args.bamCov_CPM = args.bamCov_CPM.replace("--extendReads", "")
 else:
     MAPPER = 'bowtie2'
     
@@ -396,7 +394,6 @@ def Compileresults_QC():
                 args.bamCov_default = args.bamCov_default.replace("--extendReads", "--extendReads %s"%(read_length))
                 args.bamCov_min = args.bamCov_min.replace("--extendReads", "--extendReads %s"%(read_length))
                 args.bamCov_RPGC = args.bamCov_RPGC.replace("--extendReads", "--extendReads %s"%(read_length))
-                args.bamCov_CPM = args.bamCov_CPM.replace("--extendReads", "--extendReads %s"%(read_length))
         except Exception as e:
             logger.exception(e)
             passed = False
@@ -425,7 +422,6 @@ def Compileresults_QC():
             args.bamCov_default = args.bamCov_default.replace("--extendReads", "--extendReads %s"%(read_length))
             args.bamCov_min = args.bamCov_min.replace("--extendReads", "--extendReads %s"%(read_length))
             args.bamCov_RPGC = args.bamCov_RPGC.replace("--extendReads", "--extendReads %s"%(read_length))
-            args.bamCov_CPM = args.bamCov_CPM.replace("--extendReads", "--extendReads %s"%(read_length))
         
         # Round to nearest value in EGS
         read_length = str(25*round(int(read_length)/25))
@@ -807,41 +803,41 @@ def GetBigwigs_BamCoverage():
         # Skip for RNA-Seq data
         if args.technique == 'rnaseq':
             
-            # CPM normalized with duplicates and not stranded
+            # Other normalized with duplicates and not stranded
             if not args.stranded:
-                if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw'%f):
+                if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.bw'%(f, args.normalize_type)):
                     try:
-                        result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.bam -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_CPM, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                        result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.bam -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.normalize_type, args.bamCov_RPGC.replace('RPGC', args.normalize_type), EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
                         logger.info(result.stdout.rstrip('\n'))
                         logger.warning(result.stderr.rstrip('\n'))
                     except Exception as e:
                         logger.exception(e)
                         passed = False
                 
-                passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw'%f)
+                passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.bw'%(f, args.normalize_type))
                         
             if args.stranded:
                 # Forward strand bw
-                if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.forward.bw'%f):
+                if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.forward.bw'%(f, args.normalize_type)):
                     try:
-                        result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.bam --filterRNAstrand forward -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.forward.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_CPM, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                        result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.bam --filterRNAstrand forward -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.forward.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.normalize_type, args.bamCov_RPGC.replace('RPGC', args.normalize_type), EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
                         logger.info(result.stdout.rstrip('\n'))
                         logger.warning(result.stderr.rstrip('\n'))
                     except Exception as e:
                         logger.exception(e)
                         passed = False
                 # Reverse strand bw
-                if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.reverse.bw'%f):
+                if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.reverse.bw'%(f, args.normalize_type)):
                     try:
-                        result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.bam --filterRNAstrand reverse -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.reverse.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_CPM, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                        result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.bam --filterRNAstrand reverse -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.reverse.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.normalize_type, args.bamCov_RPGC.replace('RPGC', args.normalize_type), EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
                         logger.info(result.stdout.rstrip('\n'))
                         logger.warning(result.stderr.rstrip('\n'))
                     except Exception as e:
                         logger.exception(e)
                         passed = False
                 
-                passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.forward.bw'%f)
-                passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.reverse.bw'%f)
+                passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.forward.bw'%(f, args.normalize_type))
+                passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.reverse.bw'%(f, args.normalize_type))
         
         else:
         
@@ -863,19 +859,19 @@ def GetBigwigs_BamCoverage():
                 except Exception as e:
                     logger.exception(e)
                     passed = False
-            # CPM normalized without duplicates
-            if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw'%f):
+            # Other normalized without duplicates
+            if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.bw'%(f, args.normalize_type)):
                 try:
-                    result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_CPM, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.bw %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.normalize_type, args.bamCov_RPGC.replace('RPGC', args.normalize_type), EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
                     logger.exception(e)
                     passed = False
-            # Get CPM bedgraph
-            if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bedgraph'%f):
+            # Get Other normalized bedgraph
+            if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.bedgraph'%(f, args.normalize_type)):
                 try:
-                    result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bedgraph %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.bedgraph %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.normalize_type, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
@@ -915,7 +911,7 @@ def GetBigwigs_BamCoverage():
             passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bw'%f)
             passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bw'%f)
             passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm_wDups.bw'%f)
-            passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_CPM.bw'%f)
+            passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.bw'%(f, args.normalize_type))
             
     return passed
         
