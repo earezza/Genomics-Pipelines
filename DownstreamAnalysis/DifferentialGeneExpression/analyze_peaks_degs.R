@@ -1194,12 +1194,25 @@ for (report in names(reports)){
       cat("\nNo peaks to annotate for", p, '\n')
     }
   }
-  
-  plt <- plotAnnoBar(peakAnnoList)
-  invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
-  
-  plt <- plotDistToTSS(peakAnnoList)
-  invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
+
+  tryCatch(
+    {
+      plt <- plotAnnoBar(peakAnnoList)
+      invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
+    },error = function(e)
+      {
+        message(e)
+      }
+    )
+  tryCatch(
+    {    
+      plt <- plotDistToTSS(peakAnnoList)
+      invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
+    },error = function(e)
+      {
+        message(e)
+      }
+    )
   invisible(capture.output(gc()))
 }
 
@@ -1413,11 +1426,24 @@ for (p in names(gpeaks)){
   }
 }
 
-plt <- plotAnnoBar(peakAnnoList)
-invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
-
-plt <- plotDistToTSS(peakAnnoList)
-invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
+tryCatch(
+  {
+    plt <- plotAnnoBar(peakAnnoList)
+    invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
+  },error = function(e)
+    {
+      message(e)
+    }
+  )
+tryCatch(
+  {
+    plt <- plotDistToTSS(peakAnnoList)
+    invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
+  },error = function(e)
+    {
+      message(e)
+    }
+  )
 invisible(capture.output(gc()))
 
 cat('\nFINISHED!\n')
