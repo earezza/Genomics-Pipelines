@@ -498,46 +498,67 @@ if(length(unique(dbObj$samples$Factor)) > 1){
 invisible(capture.output(gc()))
 
 # Plot peaks over genome
-plt <- covplot(c(unique_peaks, shared_peaks), title="Peaks over Genome") + 
-  scale_color_manual(values=rev(c(unlist(unname(conditions_colour_code[1:length(unique_peaks)])), 'grey'))) + 
-  scale_fill_manual(values=rev(c(unlist(unname(conditions_colour_code[1:length(unique_peaks)])), 'grey')))
-invisible(capture.output(ggsave(filename=paste(output_prefix, 'genome_peaks.png', sep=''), plot=plt, dpi=320)))
-plt <- plt + facet_grid(chr ~ .id)
-invisible(capture.output(ggsave(filename=paste(output_prefix, 'genome_peaks_split.png', sep=''), plot=plt, dpi=320)))
-rm(plt)
+tryCatch(
+  {
+    plt <- covplot(c(unique_peaks, shared_peaks), title="Peaks over Genome") + 
+      scale_color_manual(values=rev(c(unlist(unname(conditions_colour_code[1:length(unique_peaks)])), 'grey'))) + 
+      scale_fill_manual(values=rev(c(unlist(unname(conditions_colour_code[1:length(unique_peaks)])), 'grey')))
+    invisible(capture.output(ggsave(filename=paste(output_prefix, 'genome_peaks.png', sep=''), plot=plt, dpi=320)))
+    plt <- plt + facet_grid(chr ~ .id)
+    invisible(capture.output(ggsave(filename=paste(output_prefix, 'genome_peaks_split.png', sep=''), plot=plt, dpi=320)))
+    rm(plt)
+  },error = function(e)
+    {
+      message(e)
+    }
+  )
 invisible(capture.output(gc()))
 
 # Plot peaks related to TSS sites
-tagMatrices <- list()
-for (p in names(unique_peaks)){
-  tagMatrix <- getTagMatrix(unique_peaks[[p]], windows=promoters)
-  if (length(tagMatrix) == 0){
-    cat("No peaks at promoter sites for", p, "\n")
-    rm(tagMatrix)
-    #break
-  }else{
-    tagMatrices[[p]] <- tagMatrix
-    cat(dim(tagMatrix)[[1]], "peaks at promoter sites for", p, "\n")
-    plt <- tagHeatmap(tagMatrix, 
-                      xlab="bp at TSS", 
-                      ylab="Peaks", 
-                      title=paste(dim(tagMatrix)[[1]],'Peaks at Promoters', p, sep=" - "),
-                      palette=if_else(conditions_colour_code[[p]] == "#00BFC4", 'Greens', 'Reds'), 
-    )
-    invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_heatmap_', p, '_peaks.png', sep=''), plot=plt, dpi=320)))
-    rm(tagMatrix)
-    invisible(capture.output(gc()))
-  }
-}
+tryCatch(
+  {
+    tagMatrices <- list()
+    for (p in names(unique_peaks)){
+      tagMatrix <- getTagMatrix(unique_peaks[[p]], windows=promoters)
+      if (length(tagMatrix) == 0){
+        cat("No peaks at promoter sites for", p, "\n")
+        rm(tagMatrix)
+        #break
+      }else{
+        tagMatrices[[p]] <- tagMatrix
+        cat(dim(tagMatrix)[[1]], "peaks at promoter sites for", p, "\n")
+        plt <- tagHeatmap(tagMatrix, 
+                          xlab="bp at TSS", 
+                          ylab="Peaks", 
+                          title=paste(dim(tagMatrix)[[1]],'Peaks at Promoters', p, sep=" - "),
+                          palette=if_else(conditions_colour_code[[p]] == "#00BFC4", 'Greens', 'Reds'), 
+        )
+        invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_heatmap_', p, '_peaks.png', sep=''), plot=plt, dpi=320)))
+        rm(tagMatrix)
+        invisible(capture.output(gc()))
+      }
+    }
+  },error = function(e)
+    {
+      message(e)
+    }
+  )
 invisible(capture.output(gc()))
 
 # Plot TSS profile of peaks
-plt <- plotAvgProf(tagMatrices, xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
-  scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
-  scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
-invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_profile_peaks.png', sep=''), plot=plt, dpi=320)))
-rm(tagMatrices)
-rm(plt)
+tryCatch(
+  {
+    plt <- plotAvgProf(tagMatrices, xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
+      scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
+      scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
+    invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_profile_peaks.png', sep=''), plot=plt, dpi=320)))
+    rm(tagMatrices)
+    rm(plt)
+  },error = function(e)
+    {
+      message(e)
+    }
+  )
 invisible(capture.output(gc()))
 
 peaks <- c(unique_peaks, shared_peaks)
@@ -630,11 +651,24 @@ for (p in names(peaks)){
   }
 }
 
-plt <- plotAnnoBar(peakAnnoList)
-invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_distribution.png', sep=''), plot=plt, dpi=320)))
-
-plt <- plotDistToTSS(peakAnnoList)
-invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution.png', sep=''), plot=plt, dpi=320)))
+tryCatch(
+  {
+    plt <- plotAnnoBar(peakAnnoList)
+    invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_distribution.png', sep=''), plot=plt, dpi=320)))
+  },error = function(e)
+      {
+        message(e)
+      }
+    )
+tryCatch(
+  {
+    plt <- plotDistToTSS(peakAnnoList)
+    invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution.png', sep=''), plot=plt, dpi=320)))
+  },error = function(e)
+      {
+        message(e)
+      }
+    )
 invisible(capture.output(gc()))
 
 # ========= END OF OCCUPANCY ANALYSIS =========
