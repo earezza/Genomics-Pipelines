@@ -9,17 +9,7 @@ suppressWarnings(suppressPackageStartupMessages({
   library(clusterProfiler)
   library(ggplot2)
   library(EnhancedVolcano)
-  library(TxDb.Mmusculus.UCSC.mm10.knownGene)
-  #library(TxDb.Hsapiens.UCSC.hg19.knownGene)
-  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
-  library(TxDb.Rnorvegicus.UCSC.rn6.refGene)
   #library(ensembldb)
-  #library(EnsDb.Hsapiens.v86)
-  #library(EnsDb.Mmusculus.v79)
-  #library(EnsDb.Rnorvegicus.v79)
-  library(org.Hs.eg.db)
-  library(org.Mm.eg.db)
-  library(org.Rn.eg.db)
   library(RColorBrewer)
   library(pheatmap)
   library(grid)
@@ -59,12 +49,22 @@ cat("log2FC of", opt$lfc, "equates to FC of", 2^opt$lfc)
 # ========= SETUP VARIABLES =========
 # Define references for GO/KEGG annotations
 if (tolower(opt$organism) == "mouse"){
+  #library(EnsDb.Mmusculus.v79)
+  library(TxDb.Mmusculus.UCSC.mm10.knownGene)
+  library(org.Mm.eg.db)
   annoDb <- "org.Mm.eg.db"
   keggOrg <- "mmu"
 } else if (tolower(opt$organism) == "human"){
+  #library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+  #library(EnsDb.Hsapiens.v86)
+  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+  library(org.Hs.eg.db)
   annoDb <- "org.Hs.eg.db"
   keggOrg <- "hsa"
 } else if (tolower(opt$organism) == "rat"){
+  #library(EnsDb.Rnorvegicus.v79)
+  library(TxDb.Rnorvegicus.UCSC.rn6.refGene)
+  library(org.Rn.eg.db)
   annoDb <- "org.Rn.eg.db"
   keggOrg <- "rno"
 } else{
