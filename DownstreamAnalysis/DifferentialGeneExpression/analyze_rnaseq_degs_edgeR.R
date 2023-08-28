@@ -479,9 +479,15 @@ for (c in colnames(combs)){
   invisible(capture.output(ggsave(filename=paste(output_prefix, 'Heatmapplot.png', sep=''), plot=plt, dpi=320)))
   
   genes <- list()
-  genes[[combs[[c]][1]]] <- rownames(res_up_sorted)
-  genes[[combs[[c]][2]]] <- rownames(res_down_sorted)
-  genes[["DEGs"]] <- rownames(res_changed_sorted)
+  if (dim(res_up_sorted)[1] != 0){
+    genes[[combs[[c]][1]]] <- rownames(res_up_sorted)
+  }
+  if (dim(res_down_sorted)[1] != 0){
+    genes[[combs[[c]][2]]] <- rownames(res_down_sorted)
+  }
+  if (dim(res_changed_sorted)[1] != 0){
+    genes[["DEGs"]] <- rownames(res_changed_sorted)
+  }
   
   genes_entrez <- list()
   for (n in names(genes)){
