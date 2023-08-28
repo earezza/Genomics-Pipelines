@@ -44,7 +44,8 @@ option_list = list(
   make_option(c("-f", "--filter"), action="store_true", type="logical", default=FALSE, help="Flag to filter read counts (removes genes < min_count from raw matrix, then removes genes < min_baseMean after normalizing", metavar="character"),
   make_option(c("--min_count"), type="integer", default=1, help="Minimum counts to include if filtering", metavar="integer"),
   make_option(c("--min_basemean"), type="double", default=10, help="Minimum baseMean of normalized counts to include if filtering", metavar="integer"),
-  make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer")
+  make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
+  make_option(c("--pvalue"), type="double", default=0.05, help="Significance threshold for DEGs (pvalue instead of p.adjusted for case where small sample set results in p.adjust=NA)", metavar="integer")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -80,7 +81,7 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
     df$ycolour <- ifelse(grepl("MF -", df$Description), 'darkgreen', df$ycolour)
   }
   df <- df[order(df$p.adjust, decreasing=FALSE),]
-
+  
   # Re-format y-axis labels to not squish graph
   for (d in 1:length(df$Description)){
     i <- 1
@@ -129,26 +130,26 @@ make_volcanoplot <- function(res, condition1, condition2, lfc_threshold, padj_th
   names(keyvals)[keyvals == 'red'] <- paste(condition2, '(significant)', sep=' ')
   
   plt <- EnhancedVolcano(df, 
-                  x = 'log2FoldChange', 
-                  y = 'padj', 
-                  xlab = "Log2FoldChange",
-                  ylab = "-Log(adjusted p-value)",
-                  caption = paste0("Total = ", nrow(df), " genes\n", 
-                                   condition1, " = ", nrow(subset(df, log2FoldChange >= lfc_threshold)), ' DEGs\n',
-                                   condition2, " = ", nrow(subset(df, log2FoldChange <= (0-lfc_threshold))), ' DEGS'
-                                   ),
-                  colCustom = keyvals,
-                  lab = rownames(df),
-                  title = paste(condition1, ' vs ', condition2, sep=''),
-                  subtitle = 'DESeq2 Results',
-                  pCutoff = padj_threshold,
-                  FCcutoff = lfc_threshold,
-                  cutoffLineType = 'dashed',
-                  legendLabels=c('Not sig.','Log2FC','p-value','p-value & Log2FC'),
-                  labSize = 4,
-                  legendPosition = 'top',
-                  legendLabSize = 8,
-                  )
+                         x = 'log2FoldChange', 
+                         y = 'padj', 
+                         xlab = "Log2FoldChange",
+                         ylab = "-Log(adjusted p-value)",
+                         caption = paste0("Total = ", nrow(df), " genes\n", 
+                                          condition1, " = ", nrow(subset(df, log2FoldChange >= lfc_threshold)), ' DEGs\n',
+                                          condition2, " = ", nrow(subset(df, log2FoldChange <= (0-lfc_threshold))), ' DEGS'
+                         ),
+                         colCustom = keyvals,
+                         lab = rownames(df),
+                         title = paste(condition1, ' vs ', condition2, sep=''),
+                         subtitle = 'DESeq2 Results',
+                         pCutoff = padj_threshold,
+                         FCcutoff = lfc_threshold,
+                         cutoffLineType = 'dashed',
+                         legendLabels=c('Not sig.','Log2FC','p-value','p-value & Log2FC'),
+                         labSize = 4,
+                         legendPosition = 'top',
+                         legendLabSize = 8,
+  )
   return(plt)
 }
 
@@ -156,9 +157,9 @@ make_heatmapplot <- function(res, condition1, condition2, n = 50){
   df <- as.data.frame(head(res, n=n))
   df$Condition <- ifelse(df$log2FoldChange > 0, condition1, condition2)
   plt <- ggplot(df, aes(x = Condition, 
-                 y = rownames(df), 
-                 fill = log2FoldChange),
-         ) +
+                        y = rownames(df), 
+                        fill = log2FoldChange),
+  ) +
     geom_tile() +
     ggtitle(paste("Top", n, "DEGs", sep=' '), subtitle='') +
     xlab("Condition") +
@@ -177,7 +178,7 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", organism='mouse', heat_
   
   # Take top n terms (most significant, already sorted by padj)
   df <- head(anno[order(anno$p.adjust, decreasing=FALSE), ], n=num_terms)
-
+  
   # Re-format y-axis labels to not squish graph
   for (d in 1:length(df$Description)){
     i <- 1
@@ -262,6 +263,27 @@ cat("Output files will be in", paste(getwd(), "/", sep=""), "\n")
 
 # Get all pairwise combinations of conditions for comparing
 combs <- as.data.frame(combn(unique(sampleinfo$Condition), 2))
+
+
+# Perform global comparison (obtain PCA plot)
+dds <- DESeqDataSetFromMatrix(countData = count_mtx,
+                              colData = sampleinfo,
+                              design = ~ Condition)
+if (opt$filter) {
+  # Get percentile ranges of counts
+  cat("Filtering counts...\n")
+  # Remove 0 counts (sum of all samples' counts) to avoid 0-bias and disregard irrelevant genes
+  keep <- rowSums(counts(dds)) >= opt$min_count
+  dds <- dds[keep,]
+}
+dds <- DESeq(dds)
+
+vsd <- vst(dds, blind=FALSE)
+png(paste(output_prefix, 'PCAplot.png', sep=''))
+plotPCA(vsd, intgroup=c("Condition")) + 
+  geom_text(aes(label = rownames(vsd@colData)), nudge_y = 0.2, size = 3)
+invisible(capture.output(dev.off()))
+
 
 # Iterate through condition combinations to compare DEG
 for (c in colnames(combs)){
@@ -381,7 +403,8 @@ for (c in colnames(combs)){
   
   vsd <- vst(dds, blind=FALSE)
   png(paste(output_prefix, 'PCAplot.png', sep=''))
-  plotPCA(vsd, intgroup=c("Condition"))
+  plotPCA(vsd, intgroup=c("Condition")) + 
+    geom_text(aes(label = rownames(vsd@colData)), nudge_y = 0.2, size = 3)
   invisible(capture.output(dev.off()))
   
   # ========== Organize DEGs ==============
@@ -389,17 +412,17 @@ for (c in colnames(combs)){
   #res <- res[rowSums(is.na(res)) == 0, ]
   
   # Get significantly Upregulated (log2FoldChange > 0)
-  res_up <- res[res$log2FoldChange >= opt$lfc ,]
+  res_up <- subset(res, log2FoldChange >= opt$lfc & pvalue <= opt$pvalue)
   res_up_sorted <- res_up[order(res_up$log2FoldChange, decreasing=TRUE),]
   write.table(res_up_sorted, file=paste(output_prefix, "DESeq2_Result_", combs[[c]][1], ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
   # Get significantly Downregulated (log2FoldChange < 0)
-  res_down <- res[res$log2FoldChange <= (0 - opt$lfc) ,]
+  res_down <- subset(res, log2FoldChange <= (0 - opt$lfc) & pvalue <= opt$pvalue)
   res_down_sorted <- res_down[order(res_down$log2FoldChange, decreasing=TRUE),]
   write.table(res_down_sorted, file=paste(output_prefix, "DESeq2_Result_", combs[[c]][2], ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
   # Get all significantly changed genes
-  res_changed <- res[(res$log2FoldChange >= opt$lfc | res$log2FoldChange <= (0 - opt$lfc)),]
+  res_changed <- subset(res, (log2FoldChange >= opt$lfc | log2FoldChange <= (0 - opt$lfc)) & pvalue <= opt$pvalue)
   res_changed_sorted <- res_changed[order(abs(res_changed$log2FoldChange), decreasing=TRUE),]
   write.table(res_changed_sorted, file=paste(output_prefix, "DESeq2_Result_DEGs", ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
@@ -501,7 +524,7 @@ for (c in colnames(combs)){
           plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
           invisible(capture.output(ggsave(filename=paste(output_prefix, 'KEGG_annotation_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
           remove(plt)
-        
+          
         }
       },error = function(e)
       {
