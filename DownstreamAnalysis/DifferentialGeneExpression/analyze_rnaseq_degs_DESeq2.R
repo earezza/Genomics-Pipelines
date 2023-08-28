@@ -80,6 +80,20 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
     df$ycolour <- ifelse(grepl("MF -", df$Description), 'darkgreen', df$ycolour)
   }
   df <- df[order(df$p.adjust, decreasing=FALSE),]
+
+  # Re-format y-axis labels to not squish graph
+  for (d in 1:length(df$Description)){
+    i <- 1
+    s <- df$Description[d]
+    df$Description[d] <- ""
+    while (i < length(strsplit(s, ' ')[[1]])){
+      df$Description[d] <- paste(df$Description[d], paste(strsplit(s, ' ')[[1]][i:(i+5)], collapse = ' '), sep='\n')
+      i <- (i+6)
+    }
+    df$Description[d] <- gsub(" NA", "", df$Description[d])
+    df$Description[d] <- substring(df$Description[d], 2, nchar(df$Description[d]))
+  }
+  # Plot
   plt <- ggplot() +
     geom_point(data=head(df, n=n),
                aes(x = -log(p.adjust), 
@@ -163,6 +177,19 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", organism='mouse', heat_
   
   # Take top n terms (most significant, already sorted by padj)
   df <- head(anno[order(anno$p.adjust, decreasing=FALSE), ], n=num_terms)
+
+  # Re-format y-axis labels to not squish graph
+  for (d in 1:length(df$Description)){
+    i <- 1
+    s <- df$Description[d]
+    df$Description[d] <- ""
+    while (i < length(strsplit(s, ' ')[[1]])){
+      df$Description[d] <- paste(df$Description[d], paste(strsplit(s, ' ')[[1]][i:(i+5)], collapse = ' '), sep='\n')
+      i <- (i+6)
+    }
+    df$Description[d] <- gsub(" NA", "", df$Description[d])
+    df$Description[d] <- substring(df$Description[d], 2, nchar(df$Description[d]))
+  }
   
   # Create dataframe (matrix) of annotation terms vs genes with gene's associated log2FoldChange
   d <- data.frame()
