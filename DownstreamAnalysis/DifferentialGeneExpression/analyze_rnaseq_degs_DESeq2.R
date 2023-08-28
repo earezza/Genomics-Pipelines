@@ -279,7 +279,7 @@ if (opt$filter) {
 dds <- DESeq(dds)
 
 vsd <- vst(dds, blind=FALSE)
-png(paste(output_prefix, 'PCAplot.png', sep=''))
+png(paste('PCAplot.png', sep=''))
 plotPCA(vsd, intgroup=c("Condition")) + 
   geom_text(aes(label = rownames(vsd@colData)), nudge_y = 0.2, size = 3)
 invisible(capture.output(dev.off()))
