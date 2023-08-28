@@ -277,7 +277,7 @@ normalized_count_mtx <- cpm(edge, normalized.lib.sizes=TRUE)
 edge <- DGEList(counts = normalized_count_mtx, group=sampleinfo$Condition, remove.zeros=FALSE, norm.factors = edge$samples$norm.factors)
 
 # Plot PCA
-png(paste(output_prefix, 'MDSplot.png', sep=''))
+png(paste('MDSplot.png', sep=''))
 plotMDS(edge, col=as.numeric(edge$samples$group), plot=TRUE)
 invisible(capture.output(dev.off()))
 
