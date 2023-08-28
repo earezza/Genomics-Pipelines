@@ -44,7 +44,7 @@ option_list = list(
   make_option(c("-f", "--filter"), action="store_true", type="logical", default=FALSE, help="Flag to filter read counts (removes genes < min_count from raw matrix, then removes genes < min_baseMean after normalizing", metavar="character"),
   make_option(c("--min_count"), type="integer", default=1, help="Minimum counts to include if filtering", metavar="integer"),
   make_option(c("--min_basemean"), type="double", default=10, help="Minimum baseMean of normalized counts to include if filtering", metavar="integer"),
-  make_option(c("--lfc"), type="double", default=0.6, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer")
+  make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
