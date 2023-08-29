@@ -337,6 +337,7 @@ conditions_colour_code <- list()
 for (i in 1:length(unique(dbObj$samples$Condition))) {
   conditions_colour_code[[unique(dbObj$samples$Condition)[i]]] <- colours[i]
 }
+conditions_colour_code[["Shared"]] <- "#56B1F7"
 
 png(paste(output_prefix, 'raw_heatmap.png', sep=""))
 dba.plotHeatmap(dbObj)
@@ -453,6 +454,7 @@ for (i in 1:length(conditions_colour_code)){
   temp[names(conditions_colour_code[which(names(conditions_colour_code) == dba.show(dbObj.consensus)$Condition[i])])] <- conditions_colour_code[which(names(conditions_colour_code) == dba.show(dbObj.consensus)$Condition[i])]
 }
 conditions_colour_code <- temp
+conditions_colour_code[["Shared"]] <- "#56B1F7"
 
 # Consensus peaks from all conditions (all relevant peaks)
 consensus_peaks <- dba.peakset(dbObj.consensus, bRetrieve=TRUE)
