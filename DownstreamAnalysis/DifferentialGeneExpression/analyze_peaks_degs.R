@@ -138,7 +138,7 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
     df$ycolour <- ifelse(grepl("MF -", df$Description), 'darkgreen', df$ycolour)
   }
   df <- df[order(df$p.adjust, decreasing=FALSE),]
-
+  
   # Re-format y-axis labels to not squish graph
   for (d in 1:length(df$Description)){
     i <- 1
@@ -151,7 +151,7 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
     df$Description[d] <- gsub(" NA", "", df$Description[d])
     df$Description[d] <- substring(df$Description[d], 2, nchar(df$Description[d]))
   }
-
+  
   # Plot
   plt <- ggplot() +
     geom_point(data=head(df, n=n),
@@ -181,7 +181,7 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", organism='mouse', heat_
   
   # Take top n terms (most significant, already sorted by padj)
   df <- head(anno[order(anno$p.adjust, decreasing=FALSE), ], n=num_terms)
-
+  
   # Re-format y-axis labels to not squish graph
   for (d in 1:length(df$Description)){
     i <- 1
@@ -337,7 +337,6 @@ conditions_colour_code <- list()
 for (i in 1:length(unique(dbObj$samples$Condition))) {
   conditions_colour_code[[unique(dbObj$samples$Condition)[i]]] <- colours[i]
 }
-conditions_colour_code[["Shared"]] <- "#56B1F7"
 
 png(paste(output_prefix, 'raw_heatmap.png', sep=""))
 dba.plotHeatmap(dbObj)
@@ -454,7 +453,6 @@ for (i in 1:length(conditions_colour_code)){
   temp[names(conditions_colour_code[which(names(conditions_colour_code) == dba.show(dbObj.consensus)$Condition[i])])] <- conditions_colour_code[which(names(conditions_colour_code) == dba.show(dbObj.consensus)$Condition[i])]
 }
 conditions_colour_code <- temp
-conditions_colour_code[["Shared"]] <- "#56B1F7"
 
 # Consensus peaks from all conditions (all relevant peaks)
 consensus_peaks <- dba.peakset(dbObj.consensus, bRetrieve=TRUE)
@@ -538,10 +536,10 @@ tryCatch(
     invisible(capture.output(ggsave(filename=paste(output_prefix, 'genome_peaks_split.png', sep=''), plot=plt, dpi=320)))
     rm(plt)
   },error = function(e)
-    {
-      message(e)
-    }
-  )
+  {
+    message(e)
+  }
+)
 invisible(capture.output(gc()))
 
 # Plot peaks related to TSS sites
@@ -569,10 +567,10 @@ tryCatch(
       }
     }
   },error = function(e)
-    {
-      message(e)
-    }
-  )
+  {
+    message(e)
+  }
+)
 invisible(capture.output(gc()))
 
 # Plot TSS profile of peaks
@@ -585,10 +583,10 @@ tryCatch(
     rm(tagMatrices)
     rm(plt)
   },error = function(e)
-    {
-      message(e)
-    }
-  )
+  {
+    message(e)
+  }
+)
 invisible(capture.output(gc()))
 
 peaks <- c(unique_peaks, shared_peaks)
@@ -601,8 +599,13 @@ for (p in names(peaks)){
 # ========= Get Annotations =========
 peakAnnoList <- list()
 for (p in names(peaks)){
-  colour <- conditions_colour_code[[p]]
-  heat_colour <- conditions_colour_code[[p]]
+  if (p == "Shared"){
+    colour <- "#56B1F7"
+    heat_colour <- "BuPu"
+  }else{
+    colour <- conditions_colour_code[[p]]
+    heat_colour <- conditions_colour_code[[p]]
+  }
   
   cat("\nAnnotating", p, '\n')
   anno <- annotatePeak(peaks[[p]], 
@@ -686,19 +689,19 @@ tryCatch(
     plt <- plotAnnoBar(peakAnnoList)
     invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_distribution.png', sep=''), plot=plt, dpi=320)))
   },error = function(e)
-      {
-        message(e)
-      }
-    )
+  {
+    message(e)
+  }
+)
 tryCatch(
   {
     plt <- plotDistToTSS(peakAnnoList)
     invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution.png', sep=''), plot=plt, dpi=320)))
   },error = function(e)
-      {
-        message(e)
-      }
-    )
+  {
+    message(e)
+  }
+)
 invisible(capture.output(gc()))
 
 # ========= END OF OCCUPANCY ANALYSIS =========
@@ -1151,7 +1154,13 @@ for (report in names(reports)){
       next
     }
     
-    colour <- conditions_colour_code[[p]]
+    if (p == "Shared"){
+      colour <- "#56B1F7"
+      heat_colour <- "BuPu"
+    }else{
+      colour <- conditions_colour_code[[p]]
+    }
+
     if (colour == "#00BFC4"){
       heat_colour <- "Blues"
     }else if (colour == "#F8766D"){
@@ -1258,25 +1267,25 @@ for (report in names(reports)){
       cat("\nNo peaks to annotate for", p, '\n')
     }
   }
-
+  
   tryCatch(
     {
       plt <- plotAnnoBar(peakAnnoList)
       invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
     },error = function(e)
-      {
-        message(e)
-      }
-    )
+    {
+      message(e)
+    }
+  )
   tryCatch(
     {    
       plt <- plotDistToTSS(peakAnnoList)
       invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
     },error = function(e)
-      {
-        message(e)
-      }
-    )
+    {
+      message(e)
+    }
+  )
   invisible(capture.output(gc()))
 }
 
@@ -1383,7 +1392,14 @@ for (p in names(gpeaks)){
     next
   }
   
-  colour <- conditions_colour_code[[p]]
+  if (p == "Shared"){
+    colour <- "#56B1F7"
+    heat_colour <- "BuPu"
+  }else{
+    colour <- conditions_colour_code[[p]]
+    heat_colour <- conditions_colour_code[[p]]
+  }
+  
   if (colour == "#00BFC4"){
     heat_colour <- "Blues"
   }else if (colour == "#F8766D"){
@@ -1495,19 +1511,19 @@ tryCatch(
     plt <- plotAnnoBar(peakAnnoList)
     invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
   },error = function(e)
-    {
-      message(e)
-    }
-  )
+  {
+    message(e)
+  }
+)
 tryCatch(
   {
     plt <- plotDistToTSS(peakAnnoList)
     invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution_', report, '.png', sep=''), plot=plt, dpi=320)))
   },error = function(e)
-    {
-      message(e)
-    }
-  )
+  {
+    message(e)
+  }
+)
 invisible(capture.output(gc()))
 
 cat('\nFINISHED!\n')
