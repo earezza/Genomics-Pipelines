@@ -103,6 +103,9 @@ parser.add_argument('-norm', '--normalize_type', help='Method for normalized big
                     type=str, default='BPM', choices=['BPM', 'CPM', 'RPKM'])
 parser.add_argument('-reads_type', '--reads_type', help='Technique type for data',
                     type=str, default='paired', choices=['paired', 'single'])
+parser.add_argument('-macs_qvalue', '--macs_qvalue', help='q-value for MACS peak calling (try 0.05 if default value too restrictive)', type=str, default='1e-5')
+parser.add_argument('-seacr_threshold', '--seacr_threshold', help='Threshold value for SEACR peak calling (try 0.05 if default value too restrictive)', type=str, default='0.01')
+parser.add_argument('-gopeaks_pvalue', '--gopeaks_pvalue', help='pvalue for GoPeaks peak calling', type=str, default='0.05')
 parser.add_argument('-spikein', '--spikein', help='Spikein type', type=str, choices=['Amp', 'Bacteria'], default='Amp')
 parser.add_argument('-no_spikein', '--no_spikein', help='If no spikein, skip steps for normalizing to spikein', action='store_true')
 parser.add_argument('-cleanup', '--cleanup', help='If cleanup, remove all intermediate files keeping only QC and final .bam, .bw, and .bed files', action='store_true')
@@ -1224,14 +1227,14 @@ def Peak_Calling():
                 if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s.stringent.bed'%r):
                     continue
                 try:
-                    result = subprocess.run(('bash %s %sAnalysis_Results/Spikein_normalized_bws_bdgs/Normalized_bedgraphs/%s_Norm.bedgraph 0.05 non stringent %sAnalysis_Results/Peaks/%s'%(args.SEACRLoc, OUT_DIR, r, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('bash %s %sAnalysis_Results/Spikein_normalized_bws_bdgs/Normalized_bedgraphs/%s_Norm.bedgraph %s non stringent %sAnalysis_Results/Peaks/%s'%(args.SEACRLoc, OUT_DIR, r, args.seacr_threshold, OUT_DIR, r)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
                     logger.exception(e)
                     passed = False
                 try:
-                    result = subprocess.run(('bash %s %sAnalysis_Results/Spikein_normalized_bws_bdgs/Normalized_bedgraphs/%s_Norm.bedgraph 0.05 non relaxed %sAnalysis_Results/Peaks/%s'%(args.SEACRLoc, OUT_DIR, r, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('bash %s %sAnalysis_Results/Spikein_normalized_bws_bdgs/Normalized_bedgraphs/%s_Norm.bedgraph %s non relaxed %sAnalysis_Results/Peaks/%s'%(args.SEACRLoc, OUT_DIR, r, args.seacr_threshold, OUT_DIR, r)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
@@ -1255,7 +1258,7 @@ def Peak_Calling():
                         if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r):
                             continue
                         try:
-                            result = subprocess.run(('macs3 callpeak -t %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -c %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s'%(OUT_DIR, r, OUT_DIR, c, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                            result = subprocess.run(('macs3 callpeak -t %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -c %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s -q %s'%(OUT_DIR, r, OUT_DIR, c, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
                             logger.info(result.stdout.rstrip('\n'))
                             logger.warning(result.stderr.rstrip('\n'))
                         except Exception as e:
@@ -1263,12 +1266,12 @@ def Peak_Calling():
                             passed = False
                         passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r)
         else:
-            logger.info('MACS3 - No control')
+            logger.info('MACS - No control')
             for r in fastqfiles:
                 if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r):
                     continue
                 try:
-                    result = subprocess.run(('macs3 callpeak -t %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('macs3 callpeak -t %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s -q %s'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
@@ -1286,7 +1289,7 @@ def Peak_Calling():
                         if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_gopeaks_gopeaks.json'%r) and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_gopeaks_peaks.bed'%r):
                             continue
                         try:
-                            result = subprocess.run(('./gopeaks -b %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -c %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -o %sAnalysis_Results/Peaks/%s_gopeaks'%(OUT_DIR, r, OUT_DIR, c, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                            result = subprocess.run(('./gopeaks -b %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -c %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -o %sAnalysis_Results/Peaks/%s_gopeaks -p %s'%(OUT_DIR, r, OUT_DIR, c, OUT_DIR, r, args.gopeaks_pvalue)), shell=True, capture_output=True, text=True)
                             logger.info(result.stdout.rstrip('\n'))
                             logger.warning(result.stderr.rstrip('\n'))
                         except Exception as e:
@@ -1299,7 +1302,7 @@ def Peak_Calling():
                 if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_gopeaks_gopeaks.json'%r) and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_gopeaks_peaks.bed'%r):
                     continue
                 try:
-                    result = subprocess.run(('./gopeaks -b %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -o %sAnalysis_Results/Peaks/%s_gopeaks'%(OUT_DIR, r, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('./gopeaks -b %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -o %sAnalysis_Results/Peaks/%s_gopeaks -p %s'%(OUT_DIR, r, OUT_DIR, r, args.gopeaks_pvalue)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
@@ -1340,14 +1343,14 @@ def Peak_Calling():
                     continue
                 # RPGC-norm bedgraph peaks
                 try:
-                    result = subprocess.run(('bash %s %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bedgraph 0.05 non stringent %sAnalysis_Results/Peaks/%s'%(args.SEACRLoc, OUT_DIR, r, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('bash %s %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bedgraph %s non stringent %sAnalysis_Results/Peaks/%s'%(args.SEACRLoc, OUT_DIR, r, args.seacr_threshold, OUT_DIR, r)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
                     logger.exception(e)
                     passed = False
                 try:
-                    result = subprocess.run(('bash %s %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bedgraph 0.05 non relaxed %sAnalysis_Results/Peaks/%s'%(args.SEACRLoc, OUT_DIR, r, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('bash %s %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_RPGC.bedgraph %s non relaxed %sAnalysis_Results/Peaks/%s'%(args.SEACRLoc, OUT_DIR, r, args.seacr_threshold, OUT_DIR, r)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
@@ -1356,14 +1359,14 @@ def Peak_Calling():
                 # Non-norm, no duplicates, bedgraph peaks
                 '''
                 try:
-                    result = subprocess.run(('bash %s %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bedgraph 0.05 non stringent %sAnalysis_Results/Peaks/%s'%(args.SEACRLoc, OUT_DIR, r, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('bash %s %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bedgraph %s non stringent %sAnalysis_Results/Peaks/%s'%(args.SEACRLoc, OUT_DIR, r, args.seacr_threshold, OUT_DIR, r)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
                     logger.exception(e)
                     passed = False
                 try:
-                    result = subprocess.run(('bash %s %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bedgraph 0.05 non relaxed %sAnalysis_Results/Peaks/%s'%(args.SEACRLoc, OUT_DIR, r, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('bash %s %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Unnormalized/%s_wo_norm.bedgraph %s non relaxed %sAnalysis_Results/Peaks/%s'%(args.SEACRLoc, OUT_DIR, r, args.seacr_threshold, OUT_DIR, r)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
@@ -1387,7 +1390,7 @@ def Peak_Calling():
                         if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r):
                             continue
                         try:
-                            result = subprocess.run(('macs3 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -c %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s'%(OUT_DIR, r, OUT_DIR, c, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                            result = subprocess.run(('macs3 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -c %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s -q %s'%(OUT_DIR, r, OUT_DIR, c, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
                             logger.info(result.stdout.rstrip('\n'))
                             logger.warning(result.stderr.rstrip('\n'))
                         except Exception as e:
@@ -1400,7 +1403,7 @@ def Peak_Calling():
                 if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r):
                     continue
                 try:
-                    result = subprocess.run(('macs3 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('macs3 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s -q %s'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
@@ -1418,7 +1421,7 @@ def Peak_Calling():
                         if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_gopeaks_gopeaks.json'%r) and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_gopeaks_peaks.bed'%r):
                             continue
                         try:
-                            result = subprocess.run(('./gopeaks -b %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -c %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -o %sAnalysis_Results/Peaks/%s_gopeaks'%(OUT_DIR, r, OUT_DIR, c, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                            result = subprocess.run(('./gopeaks -b %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -c %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -o %sAnalysis_Results/Peaks/%s_gopeaks -p %s'%(OUT_DIR, r, OUT_DIR, c, OUT_DIR, r, args.gopeaks_pvalue)), shell=True, capture_output=True, text=True)
                             logger.info(result.stdout.rstrip('\n'))
                             logger.warning(result.stderr.rstrip('\n'))
                         except Exception as e:
@@ -1431,7 +1434,7 @@ def Peak_Calling():
                 if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_gopeaks_gopeaks.json'%r) and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_gopeaks_peaks.bed'%r):
                     continue
                 try:
-                    result = subprocess.run(('./gopeaks -b %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -o %sAnalysis_Results/Peaks/%s_gopeaks'%(OUT_DIR, r, OUT_DIR, r)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('./gopeaks -b %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -o %sAnalysis_Results/Peaks/%s_gopeaks -p %s'%(OUT_DIR, r, OUT_DIR, r, args.gopeaks_pvalue)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
