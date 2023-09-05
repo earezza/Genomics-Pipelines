@@ -11,7 +11,7 @@ R version 4.3.1
 #### Run analysis  
 <a href="https://bioconductor.org/packages/release/bioc/html/DESeq2.html">DESeq2</a> to process the count matrix and produce differential gene expression statistics by median of ratios.    
 <a href="https://bioconductor.org/packages/release/bioc/html/edgeR.html">edgeR</a> to process the count matrix and produce differential gene expression statistics by trimmed mean of M values.    
-<a href="https://bioconductor.org/packages/release/bioc/html/clusterProfiler.html">clusterProfiler</a> to annotate genes (GO, GSEA, KEGG) using database packages for mappings.   
+<a href="https://bioconductor.org/packages/release/bioc/html/clusterProfiler.html">clusterProfiler</a> and <a href="https://bioconductor.org/packages/release/bioc/html/ChIPseeker.html">ChIPseeker</a> to annotate genes (GO, GSEA, KEGG) using database packages for mappings.   
   
 ### For CUT&Tag, ChIP-Seq, etc... (analyze_peaks_degs.R)  
 In addition to the above packages,  
