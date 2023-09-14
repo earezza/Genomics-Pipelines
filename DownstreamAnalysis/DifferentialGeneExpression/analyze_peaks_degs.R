@@ -611,11 +611,22 @@ for (p in names(peaks)){
   anno <- annotatePeak(peaks[[p]], 
                        TxDb=txdb,
                        annoDb=annoDb)
+
+  peakAnnoList[[p]] <- anno
   
   plt <- upsetplot(anno, vennpie=TRUE) + ggtitle(p)
   invisible(capture.output(ggsave(paste(output_prefix, '_', p, '_annotated_peaks_upsetplot.png', sep=''), plot=plt, dpi=320, bg='white')))
   
-  peakAnnoList[[p]] <- anno
+  tryCatch(
+    {
+      png(paste(output_prefix, 'peaks_annotation_pie', p, '.png', sep=''), width=875, height=625)
+      plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-5, cex.main=1.5, cex=1.25)
+      invisible(capture.output(dev.off()))
+    },error = function(e)
+    {
+      message(e)
+    }
+  )
   
   # Write annotation to file
   write.table(anno, file=paste(output_prefix, 'annotated_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
