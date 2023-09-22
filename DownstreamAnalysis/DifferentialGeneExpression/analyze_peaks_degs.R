@@ -501,8 +501,8 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
                paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&' , names(unique_peaks)[3], sep='')
   )
   
-  png(paste(output_prefix, 'raw_consensus_peaks.png', sep=""))
-  plt = plot(euler(e), main=gsub('/', '', opt$result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
+  #png(paste(output_prefix, 'raw_consensus_peaks.png', sep=""))
+  plt <- plot(euler(e), main=gsub('/', '', opt$result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
   invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_consensus_peaks.png', sep=''), plot=plt)))
   invisible(capture.output(dev.off()))
   rm(e)
