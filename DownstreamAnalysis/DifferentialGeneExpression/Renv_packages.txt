@@ -41,6 +41,7 @@ install.packages("ggupset")
 install.packages("ggimage")
 library(VennDiagram)
 require(gridExtra)
+install.packages("pheatmap")
 
 BiocManager::install("IRkernel")
 IRkernel::installspec()
