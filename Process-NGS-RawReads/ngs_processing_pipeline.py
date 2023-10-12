@@ -874,7 +874,7 @@ def GetBigwigs_BamCoverage():
             # Get Other normalized bedgraph
             if not os.path.exists(OUT_DIR+'Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.bedgraph'%(f, args.normalize_type)):
                 try:
-                    result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.bedgraph %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.normalize_type, args.bamCov_RPGC, EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('bamCoverage --bam %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam --outFileFormat bedgraph -o %sAnalysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/%s_%s.bedgraph %s --effectiveGenomeSize %s'%(OUT_DIR, f, OUT_DIR, f, args.normalize_type, args.bamCov_RPGC.replace('RPGC', args.normalize_type), EFFECTIVEGENOMESIZE)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
