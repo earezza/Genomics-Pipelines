@@ -97,7 +97,7 @@ if (opt$organism == "mouse"){
   annoDb <- "org.Hs.eg.db"
   keggOrg <- "hsa"
   if (opt$database == "ucsc"){
-    txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
+    txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
   }else if (opt$database == "ensemble"){
     library(EnsDb.Hsapiens.v86)
     txdb <- EnsDb.Hsapiens.v86
