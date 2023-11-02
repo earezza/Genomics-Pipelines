@@ -51,7 +51,7 @@ bamcounts <- featureCounts(bam_files,
                            countMultiMappingReads = opt$multi_mappings, 
                            ignoreDup = opt$duplicates, 
                            isPairedEnd = opt$paired_end, 
-                           nthreads = opt_threads, 
+                           nthreads = opt$threads, 
                            verbose = TRUE)
 
 rownames(bamcounts$counts) <- mapIds(mapDB, keys = rownames(bamcounts$counts), column = "SYMBOL", keytype = "ENTREZID")
