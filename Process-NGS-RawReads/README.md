@@ -3,10 +3,28 @@ Pipeline to process raw reads from next-generation sequencing experiments (CUT&T
 <strong>This should be run on an HPC platform such as ComputeCanada.</strong>  
 ___  
 ## Setup  
-#### Easiest method is to use Apptainer and build a container (.sif) of the processing pipeline (if no .sif file already provided by lab) from the definition file (.def):
->> apptainer build ngs_processing_pipeline.sif ngs_pipeline_apptainer.def
-The container will be about 1.3GB and does NOT contain genome index files. So, when running you will have to bind the folder to your reads under a /data/ folder as well as genome index files (bowtie2 and/or hisat2) for your assembly.
->> apptainer run-help ngs_processing_pipeline.sif
+### <p>1. <a href="https://apptainer.org/">Apptainer</a> Method</p>  
+#### This is the easiest method.
+<p>First, <a href="https://apptainer.org/docs/user/main/quick_start.html">install Apptainer.</a><p>  
+
+#### Build a container (.sif) of the processing pipeline (if no .sif file already provided by lab) from the definition file (.def):
+<p>The container will be about 1.3GB and does NOT contain genome index files. So, when running you will have to bind the folder to your reads under a data/ folder as well as genome index files (bowtie2 and/or hisat2) for your assembly.</p>  
+
+&nbsp;&nbsp;&nbsp;&nbsp;apptainer build ngs_processing_pipeline.sif ngs_pipeline_apptainer.def   
+
+#### Review apptainer commands for help:  
+
+&nbsp;&nbsp;&nbsp;&nbsp;apptainer run-help ngs_processing_pipeline.sif  
+
+#### Pipeline input options can be viewed by running:  
+
+&nbsp;&nbsp;&nbsp;&nbsp;apptainer run ngs_processing_pipeline.sif help  
+
+#### Note: You have to bind your local storage to the container's storage for read/write access of any files you wish to process, placed in a directory called "data/".</br>Example command:    
+
+&nbsp;&nbsp;&nbsp;&nbsp;apptainer run --bind data/:/data/ ngs_processing_pipeline.sif --reads /data/SAMPLE/ --logfile SAMPLE.log --no_spikein --assembly mm10 --genome_index /data/bowtie2/mm10/genome --length 100 --adapters 1 --technique cnt --reads_type paired --outdir /data/SAMPLE/ --cleanup
+
+### 2. Manual Method
 #### These steps need to be performed once:  
 Note: Automatic setup if you only download (or copy/paste) and run ./ngs_setup.sh which takes several minutes to complete.
 <ol>  
