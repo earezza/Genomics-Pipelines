@@ -23,11 +23,11 @@ cryptography==3.4.7
 cutadapt==4.4
 cycler==0.11.0
 cykhash==2.0.1
-Cython==0.29.35
+Cython==3.0.7
 deap==1.3.1
 debugpy==1.3.0
 decorator==5.0.9
-deepTools==3.5.0
+deepTools==3.5.3
 deeptoolsintervals==0.1.9
 defusedxml==0.7.1
 dnaio==0.10.0
@@ -60,7 +60,7 @@ jupyterlab-widgets==1.0.0
 kiwisolver==1.4.4
 lockfile==0.12.2
 lzstring==1.0.4
-MACS3==3.0.0b1
+macs3==3.0.0
 Markdown==3.4.3
 markdown_it_py==3.0.0
 MarkupSafe==2.1.2

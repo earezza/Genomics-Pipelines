@@ -1,0 +1,99 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+%files
+	requirements.txt ./
+	ngs_processing_pipeline.py ./
+	#Reference_Files ./
+
+%environment
+
+%setup
+	mkdir ${APPTAINER_ROOTFS}/data/
+
+%post
+	# Update os software
+	apt-get update && apt-get -y upgrade
+
+	# Install Java
+	apt-get install -y openjdk-17-jre openjdk-17-jdk
+
+	# Install general os packages
+	apt-get install -y build-essential zlib1g-dev git wget nano locales\
+	libncurses5-dev libgdbm-dev libnss3-dev libtool libc-bin libbz2-dev liblzma-dev \
+	libssl-dev libreadline-dev libffi-dev curl software-properties-common
+	export TZ=America
+	ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+	locale-gen "en_US.UTF-8"
+	dpkg-reconfigure --frontend noninteractive locales
+
+	# Install bioinfromatics packages
+	apt-get install -y samtools bowtie2 hisat2 fastqc r-base r-base-dev
+
+	# Download additional programs
+	# Picard
+	wget -O picard.jar https://github.com/broadinstitute/picard/releases/download/3.0.0/picard.jar -P ./
+	# SEACR
+	git clone https://github.com/FredHutch/SEACR.git
+	# GoPeaks
+	wget -O gopeaks https://github.com/maxsonBraunLab/gopeaks/releases/download/v1.0.0/gopeaks-linux-amd64 -P ./
+	chmod +x ./gopeaks
+	
+	# Download NGS Processing Pipeline
+#	git clone https://github.com/earezza/Genomics-Pipelines.git 
+#	cp Genomics-Pipelines/Process-NGS-RawReads/ngs_processing_pipeline.py ./
+
+	# Install Virtualenv
+	apt-get update
+	apt install virtualenv -y
+
+	# Install Python3.9.6
+	wget https://www.python.org/ftp/python/3.9.6/Python-3.9.6.tar.xz -P ./
+	tar -xf Python-3.9.6.tar.xz
+	cd Python-3.9.6
+	./configure --enable-optimizations
+	make
+	make altinstall
+	cd ../
+
+	# Create Python3.9.6 environment
+	virtualenv --python="/usr/local/bin/python3.9" ./ngsENV
+	. ngsENV/bin/activate
+
+	# Install required packages
+	pip install update pip
+	pip install --upgrade pip
+	pip install --upgrade setuptools==57.0.0
+	pip install --upgrade wheel
+	pip install -r requirements.txt
+
+	deactivate
+	
+%test
+	java --version
+	. /ngsENV/bin/activate
+	python --version
+	pip list
+	python /ngs_processing_pipeline.py --help
+	deactivate
+	R --version
+	ls /data/
+
+%runscript
+	
+	. /ngsENV/bin/activate
+	python /ngs_processing_pipeline.py $*	
+	deactivate
+
+%labels
+	Author Eric Arezza
+	Version v0.0.1
+
+%help
+	This container is used to run a pipeline that will process next-generation/high-throughput sequencing (.fastq.gz) reads.
+	Input options can be used to define the assembly for alignment (e.g. mm10, hg38, rn6), type of reads sequenced (paired or single),
+	technique used (CUT&Tag, RNA-Seq, etc...) and more (see https://github.com/Dilworth-Laboratory/Genomics-Pipelines/blob/main/Process-NGS-RawReads/README.md for more info).
+	Output files will be alignment .bam files, bigwigs, and peaks .bed files (if not RNA-Seq), as well as additional QC and log files.
+	Note: reads_R1.fastq.gz and reads_R2.fastq.gz should be in a SAMPLE/ folder under a folder named data/ (or whichever you bind to the container). 
+	Example command:
+		apptainer run --bind data/:/data/ ngs_processing_pipeline.sif --reads /data/SAMPLE/ --logfile SAMPLE.log --no_spikein --assembly mm10 --genome_index /data/bowtie2/mm10/genome --length 100 --adapters 1 --technique cnt --reads_type paired --outdir /data/SAMPLE/ --cleanup

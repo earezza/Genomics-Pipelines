@@ -3,6 +3,10 @@ Pipeline to process raw reads from next-generation sequencing experiments (CUT&T
 <strong>This should be run on an HPC platform such as ComputeCanada.</strong>  
 ___  
 ## Setup  
+#### Easiest method is to use Apptainer and build a container (.sif) of the processing pipeline (if no .sif file already provided by lab) from the definition file (.def):
+>> apptainer build ngs_processing_pipeline.sif ngs_pipeline_apptainer.def
+The container will be about 1.3GB and does NOT contain genome index files. So, when running you will have to bind the folder to your reads under a /data/ folder as well as genome index files (bowtie2 and/or hisat2) for your assembly.
+>> apptainer run-help ngs_processing_pipeline.sif
 #### These steps need to be performed once:  
 Note: Automatic setup if you only download (or copy/paste) and run ./ngs_setup.sh which takes several minutes to complete.
 <ol>  
