@@ -82,18 +82,18 @@ import glob
 import yaml
 from pathlib import Path
 
-describe_help = 'python ngs_processing_pipeline.py --reads READS_DIR/ --species Mus -length 100 -adapters 1 -qctrim -technique rnaseq'
+describe_help = 'python ngs_processing_pipeline.py --reads READS_DIR/ --assembly mm10 -length 100 -adapters 1 -qctrim -technique rnaseq'
 parser = argparse.ArgumentParser(description=describe_help)
 # User defined options
 parser.add_argument('-logfile', '--logfile', help='Name of .log file', type=str, default="ngs_processing_pipeline.log")
 parser.add_argument('-outdir', '--outdir', help='Path of directory to store results', type=str, default="./")
 parser.add_argument('-reads', '--reads', help='Path to directory containing reads (R1, R2, and md5sum.txt files)', type=str)
 parser.add_argument('-merge', '--merge', help='If flagged, will produce a merged result from input files in addition to individual replicates/reads', action='store_true')
-parser.add_argument('-species', '--species', help='Species of reads (Mus for mouse, Homo for human, Rat for rat)', type=str, choices=['Mus', 'Homo', 'Rat'], default='Mus')
+parser.add_argument('-assembly', '--assembly', help='Genome assembly for alignment (supports mm10, hg38, and rn6, can be overridden with --genome_index)', type=str, choices=['mm10', 'hg38', 'rn6'], default='mm10')
 parser.add_argument('-length', '--length', help='Read length', type=str, default='100', choices=['50', '75', '100', '150', '200'])
 parser.add_argument('-controls', '--controls', help='Control reads for peaks calling', default=[], nargs='+')
 parser.add_argument('-adapters', '--adapters', help='Adapter sequences, see https://support-docs.illumina.com/SHARE/AdapterSeq/Content/SHARE/AdapterSeq/Nextera/SequencesNXTILMPrepAndPCR.htm',
-                    type=int, default=1, choices=[1, 2, 3, 4, 5])
+                    type=int, default=1, choices=[0, 1])
 parser.add_argument('-qctrim', '--qctrim', help='If flagged, will apply QC trimming to raw reads (min length 20, score > 20, remove first 11 bases)', action='store_true')
 parser.add_argument('-polyAtrim', '--polyAtrim', help='If flagged, will apply poly-A trimming to reads after trimming adapters (as per cutadapt recommendation)', action='store_true')
 parser.add_argument('-stranded', '--stranded', help='If flagged, will create bam and coverage mapping to forward and reverse strands separately, intended for RNA-Seq', action='store_true')
@@ -110,9 +110,9 @@ parser.add_argument('-spikein', '--spikein', help='Spikein type', type=str, choi
 parser.add_argument('-no_spikein', '--no_spikein', help='If no spikein, skip steps for normalizing to spikein', action='store_true')
 parser.add_argument('-cleanup', '--cleanup', help='If cleanup, remove all intermediate files keeping only QC and final .bam, .bw, and .bed files', action='store_true')
 # Program and reference genome locations
-parser.add_argument('-PicardLoc', '--PicardLoc', help='Location of picard.jar', type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+"/picard.jar")
-parser.add_argument('-SEACRLoc', '--SEACRLoc', help='Location of SEACR .sh', type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+"/SEACR/SEACR_1.3.sh")
-parser.add_argument('-genome_index', '--genome_index', help='Location of genome index files for mapping reads', type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/Reference_Files/bowtie2/Mus_musculus/UCSC/mm10/Sequence/Bowtie2Index/genome')
+parser.add_argument('-PicardLoc', '--PicardLoc', help='Location of picard.jar', type=str, default="picard.jar")
+parser.add_argument('-SEACRLoc', '--SEACRLoc', help='Location of SEACR .sh', type=str, default="SEACR/SEACR_1.3.sh")
+parser.add_argument('-genome_index', '--genome_index', help='Location of genome index files for mapping reads', type=str, default='../Reference_Files/bowtie2/' + parser.parse_args().assembly + '/genome')
 # Usually unchanged command line options for programs
 parser.add_argument('-spike_align', '--spike_align', help='Command input options for spikein alignment', type=str, default="-p 8 --end-to-end --very-sensitive --no-overlap --no-dovetail --no-mixed --no-discordant --phred33 -I 10 -X 700")
 parser.add_argument('-bamCov_default', '--bamCov_default', help='Command input default for bamCoverage', type=str, default="--binSize 1 --ignoreForNormalization 'chrM' --extendReads --numberOfProcessors max")
@@ -122,11 +122,10 @@ parser.add_argument('-blacklist', '--blacklist', help='Bed file containing black
 parser.add_argument('-genome_align', '--genome_align', help='Command input options for genome alignment', type=str, default="-p %s --local --very-sensitive-local --no-unal --no-mixed --no-discordant --phred33 -I 10 -X 700"%os.cpu_count())
 parser.add_argument('-samtools_mapq', '--samtools_mapq', help='Command input option for samtools view min alignment Q-score', type=str, default="-q 10")
 parser.add_argument('-samtools_flags', '--samtools_flags', help='Command input option for samtools view flags', type=str, default="-f 2")
-#parser.add_argument('-mnase', '--mnase', help='If MNase-seq data, apply --MNase bam coverage option', action='store_true')
 
 # Spikein reference index files
-parser.add_argument('-spikein_index_amp', '--spikein_index_amp', help="Source of reference files for Amp spikein index file", type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+'/Reference_files/Spikein_indices/Amp_pbluescript/Amp_index/Amp_pBlue')
-parser.add_argument('-spikein_index_Ecoli', '--spikein_index_Ecoli', help="Source of reference files for Amp spikein index file", type=str, default=os.getenv('HOME')+'/projects/def-jdilwort/'+os.getenv('USER')+'/Reference_files/Spikein_indices/EcoliK12_index/EcoliK12Index/EcoliK12')
+parser.add_argument('-spikein_index_amp', '--spikein_index_amp', help="Source of reference files for Amp spikein index file", type=str, default='../Reference_Files/Spikein_indices/Amp_pbluescript/Amp_index/Amp_pBlue')
+parser.add_argument('-spikein_index_Ecoli', '--spikein_index_Ecoli', help="Source of reference files for Amp spikein index file", type=str, default='../Reference_Files/Spikein_indices/EcoliK12_index/EcoliK12Index/EcoliK12')
 args = parser.parse_args()
 
 # Define constants
@@ -148,6 +147,7 @@ if args.technique == "mnaseseq":
     
 if args.technique == "rnaseq":
     MAPPER = 'hisat2'
+    args.genome_index = args.genome_index.replace('bowtie2', MAPPER)
     args.genome_align = "-p %s --no-unal --no-mixed --no-discordant --phred33 -I 10 -X 700"%os.cpu_count()
     args.bamCov_default = args.bamCov_default.replace("--extendReads", "")
     args.bamCov_min = args.bamCov_min.replace("--extendReads", "")
@@ -160,11 +160,8 @@ else:
 TRIM = ''
 if args.reads_type == "paired":
     illumina_adapter_sequences = {
-        1: '-a CTGTCTCTTATACACATCT -A CTGTCTCTTATACACATCT',
-        #2: '-a CTGTCTCTTATACACATCT+ATGTGTATAAGAGACA -A CTGTCTCTTATACACATCT+ATGTGTATAAGAGACA',
-        #3: '-a CTGTCTCTTATACACATCT+AGATGTGTATAAGAGACAG -A CTGTCTCTTATACACATCT+AGATGTGTATAAGAGACAG',
-        #4: '-g TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG -G GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG',
-        #5: '-g CAAGCAGAAGACGGCATACGAGAT[i7]GTCTCGTGGGCTCGG -G AATGATACGGCGACCACCGAGATCTACAC[i5]TCGTCGGCAGCGTC', # see illumina reference docs for indices...
+        0: '',
+        1: '-a CTGTCTCTTATACACATCT -A CTGTCTCTTATACACATCT'
         }
     if args.qctrim:
         TRIM = '-m 20 -q 20,20 -u 11 -U 11'
@@ -175,11 +172,8 @@ else:
         args.genome_align = "-p %s --no-unal --phred33"%os.cpu_count()
     args.samtools_flags = "-F 4"
     illumina_adapter_sequences = {
-        1: '-a CTGTCTCTTATACACATCT',
-        #2: '-a CTGTCTCTTATACACATCT+ATGTGTATAAGAGACA',
-        #3: '-a CTGTCTCTTATACACATCT+AGATGTGTATAAGAGACAG',
-        #4: '-g TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG',
-        #5: '-g CAAGCAGAAGACGGCATACGAGAT[i7]GTCTCGTGGGCTCGG', # see illumina reference docs for indices...
+        0: '',
+        1: '-a CTGTCTCTTATACACATCT'
         }
     if args.qctrim:
         TRIM = '-m 20 -q 20 -u 11'
@@ -203,13 +197,13 @@ TARGETS = set([ f for f in fastqfiles if f not in IGGREADS ])
 EGS_GRCh38 = {'50': '2701495761', '75': '2747877777', '100': '2805636331', '150': '2862010578', '200': '2887553303'}
 EGS_GRCm38 = {'50': '2308125349', '75': '2407883318', '100': '2467481108', '150': '2494787188', '200': '2520869189'}
 EGS_Rnor6 = {'50': '2375372135', '75': '2440746491', '100': '2480029900', '150': '2477334634', '200': '2478552171'}
-if args.species == 'Mus':
+if args.assembly == 'mm10':
     EGS = EGS_GRCm38
     EFFECTIVEGENOMESIZE = EGS[args.length]
-if args.species == 'Homo':
+if args.assembly == 'hg38':
     EGS = EGS_GRCh38
     EFFECTIVEGENOMESIZE = EGS[args.length]
-if args.species == 'Rat':
+if args.assembly == 'rn6':
     EGS = EGS_Rnor6
     EFFECTIVEGENOMESIZE = EGS[args.length]
 
