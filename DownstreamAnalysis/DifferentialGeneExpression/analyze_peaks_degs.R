@@ -36,7 +36,9 @@ option_list = list(
   make_option(c("-o", "--organism"), type="character", default="mouse", help="Organism to annotate genes at peaks, human (hg38) or mouse (mm10, default) or rat (rn6)", metavar="character"),
   make_option(c("-r", "--result_dir"), type="character", default="Peaks_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
+  make_option(c("-a", "--annotation_level"), type="character", default="transcript", help="Level parameter for annotatePeak, 'gene' or 'transcript'", metavar="character"),
   make_option(c("-a", "--add_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add all peaks together from replicates instead of only taking their consensuspeaks", metavar="character"),
+  make_option(c("-b", "--blacklisted_keep"), type="logical", action="store_true", default=FALSE, help="Flag to keep blacklisted regions in raw peaks files", metavar="character"),
   make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
   make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="integer")
 );
@@ -97,7 +99,7 @@ if (opt$organism == "mouse"){
   annoDb <- "org.Hs.eg.db"
   keggOrg <- "hsa"
   if (opt$database == "ucsc"){
-    txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
+    txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
   }else if (opt$database == "ensemble"){
     library(EnsDb.Hsapiens.v86)
     txdb <- EnsDb.Hsapiens.v86
@@ -161,7 +163,7 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
                    size = unname(unlist(sapply(GeneRatio, function(x) eval(parse(text=x)))))*100,
                ),
     ) + 
-    theme_linedraw() +
+    theme_classic() +
     theme(axis.text.y = element_text(colour=rev(head(df$ycolour, n=n)))) +
     scale_color_gradient(low = "black", high = colour) +
     ggtitle(title) 
@@ -362,10 +364,14 @@ invisible(capture.output(gc()))
 
 # ========= Remove Blacklisted Regions =========
 # Remove blacklisted regions to ignore irrelevant peaks (blacklisted regions from ENCODE, genome selected is based on prediction from bam files)
-dbObj.noblacklist <- dba.blacklist(dbObj, blacklist=TRUE, greylist=FALSE)
-blacklisted_peaks <- dba.blacklist(dbObj.noblacklist, Retrieve=DBA_BLACKLISTED_PEAKS)
-cat("After blacklist applied:\n")
-dbObj.noblacklist
+if (!opt$blacklisted_keep){
+  dbObj.noblacklist <- dba.blacklist(dbObj, blacklist=TRUE, greylist=FALSE)
+  blacklisted_peaks <- dba.blacklist(dbObj.noblacklist, Retrieve=DBA_BLACKLISTED_PEAKS)
+  cat("After blacklisted regions removed:\n")
+  dbObj.noblacklist
+}else{
+  dbObj.noblacklist <- dbObj
+}
 
 png(paste(output_prefix, 'raw_noblacklist_heatmap.png', sep=""))
 dba.plotHeatmap(dbObj.noblacklist)
@@ -506,7 +512,45 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
   invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_consensus_peaks.png', sep=''), plot=plt)))
   invisible(capture.output(dev.off()))
   rm(e)
+}else if (length(unique(dba.show(dbObj.consensus)$Condition)) == 4){
+  e = c(
+    "A"=length(unique_peaks[[names(unique_peaks)[1]]]), 
+    "B"=length(unique_peaks[[names(unique_peaks)[2]]]),
+    "C"=length(unique_peaks[[names(unique_peaks)[3]]]),
+    "D"=length(unique_peaks[[names(unique_peaks)[4]]]),
+    "A&B"=length(differential_peaks$AandB),
+    "A&C"=length(differential_peaks$AandC),
+    "A&D"=length(differential_peaks$AandD),
+    "B&C"=length(differential_peaks$BandC),
+    "B&D"=length(differential_peaks$BandD),
+    "C&D"=length(differential_peaks$CandD),
+    "A&B&C"=length(differential_peaks$notD),
+    "A&B&D"=length(differential_peaks$notC),
+    "A&C&D"=length(differential_peaks$notB),
+    "B&C&D"=length(differential_peaks$notA),
+    "A&B&C&D"=length(shared_peaks[[names(shared_peaks)[1]]])
+  )
+  names(e) = c(names(unique_peaks)[1], names(unique_peaks)[2], names(unique_peaks)[3], names(unique_peaks)[4],
+               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2], sep=''),
+               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[3], sep=''),
+               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[4], sep=''),
+               paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[3], sep=''),
+               paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[4], sep=''),
+               paste(names(unique_peaks)[3] , '&' , names(unique_peaks)[4], sep=''),
+               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[3], sep=''),
+               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[4], sep=''),
+               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep=''),
+               paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep=''),
+               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep='')
+  )
+  
+  #png(paste(output_prefix, 'raw_consensus_peaks.png', sep=""))
+  plt <- plot(euler(e), main=gsub('/', '', opt$result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
+  invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_consensus_peaks.png', sep=''), plot=plt)))
+  invisible(capture.output(dev.off()))
+  rm(e)
 }
+
 invisible(capture.output(gc()))
 
 
@@ -610,8 +654,11 @@ for (p in names(peaks)){
   cat("\nAnnotating", p, '\n')
   anno <- annotatePeak(peaks[[p]], 
                        TxDb=txdb,
-                       annoDb=annoDb)
-
+                       annoDb=annoDb,
+                       level=opt$annotation_level,
+                       tssRegion=c(-3000, 3000)
+                       )
+  
   peakAnnoList[[p]] <- anno
   
   plt <- upsetplot(anno, vennpie=TRUE) + ggtitle(p)
@@ -1047,7 +1094,9 @@ for (report in names(reports)){
   names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
   names(res)[names(res) == 'FDR'] <- 'p.adjust'
   res <- res[order(res$log2FoldChange, decreasing=TRUE), ]
-  res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
+  res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb,
+                                    level=opt$annotation_level,
+                                    tssRegion=c(-3000, 3000))@anno)
   
   write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   
@@ -1124,12 +1173,16 @@ for (report in names(reports)){
   
   # Write complete DE result to files
   if (dim(gained)[1] > 0){
-    gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=txdb, annoDb=annoDb)@anno)
+    gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=txdb, annoDb=annoDb,
+                                         level=opt$annotation_level,
+                                         tssRegion=c(-3000, 3000))@anno)
     gained <- gained[order(gained$Fold, decreasing=TRUE), ]
     write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   }
   if (dim(lost)[1] > 0){
-    lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=txdb, annoDb=annoDb)@anno)
+    lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=txdb, annoDb=annoDb,
+                                       level=opt$annotation_level,
+                                       tssRegion=c(-3000, 3000))@anno)
     lost <- lost[order(lost$Fold, decreasing=FALSE), ]
     write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   }
@@ -1171,7 +1224,7 @@ for (report in names(reports)){
     }else{
       colour <- conditions_colour_code[[p]]
     }
-
+    
     if (colour == "#00BFC4"){
       heat_colour <- "Blues"
     }else if (colour == "#F8766D"){
@@ -1190,9 +1243,11 @@ for (report in names(reports)){
       cat("\nAnnotating", p, "\n")
       anno <- annotatePeak(gpeaks[[p]], 
                            TxDb=txdb,
-                           annoDb=annoDb)
+                           annoDb=annoDb,
+                           level=opt$annotation_level,
+                           tssRegion=c(-3000, 3000))
       peakAnnoList[[p]] <- anno
-
+      
       tryCatch(
         {
           png(paste(output_prefix,'_', report, 'peaks_annotation_pie', p, '.png', sep=''), width=875, height=625)
@@ -1331,7 +1386,9 @@ report <- "DESeq2_and_edgeR"
 res <- as.data.frame(reports[[report]])
 res['log2FoldChange'] <- (res$Fold.DESeq2 + res$Fold.edgeR)/2
 res['p.adjust'] <- (res$FDR.DESeq2 + res$FDR.edgeR)/2
-res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb)@anno)
+res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb,
+                                  level=opt$annotation_level,
+                                  tssRegion=c(-3000, 3000))@anno)
 res <- res[order(res$log2FoldChange, decreasing=TRUE), ]
 
 write.table(res, file=paste(output_prefix, 'analyzed_report_', report, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
@@ -1372,12 +1429,16 @@ lost <- out %>%
 
 
 if (dim(gained)[1] > 0){
-  gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=txdb, annoDb=annoDb)@anno)
+  gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=txdb, annoDb=annoDb,
+                                       level=opt$annotation_level,
+                                       tssRegion=c(-3000, 3000))@anno)
   gained <- gained[order(gained$Fold, decreasing=TRUE), ]
   write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
 }
 if (dim(lost)[1] > 0){
-  lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=txdb, annoDb=annoDb)@anno)
+  lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=txdb, annoDb=annoDb,
+                                     level=opt$annotation_level,
+                                     tssRegion=c(-3000, 3000))@anno)
   lost <- lost[order(lost$Fold, decreasing=FALSE), ]
   write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
 }
@@ -1440,19 +1501,21 @@ for (p in names(gpeaks)){
     cat("\nAnnotating", p, "\n")
     anno <- annotatePeak(gpeaks[[p]], 
                          TxDb=txdb,
-                         annoDb=annoDb)
+                         annoDb=annoDb,
+                         level=opt$annotation_level,
+                         tssRegion=c(-3000, 3000))
     peakAnnoList[[p]] <- anno
-
+    
     tryCatch(
-        {
-          png(paste(output_prefix,'_', report, 'peaks_annotation_pie', p, '.png', sep=''), width=875, height=625)
-          plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-5, cex.main=1.5, cex=1.25)
-          invisible(capture.output(dev.off()))
-        },error = function(e)
-        {
-          message(e)
-        }
-      )
+      {
+        png(paste(output_prefix,'_', report, 'peaks_annotation_pie', p, '.png', sep=''), width=875, height=625)
+        plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-5, cex.main=1.5, cex=1.25)
+        invisible(capture.output(dev.off()))
+      },error = function(e)
+      {
+        message(e)
+      }
+    )
     
     plt <- upsetplot(anno, vennpie=TRUE) + ggtitle(p)
     invisible(capture.output(ggsave(paste(output_prefix, '_', report, '_', p, '_annotated_peaks_upsetplot.png', sep=''), plot=plt, dpi=320, bg='white')))
