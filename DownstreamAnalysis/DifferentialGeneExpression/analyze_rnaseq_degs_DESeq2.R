@@ -279,10 +279,9 @@ if (opt$filter) {
 dds <- DESeq(dds)
 
 vsd <- vst(dds, blind=FALSE)
-png(paste('PCAplot.png', sep=''))
-plotPCA(vsd, intgroup=c("Condition")) + 
+plt <- plotPCA(vsd, intgroup=c("Condition")) + 
   geom_text(aes(label = rownames(vsd@colData)), nudge_y = 0.2, size = 3)
-invisible(capture.output(dev.off()))
+invisible(capture.output(ggsave("PCAplot.png",plot=plt)))
 
 
 # Iterate through condition combinations to compare DEG
@@ -379,10 +378,11 @@ for (c in colnames(combs)){
   
   # Generate plots
   png(paste(output_prefix, 'MAplot.png', sep=''))
-  plotMA(res, ylim=c(-2,2), ylab='log2foldchange', alpha=0.1)
+  plotMA(res, ylim=c(-2,2), ylab='log2foldchange', alpha=0.1) 
   title(main = comparison, sub="blue if adjusted pvalue < 0.1", cex.sub=0.8)
   abline(h=c((0-opt$lfc), opt$lfc), col="red", lwd=2)
   invisible(capture.output(dev.off()))
+  #invisible(capture.output(ggsave(paste(output_prefix, 'MAplot.png', sep=''), plot=plt)))
   
   resLFC <- lfcShrink(dds, coef=resultsNames(dds)[-1], type="apeglm")
   png(paste(output_prefix, 'shrunkMAplot.png', sep=''))
@@ -402,10 +402,11 @@ for (c in colnames(combs)){
   #hist(res$padj[res$log2FoldChange <= -0.6], breaks = 0:20/20, col = "darkred", border = "white")
   
   vsd <- vst(dds, blind=FALSE)
-  png(paste(output_prefix, 'PCAplot.png', sep=''))
-  plotPCA(vsd, intgroup=c("Condition")) + 
+  #png(paste(output_prefix, 'PCAplot.png', sep=''))
+  plt <- plotPCA(vsd, intgroup=c("Condition")) + 
     geom_text(aes(label = rownames(vsd@colData)), nudge_y = 0.2, size = 3)
-  invisible(capture.output(dev.off()))
+  invisible(capture.output(ggsave(paste(output_prefix, 'PCAplot.png', sep=''), plot=plt)))
+  #invisible(capture.output(dev.off()))
   
   # ========== Organize DEGs ==============
   # Remove any NAs
