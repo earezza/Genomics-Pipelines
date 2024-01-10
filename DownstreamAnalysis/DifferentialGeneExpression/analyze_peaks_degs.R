@@ -486,8 +486,8 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
                          col=NA,
                          #cat.pos=c(0,0),
                          cat.dist = c(0,0))
-  grid.arrange(gTree(children=g), top="Binding Site Overlaps", bottom=gsub('/', '', opt$result_dir))
-  invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_consensus_peaks.png', sep=''), plot=g)))
+  plt <- grid.arrange(gTree(children=g), top="Binding Site Overlaps", bottom=gsub('/', '', opt$result_dir))
+  invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_consensus_peaks.png', sep=''), plot=plt)))
   rm(g)
 }else if (length(unique(dba.show(dbObj.consensus)$Condition)) == 3){
   e = c(
