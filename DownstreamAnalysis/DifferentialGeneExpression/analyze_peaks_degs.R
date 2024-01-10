@@ -477,7 +477,6 @@ cat("\n", length(shared_peaks[["Shared"]]), "shared peaks.\n")
 
 # Plots
 if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
-  png(paste(output_prefix, 'raw_consensus_peaks.png', sep=""))
   grid.newpage()
   g = draw.pairwise.venn(area1=length(unique_peaks[[names(unique_peaks)[1]]])+length(shared_peaks[[names(shared_peaks)[1]]]), 
                          area2=length(unique_peaks[[names(unique_peaks)[2]]])+length(shared_peaks[[names(shared_peaks)[1]]]),
@@ -488,7 +487,7 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
                          #cat.pos=c(0,0),
                          cat.dist = c(0,0))
   grid.arrange(gTree(children=g), top="Binding Site Overlaps", bottom=gsub('/', '', opt$result_dir))
-  invisible(capture.output(dev.off()))
+  invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_consensus_peaks.png', sep=''), plot=g)))
   rm(g)
 }else if (length(unique(dba.show(dbObj.consensus)$Condition)) == 3){
   e = c(
