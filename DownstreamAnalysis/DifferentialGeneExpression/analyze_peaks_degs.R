@@ -334,7 +334,7 @@ cat("Raw peaksets:\n")
 dbObj
 
 # Colour codes for consistency in plots (add more colours if needed)
-colours <- c("#00BFC4", "#F8766D", "#7CAE00", "#C77CFF", "#e69e02")
+colours <- c("#00BFC4", "#F8766D", "#7CAE00", "#C77CFF", "#e69e02", "#00A9FF", "#C77CFF", "#FF61CC")
 conditions_colour_code <- list()
 for (i in 1:length(unique(dbObj$samples$Condition))) {
   conditions_colour_code[[unique(dbObj$samples$Condition)[i]]] <- colours[i]
@@ -473,7 +473,18 @@ for (c in unique(dba.show(dbObj.consensus)$Condition)){
 # Peaks shared between all conditions
 shared_peaks <- list()
 shared_peaks[["Shared"]] <- differential_peaks$inAll
-cat("\n", length(shared_peaks[["Shared"]]), "shared peaks.\n")
+cat("\n", length(shared_peaks[["Shared"]]), "all shared peaks.\n")
+
+if (length(unique(dbObj$samples$Condition)) == 3){
+  for (c in unique(dba.show(dbObj.consensus)$Condition)){
+    i <- which(unique(dba.show(dbObj.consensus)$Condition) == c) + 3
+    pair <- unique(dba.show(dbObj.consensus)$Condition)[which(unique(dba.show(dbObj.consensus)$Condition) != c)]
+    unique_peaks[[paste(pair, collapse='_and_')]] <- differential_peaks[[which(unique(dba.show(dbObj.consensus)$Condition) == c) + 3]]
+    conditions_colour_code[[paste(pair, collapse='_and_')]] <- colours[i]
+    cat("\n", paste(pair, collapse='_and_'), "have", length(unique_peaks[[paste(pair, collapse='_and_')]]), "shared peaks.\n")
+  }
+}
+  
 
 # Plots
 if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
@@ -571,9 +582,9 @@ invisible(capture.output(gc()))
 # Plot peaks over genome
 tryCatch(
   {
-    plt <- covplot(c(unique_peaks, shared_peaks), title="Peaks over Genome") + 
-      scale_color_manual(values=rev(c(unlist(unname(conditions_colour_code[1:length(unique_peaks)])), 'grey'))) + 
-      scale_fill_manual(values=rev(c(unlist(unname(conditions_colour_code[1:length(unique_peaks)])), 'grey')))
+    plt <- covplot(c(unique_peaks[1:length(unique(dbObj$samples$Condition))], shared_peaks), title="Peaks over Genome") + 
+      scale_color_manual(values=rev(c(unlist(unname(conditions_colour_code[1:length(unique(dbObj$samples$Condition))])), 'grey'))) + 
+      scale_fill_manual(values=rev(c(unlist(unname(conditions_colour_code[1:length(unique(dbObj$samples$Condition))])), 'grey')))
     invisible(capture.output(ggsave(filename=paste(output_prefix, 'genome_peaks.png', sep=''), plot=plt, dpi=320)))
     plt <- plt + facet_grid(chr ~ .id)
     invisible(capture.output(ggsave(filename=paste(output_prefix, 'genome_peaks_split.png', sep=''), plot=plt, dpi=320)))
@@ -619,10 +630,22 @@ invisible(capture.output(gc()))
 # Plot TSS profile of peaks
 tryCatch(
   {
-    plt <- plotAvgProf(tagMatrices, xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
-      scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
-      scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
-    invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_profile_peaks.png', sep=''), plot=plt, dpi=320)))
+    if (length(unique(dba.show(dbObj.consensus)$Condition)) == 3){
+      plt <- plotAvgProf(tagMatrices[1:3], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
+        scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
+        scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
+      invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_profile_unique-peaks.png', sep=''), plot=plt, dpi=320)))
+      plt <- plotAvgProf(tagMatrices[4:6], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
+        scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
+        scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
+      invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_profile_pairs-peaks.png', sep=''), plot=plt, dpi=320)))
+    }
+    else{
+      plt <- plotAvgProf(tagMatrices, xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
+        scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
+        scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
+      invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_profile_peaks.png', sep=''), plot=plt, dpi=320)))
+    }
     rm(tagMatrices)
     rm(plt)
   },error = function(e)
@@ -729,7 +752,7 @@ for (p in names(peaks)){
           invisible(capture.output(ggsave(filename=paste(output_prefix, '_', p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
           
           # Write annotations to csv
-          write.table(as.data.frame(compGO), file=paste(output_prefix, '_', p, 'annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+          write.table(as.data.frame(compGO), file=paste(output_prefix, '_', p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
         }
       },error = function(e)
       {
