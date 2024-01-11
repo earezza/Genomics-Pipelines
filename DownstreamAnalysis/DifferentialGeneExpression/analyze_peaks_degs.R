@@ -36,7 +36,7 @@ option_list = list(
   make_option(c("-o", "--organism"), type="character", default="mouse", help="Organism to annotate genes at peaks, human (hg38) or mouse (mm10, default) or rat (rn6)", metavar="character"),
   make_option(c("-r", "--result_dir"), type="character", default="Peaks_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
-  make_option(c("-a", "--annotation_level"), type="character", default="transcript", help="Level parameter for annotatePeak, 'gene' or 'transcript'", metavar="character"),
+  make_option(c("-l", "--annotation_level"), type="character", default="transcript", help="Level parameter for annotatePeak, 'gene' or 'transcript'", metavar="character"),
   make_option(c("-a", "--add_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add all peaks together from replicates instead of only taking their consensuspeaks", metavar="character"),
   make_option(c("-b", "--blacklisted_keep"), type="logical", action="store_true", default=FALSE, help="Flag to keep blacklisted regions in raw peaks files", metavar="character"),
   make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
@@ -509,7 +509,7 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
   #png(paste(output_prefix, 'raw_consensus_peaks.png', sep=""))
   plt <- plot(euler(e), main=gsub('/', '', opt$result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
   invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_consensus_peaks.png', sep=''), plot=plt)))
-  invisible(capture.output(dev.off()))
+  #invisible(capture.output(dev.off()))
   rm(e)
 }else if (length(unique(dba.show(dbObj.consensus)$Condition)) == 4){
   e = c(
@@ -546,7 +546,7 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
   #png(paste(output_prefix, 'raw_consensus_peaks.png', sep=""))
   plt <- plot(euler(e), main=gsub('/', '', opt$result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
   invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_consensus_peaks.png', sep=''), plot=plt)))
-  invisible(capture.output(dev.off()))
+  #invisible(capture.output(dev.off()))
   rm(e)
 }
 
@@ -656,7 +656,7 @@ for (p in names(peaks)){
                        annoDb=annoDb,
                        level=opt$annotation_level,
                        tssRegion=c(-3000, 3000)
-                       )
+  )
   
   peakAnnoList[[p]] <- anno
   
