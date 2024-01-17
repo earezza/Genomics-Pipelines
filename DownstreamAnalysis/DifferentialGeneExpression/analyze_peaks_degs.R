@@ -340,9 +340,8 @@ for (i in 1:length(unique(dbObj$samples$Condition))) {
   conditions_colour_code[[unique(dbObj$samples$Condition)[i]]] <- colours[i]
 }
 
-png(paste(output_prefix, 'raw_heatmap.png', sep=""))
-dba.plotHeatmap(dbObj)
-invisible(capture.output(dev.off()))
+plt <- dba.plotHeatmap(dbObj)
+invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_heatmap.png', sep=''), plot=grid.arrange(plt))))
 invisible(capture.output(gc()))
 
 # Show overlap rates for each condition
@@ -373,9 +372,8 @@ if (!opt$blacklisted_keep){
   dbObj.noblacklist <- dbObj
 }
 
-png(paste(output_prefix, 'raw_noblacklist_heatmap.png', sep=""))
-dba.plotHeatmap(dbObj.noblacklist)
-invisible(capture.output(dev.off()))
+plt <- dba.plotHeatmap(dbObj.noblacklist)
+invisible(capture.output( ggsave(filename=paste(output_prefix, 'raw_noblacklist_heatmap.png', sep=''), plot=grid.arrange(plt)) ))
 invisible(capture.output(gc()))
 
 # Show overlap rates for each condition
@@ -484,7 +482,18 @@ if (length(unique(dbObj$samples$Condition)) == 3){
     cat("\n", paste(pair, collapse='_and_'), "have", length(unique_peaks[[paste(pair, collapse='_and_')]]), "shared peaks.\n")
   }
 }
-  
+
+# if (length(unique(dbObj$samples$Condition)) == 4){
+#   for (c in unique(dba.show(dbObj.consensus)$Condition)){
+#     i <- which(unique(dba.show(dbObj.consensus)$Condition) == c) + 3
+#     pair <- unique(dba.show(dbObj.consensus)$Condition)[which(unique(dba.show(dbObj.consensus)$Condition) != c)]
+#     unique_peaks[[paste(pair, collapse='_and_')]] <- differential_peaks[[which(unique(dba.show(dbObj.consensus)$Condition) == c) + 3]]
+#     conditions_colour_code[[paste(pair, collapse='_and_')]] <- colours[i]
+#     cat("\n", paste(pair, collapse='_and_'), "have", length(unique_peaks[[paste(pair, collapse='_and_')]]), "shared peaks.\n")
+#   }
+# }
+
+
 
 # Plots
 if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
@@ -564,17 +573,18 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
 invisible(capture.output(gc()))
 
 
-png(paste(output_prefix, 'raw_consensus_heatmap.png', sep=""))
-dba.plotHeatmap(dbObj.consensus)
-invisible(capture.output(dev.off()))
+plt <- dba.plotHeatmap(dbObj.consensus)
+invisible(capture.output( ggsave(filename=paste(output_prefix, 'raw_consensus_heatmap.png', sep=''), plot=grid.arrange(plt)) ))
 invisible(capture.output(gc()))
 
-png(paste(output_prefix, 'raw_pca_condition.png', sep=""))
-dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours))
-invisible(capture.output(dev.off()))
+
+plt <- dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours))
+#plt$main <- "PCA"
+invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_pca_condition.png', sep=''), plot=grid.arrange(plt))))
+
 if(length(unique(dbObj$samples$Factor)) > 1){
-  png(paste(output_prefix, 'raw_pca_factor.png', sep=""))
-  dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_FACTOR, label=DBA_ID)
+  plt <- dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_FACTOR, label=DBA_ID)
+  invisible(capture.output( ggsave(filename=paste(output_prefix, 'raw_pca_factor.png', sep=''), plot=grid.arrange(plt)) ))
   invisible(capture.output(dev.off()))
 }
 invisible(capture.output(gc()))
@@ -688,9 +698,9 @@ for (p in names(peaks)){
   
   tryCatch(
     {
-      png(paste(output_prefix, 'peaks_annotation_pie', p, '.png', sep=''), width=875, height=625)
-      plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-5, cex.main=1.5, cex=1.25)
-      invisible(capture.output(dev.off()))
+      #png(paste(output_prefix, 'peaks_annotation_pie', p, '.png', sep=''), width=875, height=625)
+      plt <- plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-5, cex.main=1.5, cex=1.25)
+      invisible(capture.output( ggsave(filename=paste(output_prefix, 'peaks_annotation_pie', p, '.png', sep=''), plot=grid.arrange(plt)) ))
     },error = function(e)
     {
       message(e)
@@ -913,12 +923,11 @@ cat("After normalizing:\n")
 dbObj.norm
 
 # Plots
-png(paste(output_prefix, 'consensus_peaks_counted_normalized_heatmap.png', sep=''))
-dba.plotHeatmap(dbObj.norm)
-invisible(capture.output(dev.off()))
-png(paste(output_prefix, 'consensus_peaks_counted_normalized_pca.png', sep=''))
-dba.plotPCA(dbObj.norm, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours))
-invisible(capture.output(dev.off()))
+plt <- dba.plotHeatmap(dbObj.norm)
+invisible(capture.output( ggsave(filename=paste(output_prefix, 'consensus_peaks_counted_normalized_heatmap.png', sep=''), plot=grid.arrange(plt)) ))
+
+plt <- dba.plotPCA(dbObj.norm, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours))
+invisible(capture.output( ggsave(filename=paste(output_prefix, 'consensus_peaks_counted_normalized_pca.png', sep=''), plot=grid.arrange(plt)) ))
 invisible(capture.output(gc()))
 
 # ========= Define contrasts between sample conditions (assumes 2 conditions) =========
@@ -950,16 +959,14 @@ dbObj.analyzed
 # Plots
 tryCatch(
   {
-    png(paste(output_prefix, 'analyzed_venn.png', sep=''))
-    dba.plotVenn(main="DE Binding Sites Identified by Method",
+    plt <- dba.plotVenn(main="DE Binding Sites Identified by Method",
                  dbObj.analyzed, 
                  contrast=1, 
                  method=DBA_ALL_METHODS
     )
-    invisible(capture.output(dev.off()))
+    invisible(capture.output( ggsave(filename=paste(output_prefix, 'analyzed_venn.png', sep=''), plot=grid.arrange(plt)) ))
   }, error=function(e){
     message("No figure\n", e)
-    invisible(capture.output(dev.off()))
     if (file.exists(paste(output_prefix, 'analyzed_venn.png', sep=''))){
       invisible(file.remove(paste(output_prefix, 'analyzed_venn.png', sep='')))
     }
@@ -1272,9 +1279,9 @@ for (report in names(reports)){
       
       tryCatch(
         {
-          png(paste(output_prefix,'_', report, 'peaks_annotation_pie', p, '.png', sep=''), width=875, height=625)
-          plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-5, cex.main=1.5, cex=1.25)
-          invisible(capture.output(dev.off()))
+          #png(paste(output_prefix,'_', report, 'peaks_annotation_pie', p, '.png', sep=''), width=875, height=625)
+          plt <- plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-5, cex.main=1.5, cex=1.25)
+          invisible(capture.output( ggsave(filename=paste(output_prefix, '_', report, 'peaks_annotation_pie', p, '.png', sep=''), plot=grid.arrange(plt)) ))
         },error = function(e)
         {
           message(e)
@@ -1530,9 +1537,9 @@ for (p in names(gpeaks)){
     
     tryCatch(
       {
-        png(paste(output_prefix,'_', report, 'peaks_annotation_pie', p, '.png', sep=''), width=875, height=625)
-        plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-5, cex.main=1.5, cex=1.25)
-        invisible(capture.output(dev.off()))
+        #png(paste(output_prefix,'_', report, 'peaks_annotation_pie', p, '.png', sep=''), width=875, height=625)
+        plt <- plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-5, cex.main=1.5, cex=1.25)
+        invisible(capture.output( ggsave(filename=paste(output_prefix,'_', report, 'peaks_annotation_pie', p, '.png', sep=''), plot=grid.arrange(plt)) ))
       },error = function(e)
       {
         message(e)
