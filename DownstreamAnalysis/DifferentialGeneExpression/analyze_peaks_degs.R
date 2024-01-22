@@ -79,7 +79,7 @@ load_annotation <- function(assembly, database){
     annoDb <- "org.Hs.eg.db"
     keggOrg <- "hsa"
     if (database == "ucsc"){
-      if (assembly == hg38){
+      if (assembly == "hg38"){
         library(TxDb.Hsapiens.UCSC.hg38.knownGene)
         txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
       }else if (assembly == "hg19"){
