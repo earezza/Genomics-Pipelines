@@ -400,15 +400,23 @@ if (length(unique(dbObj$samples$Factor)) > 1){
     dbObj.consensus <- dbObj.caller_consensus
   }
 }else{
-  # consensus between replicates
-  dbObj.total <- dba.peakset(dbObj.noblacklist, consensus=c(DBA_CONDITION), minOverlap=rep_overlaps)
-  maskname <- names(dbObj.total$masks)[grepl('Replicate.1-2', names(dbObj.total$masks))]
-  if (length(maskname) == 1){
-    dbObj.consensus <- dba(dbObj.total, mask=dbObj.total$masks[[maskname]], minOverlap=1)
-    dbObj.caller_consensus <- dbObj.consensus
-  }else if (length(maskname) == 2){
-    dbObj.consensus <- dba(dbObj.total, mask=(dbObj.total$masks[[maskname[1]]] | dbObj.total$masks[[maskname[2]]]), minOverlap=1)
-    dbObj.caller_consensus <- dbObj.consensus
+  if (length(unique(dbObj$samples$Replicate)) > 1){
+    # consensus between replicates
+    dbObj.total <- dba.peakset(dbObj.noblacklist, consensus=c(DBA_CONDITION), minOverlap=rep_overlaps)
+    maskname <- names(dbObj.total$masks)[grepl('Replicate.1-2', names(dbObj.total$masks))]
+    if (length(maskname) == 1){
+      dbObj.consensus <- dba(dbObj.total, mask=dbObj.total$masks[[maskname]], minOverlap=1)
+      dbObj.caller_consensus <- dbObj.consensus
+    }else if (length(maskname) == 2){
+      dbObj.consensus <- dba(dbObj.total, mask=(dbObj.total$masks[[maskname[1]]] | dbObj.total$masks[[maskname[2]]]), minOverlap=1)
+      dbObj.caller_consensus <- dbObj.consensus
+    }
+  } else {
+    # When only 1 peak caller and 1 replicate available
+    dbObj.total <- dbObj.noblacklist
+    dbObj.consensus <- dbObj.noblacklist
+    dbObj.caller_consensus <- dbObj.noblacklist
+    
   }
 }
 dbObj.caller_consensus
@@ -559,15 +567,22 @@ invisible(capture.output( dev.off() ))
 invisible(capture.output(gc()))
 
 
-plt <- dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours))
-#plt$main <- "PCA"
-invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_pca_condition.png', sep=''), plot=grid.arrange(plt))))
-
-if(length(unique(dbObj$samples$Factor)) > 1){
-  plt <- dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_FACTOR, label=DBA_ID)
-  invisible(capture.output( ggsave(filename=paste(output_prefix, 'raw_pca_factor.png', sep=''), plot=grid.arrange(plt)) ))
-  #invisible(capture.output(dev.off()))
-}
+tryCatch(
+  {
+    plt <- dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours))
+    #plt$main <- "PCA"
+    invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_pca_condition.png', sep=''), plot=grid.arrange(plt))))
+    
+    if(length(unique(dbObj$samples$Factor)) > 1){
+      plt <- dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_FACTOR, label=DBA_ID)
+      invisible(capture.output( ggsave(filename=paste(output_prefix, 'raw_pca_factor.png', sep=''), plot=grid.arrange(plt)) ))
+      #invisible(capture.output(dev.off()))
+    }
+  },error = function(e)
+  {
+    message(e)
+  }
+)
 invisible(capture.output(gc()))
 
 # Plot peaks over genome
