@@ -2,19 +2,7 @@
 suppressWarnings(suppressPackageStartupMessages({
   library(DiffBind)
   library(tidyverse)
-  ##library(profileplyr)
   library(ChIPseeker)
-  #library(TxDb.Mmusculus.UCSC.mm10.knownGene)
-  #library(TxDb.Hsapiens.UCSC.hg38.knownGene)
-  #library(TxDb.Rnorvegicus.UCSC.rn6.refGene)
-  ##library(ensembldb)
-  #library(EnsDb.Hsapiens.v86)
-  #library(EnsDb.Mmusculus.v79)
-  #library(EnsDb.Rnorvegicus.v79)
-  #library(org.Hs.eg.db)
-  #library(org.Mm.eg.db)
-  #library(org.Rn.eg.db)
-  ##library(reshape2)
   library(ReactomePA)
   library(clusterProfiler)
   library(vulcan)
@@ -32,12 +20,11 @@ suppressWarnings(suppressPackageStartupMessages({
 # ======= Get command-line optional arguments =======
 option_list = list(
   make_option(c("-f", "--file"), type="character", default=NULL, help="DiffBind-formatted sample sheet", metavar="character"),
-  make_option(c("-s", "--fragmentsizes"), type="character", default=NULL, help="File with bam fragment sizes generated from bamPEFragmentSize, otherwise determined automatically via vulcan", metavar="character"),
-  make_option(c("-o", "--organism"), type="character", default="mouse", help="Organism to annotate genes at peaks, human (hg38) or mouse (mm10, default) or rat (rn6)", metavar="character"),
+  make_option(c("-a", "--assembly"), type="character", default="mm10", help="Assembly to annotate genes/peaks (e.g. hg19, hg38, mm9, mm10, rn6)", metavar="character"),
   make_option(c("-r", "--result_dir"), type="character", default="Peaks_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
   make_option(c("-l", "--annotation_level"), type="character", default="transcript", help="Level parameter for annotatePeak, 'gene' or 'transcript'", metavar="character"),
-  make_option(c("-a", "--add_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add all peaks together from replicates instead of only taking their consensuspeaks", metavar="character"),
+  make_option(c("-c", "--combine_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add all peaks together from replicates instead of only taking their consensuspeaks", metavar="character"),
   make_option(c("-b", "--blacklisted_keep"), type="logical", action="store_true", default=FALSE, help="Flag to keep blacklisted regions in raw peaks files", metavar="character"),
   make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
   make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="integer")
@@ -58,79 +45,79 @@ if (!file.exists(opt$file)){
   cat(opt$file, "does not exist...check path and current working directory.")
   q()
 }
-if (!(opt$organism %in% c('mouse', 'human', 'rat'))){
-  cat(opt$organism, "not a valid choice. Must be mouse, human, or rat")
+if (!(opt$assembly %in% c('mm10', 'mm9', 'hg38', 'hg19', 'rn6'))){
+  cat(opt$assembly, "not a valid choice. Only supports mm9, mm10, hg19, hg38, rn6 assemblies.")
   q()
 }
 
-# ========= SETUP RUN AND VARIABLES =========
-# Get samplesheet, set directory with samplesheet as workspace
-samplesheet <- opt$file
-
-# Get mean fragmentSize for samples from deepTools bamPEFragmentSize function (obtained prior to Rscript)
-# Note: Assumes order of samples matches the samplesheet
-if (is.null(opt$fragmentsizes)){
-  fragment_size <- 125 # default
-} else{
-  fragment_sizes <- read.table(opt$fragmentsizes, header=TRUE, sep='\t')[,c( "X", "Frag..Len..Mean")]
-  fragment_size <- round(fragment_sizes["Frag..Len..Mean"], 0)[,1]
-  fragment_size <- round(mean(fragment_size))
-}
-
-# ========= Get database references for annotations =========
-if (opt$organism == "mouse"){
-  library(TxDb.Mmusculus.UCSC.mm10.knownGene)
-  library(org.Mm.eg.db)
-  annoDb <- "org.Mm.eg.db"
-  keggOrg <- "mmu"
-  if (opt$database == "ucsc"){
-    txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene
-  }else if (opt$database == "ensemble"){
-    library(EnsDb.Mmusculus.v79)
-    txdb <- EnsDb.Mmusculus.v79
-    seqlevelsStyle(txdb) <- "UCSC" # format ensembl genes using UCSC style
-  }
-  else{
-    stop("Invalid choice of annotation database")
-  }
-} else if (opt$organism == "human"){
-  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
-  library(org.Hs.eg.db)
-  annoDb <- "org.Hs.eg.db"
-  keggOrg <- "hsa"
-  if (opt$database == "ucsc"){
-    txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
-  }else if (opt$database == "ensemble"){
-    library(EnsDb.Hsapiens.v86)
-    txdb <- EnsDb.Hsapiens.v86
-    seqlevelsStyle(txdb) <- "UCSC" # format ensembl genes using UCSC style
-  } 
-  else{
-    stop("Invalid choice of annotation database")
-  }
-} else if (opt$organism == "rat"){
-  library(TxDb.Rnorvegicus.UCSC.rn6.refGene)
-  library(org.Rn.eg.db)
-  annoDb <- "org.Rn.eg.db"
-  keggOrg <- "rno"
-  if (opt$database == "ucsc"){
-    txdb <- TxDb.Rnorvegicus.UCSC.rn6.refGene
-  }else if (opt$database == "ensemble"){
-    library(EnsDb.Rnorvegicus.v79)
-    txdb <- EnsDb.Rnorvegicus.v79
-    seqlevelsStyle(txdb) <- "UCSC" # format ensembl genes using UCSC style
-  } 
-  else{
-    stop("Invalid choice of annotation database")
-  }
-} else{
-  stop("Invalid choice of organism")
-}
-
-# Get promoter regions from database
-promoters <- getPromoters(TxDb=txdb, upstream=3000, downstream=3000)
 
 # Define Functions
+load_annotation <- function(assembly, database){
+  # ========= Get database references for annotations =========
+  if (assembly == "mm10" | assembly == "mm9"){
+    library(org.Mm.eg.db)
+    annoDb <- "org.Mm.eg.db"
+    keggOrg <- "mmu"
+    if (database == "ucsc"){
+      if (assembly == "mm10"){
+        library(TxDb.Mmusculus.UCSC.mm10.knownGene)
+        txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene
+      }else if (assembly == "mm9"){
+        library(TxDb.Mmusculus.UCSC.mm9.knownGene)
+        txdb <- TxDb.Mmusculus.UCSC.mm9.knownGene
+      }
+    }else if (database == "ensemble"){
+      library(EnsDb.Mmusculus.v79)
+      txdb <- EnsDb.Mmusculus.v79
+      seqlevelsStyle(txdb) <- "UCSC" # format ensembl genes using UCSC style
+    }
+    else{
+      stop("Invalid choice of annotation database")
+    }
+  } else if (assembly == "hg38" | assembly == "hg19"){
+    library(org.Hs.eg.db)
+    annoDb <- "org.Hs.eg.db"
+    keggOrg <- "hsa"
+    if (database == "ucsc"){
+      if (assembly == hg38){
+        library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+        txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
+      }else if (assembly == "hg19"){
+        library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+        txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
+      }
+    }else if (database == "ensemble"){
+      library(EnsDb.Hsapiens.v86)
+      txdb <- EnsDb.Hsapiens.v86
+      seqlevelsStyle(txdb) <- "UCSC" # format ensembl genes using UCSC style
+    } 
+    else{
+      stop("Invalid choice of annotation database")
+    }
+  } else if (assembly == "rn6"){
+    library(TxDb.Rnorvegicus.UCSC.rn6.refGene)
+    library(org.Rn.eg.db)
+    annoDb <- "org.Rn.eg.db"
+    keggOrg <- "rno"
+    if (database == "ucsc"){
+      txdb <- TxDb.Rnorvegicus.UCSC.rn6.refGene
+    }else if (database == "ensemble"){
+      library(EnsDb.Rnorvegicus.v79)
+      txdb <- EnsDb.Rnorvegicus.v79
+      seqlevelsStyle(txdb) <- "UCSC" # format ensembl genes using UCSC style
+    } 
+    else{
+      stop("Invalid choice of annotation database")
+    }
+  } else{
+    stop("Invalid choice of assembly")
+  }
+  
+  anno_ref <- list("txdb"=txdb, "annoDb"=annoDb, "keggOrg"=keggOrg)
+  
+  return(anno_ref)
+}
+
 make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n=15){
   df$ycolour <- "black"
   if ("ONTOLOGY" %in% colnames(df)){
@@ -174,7 +161,7 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
   return(plt)
 }
 
-make_pheatmapplot <- function(anno, res, anno_type="GO", organism='mouse', heat_colour="PiYG", num_terms=25, num_genes=50, lfc=0.6, dendro=TRUE, sort_genes=TRUE, title="", xlabel="Gene", ylabel="Term"){
+make_pheatmapplot <- function(anno, res, anno_type="GO", assembly='mm10', heat_colour="PiYG", num_terms=25, num_genes=50, lfc=0.6, dendro=TRUE, sort_genes=TRUE, title="", xlabel="Gene", ylabel="Term"){
   
   # colour should be "Reds", "Greens", "Blues", or "PiYG"
   if ("ONTOLOGY" %in% colnames(anno)){
@@ -203,11 +190,11 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", organism='mouse', heat_
     gene_group <- strsplit(df[df$Description == a, ]$geneID, '/')[[1]]
     # For KEGG to convert EntrezID to gene Symbol
     if (anno_type == "KEGG"){
-      if (tolower(organism) == "human"){
+      if (assembly == "hg19" | assembly == "hg38"){
         gene_group <- mapIds(org.Hs.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
-      }else if (tolower(organism) == "mouse"){
+      }else if (assembly == "mm10" | assembly == "mm9"){
         gene_group <- mapIds(org.Mm.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
-      }else if (tolower(organism) == "rat"){
+      }else if (assembly == "rn6"){
         gene_group <- mapIds(org.Rn.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
       }
     }
@@ -272,9 +259,10 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", organism='mouse', heat_
 # result for DE since the read counts are accounted for (peak shapes).
 
 
+# ========= SETUP RUN AND VARIABLES =========
 # ========= Load peaksets =========
-setwd(dirname(samplesheet))
-samplesheet <- basename(samplesheet)
+setwd(dirname(opt$file))
+samplesheet <- basename(opt$file)
 
 # Set directories
 if (!file.exists(opt$result_dir)) {
@@ -290,18 +278,9 @@ if (!file.exists(result_dir)) {
 output_prefix <- gsub('.csv', '_', paste(result_dir, samplesheet, sep=""))
 output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
 
-# Average overl all samples
-#tryCatch(
-#  {
-#    png(paste(output_prefix, 'fragment_length.png', sep=""))
-#    fragment_size <- average_fragment_length(unique(read.csv(samplesheet)$bamReads), plot=TRUE)
-#    invisible(capture.output(dev.off()))
-#  }, error=function(e){
-#    message("Problem reading samplesheet.\n", e)
-#    invisible(capture.output(dev.off()))
-#    invisible(file.remove(paste(output_prefix, 'fragment_length.png', sep="")))
-#  }
-#)
+# Get annotations reference and respective promoter regions
+anno_ref <- load_annotation(opt$assembly, opt$database)
+promoters <- getPromoters(TxDb=anno_ref$txdb, upstream=3000, downstream=3000)
 
 # Average for each sample
 fragment_size <- 1:length(read.csv(samplesheet)$SampleID)
@@ -340,8 +319,9 @@ for (i in 1:length(unique(dbObj$samples$Condition))) {
   conditions_colour_code[[unique(dbObj$samples$Condition)[i]]] <- colours[i]
 }
 
-plt <- dba.plotHeatmap(dbObj)
-invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_heatmap.png', sep=''), plot=grid.arrange(plt))))
+png(filename=paste(output_prefix, 'raw_heatmap.png', sep=''))
+dba.plotHeatmap(dbObj)
+invisible(capture.output(dev.off()))
 invisible(capture.output(gc()))
 
 # Show overlap rates for each condition
@@ -372,8 +352,9 @@ if (!opt$blacklisted_keep){
   dbObj.noblacklist <- dbObj
 }
 
-plt <- dba.plotHeatmap(dbObj.noblacklist)
-invisible(capture.output( ggsave(filename=paste(output_prefix, 'raw_noblacklist_heatmap.png', sep=''), plot=grid.arrange(plt)) ))
+png(paste(output_prefix, 'raw_noblacklist_heatmap.png', sep=''))
+dba.plotHeatmap(dbObj.noblacklist)
+invisible(capture.output( dev.off() ))
 invisible(capture.output(gc()))
 
 # Show overlap rates for each condition
@@ -394,7 +375,7 @@ invisible(capture.output(dev.off()))
 invisible(capture.output(gc()))
 
 # ========= Get Consensus Peaks =========
-if (opt$add_replicates == TRUE){
+if (opt$combine_replicates == TRUE){
   rep_overlaps <- 1 # add all peaks from replicates
 }else{
   rep_overlaps <- 2 # add only consensus peaks (peaks must be in at least 2 replicates)
@@ -572,9 +553,9 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
 
 invisible(capture.output(gc()))
 
-
-plt <- dba.plotHeatmap(dbObj.consensus)
-invisible(capture.output( ggsave(filename=paste(output_prefix, 'raw_consensus_heatmap.png', sep=''), plot=grid.arrange(plt)) ))
+png(paste(output_prefix, 'raw_consensus_heatmap.png', sep=''))
+dba.plotHeatmap(dbObj.consensus)
+invisible(capture.output( dev.off() ))
 invisible(capture.output(gc()))
 
 
@@ -585,7 +566,7 @@ invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_pca_condition
 if(length(unique(dbObj$samples$Factor)) > 1){
   plt <- dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_FACTOR, label=DBA_ID)
   invisible(capture.output( ggsave(filename=paste(output_prefix, 'raw_pca_factor.png', sep=''), plot=grid.arrange(plt)) ))
-  invisible(capture.output(dev.off()))
+  #invisible(capture.output(dev.off()))
 }
 invisible(capture.output(gc()))
 
@@ -685,8 +666,8 @@ for (p in names(peaks)){
   
   cat("\nAnnotating", p, '\n')
   anno <- annotatePeak(peaks[[p]], 
-                       TxDb=txdb,
-                       annoDb=annoDb,
+                       TxDb=anno_ref$txdb,
+                       annoDb=anno_ref$annoDb,
                        level=opt$annotation_level,
                        tssRegion=c(-3000, 3000)
   )
@@ -722,7 +703,7 @@ for (p in names(peaks)){
                                  fun="enrichKEGG",
                                  pvalueCutoff=0.05,
                                  pAdjustMethod="BH",
-                                 organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+                                 organism=anno_ref$keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
       if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
         #plt <- dotplot(compKEGG, showCategory = 10, title = "KEGG Pathway Enrichment Analysis")
         plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
@@ -748,7 +729,7 @@ for (p in names(peaks)){
         
         compGO <- compareCluster(geneCluster=genes,
                                  keyType='SYMBOL',
-                                 OrgDb=annoDb,
+                                 OrgDb=anno_ref$annoDb,
                                  fun="enrichGO",
                                  ont=ont,
                                  pvalueCutoff=0.05,
@@ -1123,7 +1104,7 @@ for (report in names(reports)){
   names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
   names(res)[names(res) == 'FDR'] <- 'p.adjust'
   res <- res[order(res$log2FoldChange, decreasing=TRUE), ]
-  res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb,
+  res <- as.data.frame(annotatePeak(GRanges(res), TxDb=anno_ref$txdb, annoDb=anno_ref$annoDb,
                                     level=opt$annotation_level,
                                     tssRegion=c(-3000, 3000))@anno)
   
@@ -1202,14 +1183,14 @@ for (report in names(reports)){
   
   # Write complete DE result to files
   if (dim(gained)[1] > 0){
-    gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=txdb, annoDb=annoDb,
+    gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=anno_ref$txdb, annoDb=anno_ref$annoDb,
                                          level=opt$annotation_level,
                                          tssRegion=c(-3000, 3000))@anno)
     gained <- gained[order(gained$Fold, decreasing=TRUE), ]
     write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   }
   if (dim(lost)[1] > 0){
-    lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=txdb, annoDb=annoDb,
+    lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=anno_ref$txdb, annoDb=anno_ref$annoDb,
                                        level=opt$annotation_level,
                                        tssRegion=c(-3000, 3000))@anno)
     lost <- lost[order(lost$Fold, decreasing=FALSE), ]
@@ -1271,8 +1252,8 @@ for (report in names(reports)){
     if (length(gpeaks[[p]]) > 0){
       cat("\nAnnotating", p, "\n")
       anno <- annotatePeak(gpeaks[[p]], 
-                           TxDb=txdb,
-                           annoDb=annoDb,
+                           TxDb=anno_ref$txdb,
+                           annoDb=anno_ref$annoDb,
                            level=opt$annotation_level,
                            tssRegion=c(-3000, 3000))
       peakAnnoList[[p]] <- anno
@@ -1306,7 +1287,7 @@ for (report in names(reports)){
                                      fun="enrichKEGG",
                                      pvalueCutoff=0.05,
                                      pAdjustMethod="BH",
-                                     organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+                                     organism=anno_ref$keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
           
           if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
             plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
@@ -1315,10 +1296,10 @@ for (report in names(reports)){
             # Write annotations to csv
             write.table(as.data.frame(compKEGG), file=paste(output_prefix, report, '_', p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
             
-            plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
+            plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_KEGG_annotation_', p, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
-            plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
+            plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_KEGG_annotation_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
             
@@ -1336,7 +1317,7 @@ for (report in names(reports)){
         tryCatch(
           {
             compGO <- compareCluster(geneCluster=genes,
-                                     OrgDb=annoDb,
+                                     OrgDb=anno_ref$annoDb,
                                      fun="enrichGO",
                                      ont=ont,
                                      pvalueCutoff=0.05,
@@ -1415,7 +1396,7 @@ report <- "DESeq2_and_edgeR"
 res <- as.data.frame(reports[[report]])
 res['log2FoldChange'] <- (res$Fold.DESeq2 + res$Fold.edgeR)/2
 res['p.adjust'] <- (res$FDR.DESeq2 + res$FDR.edgeR)/2
-res <- as.data.frame(annotatePeak(GRanges(res), TxDb=txdb, annoDb=annoDb,
+res <- as.data.frame(annotatePeak(GRanges(res), TxDb=anno_ref$txdb, annoDb=anno_ref$annoDb,
                                   level=opt$annotation_level,
                                   tssRegion=c(-3000, 3000))@anno)
 res <- res[order(res$log2FoldChange, decreasing=TRUE), ]
@@ -1458,14 +1439,14 @@ lost <- out %>%
 
 
 if (dim(gained)[1] > 0){
-  gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=txdb, annoDb=annoDb,
+  gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=anno_ref$txdb, annoDb=anno_ref$annoDb,
                                        level=opt$annotation_level,
                                        tssRegion=c(-3000, 3000))@anno)
   gained <- gained[order(gained$Fold, decreasing=TRUE), ]
   write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
 }
 if (dim(lost)[1] > 0){
-  lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=txdb, annoDb=annoDb,
+  lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=anno_ref$txdb, annoDb=anno_ref$annoDb,
                                      level=opt$annotation_level,
                                      tssRegion=c(-3000, 3000))@anno)
   lost <- lost[order(lost$Fold, decreasing=FALSE), ]
@@ -1529,8 +1510,8 @@ for (p in names(gpeaks)){
   if (length(gpeaks[[p]]) > 0){
     cat("\nAnnotating", p, "\n")
     anno <- annotatePeak(gpeaks[[p]], 
-                         TxDb=txdb,
-                         annoDb=annoDb,
+                         TxDb=anno_ref$txdb,
+                         annoDb=anno_ref$annoDb,
                          level=opt$annotation_level,
                          tssRegion=c(-3000, 3000))
     peakAnnoList[[p]] <- anno
@@ -1564,7 +1545,7 @@ for (p in names(gpeaks)){
                                    fun="enrichKEGG",
                                    pvalueCutoff=0.05,
                                    pAdjustMethod="BH",
-                                   organism=keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+                                   organism=anno_ref$keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
         
         if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
           plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
@@ -1573,10 +1554,10 @@ for (p in names(gpeaks)){
           # Write annotations to csv
           write.table(as.data.frame(compKEGG), file=paste(output_prefix, report, '_', p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
           
-          plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
+          plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
           invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_KEGG_annotation_', p, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
           remove(plt)
-          plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
+          plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
           invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_KEGG_annotation_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
           remove(plt)
         }
@@ -1592,7 +1573,7 @@ for (p in names(gpeaks)){
       tryCatch(
         {
           compGO <- compareCluster(geneCluster=genes,
-                                   OrgDb=annoDb,
+                                   OrgDb=anno_ref$annoDb,
                                    fun="enrichGO",
                                    ont=ont,
                                    pvalueCutoff=0.05,
@@ -1609,10 +1590,10 @@ for (p in names(gpeaks)){
             # Write annotations to csv
             write.table(as.data.frame(compGO), file=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
             
-            plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=TRUE, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term")
+            plt <- make_pheatmapplot(compGO@compareClusterResult, res, assembly=opt$assembly, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=TRUE, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term")
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_GO-', ont, '_', p, '_pheatmap_by_gene.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
-            plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=FALSE, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term")
+            plt <- make_pheatmapplot(compGO@compareClusterResult, res, assembly=opt$assembly, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=FALSE, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term")
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_GO-', ont, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
             
