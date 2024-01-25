@@ -71,6 +71,7 @@ __all__ = [
 
 import os
 import sys
+import re
 import time
 import types
 import argparse
@@ -307,8 +308,8 @@ def md5sum_check():
         global reads
         global fastqfiles
         if args.reads_type == "paired":
-            reads = set(np.array([ [ t for t in r.replace('.fastq.gz', '').split('_') if t[0] == 'R' ] for r in read_files ]).flatten())
-            fastqfiles = set([ r.replace('.fastq.gz', '').split('_')[0] for r in read_files ])
+            reads = set([ re.findall(r'()+(R\d)', r)[0][-1] for r in read_files ])
+            fastqfiles = set(np.array([ re.findall(r'(.+)_R\d.fastq.gz', r) for r in read_files]).flatten())
         else:
             #reads = set([ r.replace('.fastq.gz', '') for r in read_files ])
             reads = {''}
