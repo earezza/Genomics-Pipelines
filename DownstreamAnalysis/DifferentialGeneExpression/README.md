@@ -1,5 +1,5 @@
 
-## Downstream Analysis: Differential Gene Expression  
+## Downstream Analysis: Differential Binding Sites and Gene Expression  
 
 These pipelines and tools are performed in R. Packages which may be required can be found in the provided <strong>Renv_packages.txt</strong> file.  
   
