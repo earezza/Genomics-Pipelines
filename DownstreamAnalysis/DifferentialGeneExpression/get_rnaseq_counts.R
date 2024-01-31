@@ -49,7 +49,8 @@ if (!file.exists(opt$result_dir)) {
   dir.create(opt$result_dir)
 }
 
-bam_files <- list.files(path=opt$bams, full.names=TRUE)[c(TRUE, FALSE)]
+files <- list.files(path=opt$bams, full.names=TRUE)
+bam_files <- files[sapply(files, endsWith, ".bam") == TRUE]
 
 bamcounts <- featureCounts(bam_files, 
                            annot.inbuilt = opt$assembly, 
