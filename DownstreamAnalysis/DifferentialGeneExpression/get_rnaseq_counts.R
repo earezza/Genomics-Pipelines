@@ -17,7 +17,7 @@ option_list = list(
   make_option(c("-s", "--strand_specific"), type="integer", default=0, help="Obtain counts for strand-specific mappings (0 = not strand specific, 1 = forward-strand only, 2 = reverse-strand only)", metavar="character"),
   make_option(c("-m", "--multi_mappings"), action="store_true", type="logical", default=FALSE, help="Flag to count multi-mapping reads", metavar="character"),
   make_option(c("-d", "--duplicates"), action="store_true", type="logical", default=FALSE, help="Flag to include duplicates", metavar="character"),
-  make_option(c("-p", "--paired_end"), action="store_false", type="logical", default=TRUE, help="Flag to indicate if data is paired-end sequences", metavar="character"),
+  make_option(c("-p", "--paired_end"), action="store_true", type="logical", default=FALSE, help="Flag to indicate if data is paired-end sequences", metavar="character"),
   make_option(c("-r", "--result_dir"), type="character", default="Counts/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-t", "--threads"), type="integer", default=4, help="Number of CPU threads to use when computing counts to speed up run", metavar="character")
 );
@@ -42,6 +42,13 @@ if (tolower(opt$organism) == "mouse"){
   stop("Invalid choice of organism")
 }
 
+if (substr(opt$result_dir, nchar(opt$result_dir), nchar(opt$result_dir)) != "/"){
+  opt$result_dir = paste(opt$result_dir, "/", sep="")
+}
+if (!file.exists(opt$result_dir)) {
+  dir.create(opt$result_dir)
+}
+
 bam_files <- list.files(path=opt$bams, full.names=TRUE)[c(TRUE, FALSE)]
 
 bamcounts <- featureCounts(bam_files, 
@@ -59,5 +66,5 @@ rownames(bamcounts$counts) <- mapIds(mapDB, keys = rownames(bamcounts$counts), c
 bamcounts$counts <- bamcounts$counts[!(is.na(rownames(bamcounts$counts))), ]
 
 for (n in names(bamcounts)){
-  write.table(bamcounts[[n]], file=paste(opt$result_dir, "/", n, ".csv", sep=""), sep=",", quote=F, col.names=NA)
+  write.table(bamcounts[[n]], file=paste(opt$result_dir, n, ".csv", sep=""), sep=",", quote=F, col.names=NA)
 }
