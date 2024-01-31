@@ -59,6 +59,7 @@ bamcounts <- featureCounts(bam_files,
                            countMultiMappingReads = opt$multi_mappings, 
                            ignoreDup = opt$duplicates, 
                            isPairedEnd = opt$paired_end, 
+                           strandSpecific=opt$strand_specific,
                            nthreads = opt$threads, 
                            verbose = TRUE)
 
