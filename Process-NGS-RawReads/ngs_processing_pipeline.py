@@ -375,6 +375,7 @@ def Compileresults_QC():
     formatter = logging.Formatter('%(levelname)s : %(name)s : %(message)s')
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
+    '''
     if os.path.exists(OUT_DIR+'Analysis_Results/QC_Rawreads/Rawreads_QC_%s.html'%(args.logfile.rstrip('.log'))):
         # Get read length if differs from args.length
         try:
@@ -396,6 +397,7 @@ def Compileresults_QC():
             logger.exception(e)
             passed = False
         return passed
+    '''
     try:
         result = subprocess.run('multiqc %sAnalysis_Results/QC_Rawreads --force -v -o %sAnalysis_Results/QC_Rawreads -n Rawreads_QC_%s.html'%(OUT_DIR, OUT_DIR, args.logfile.rstrip('.log')), shell=True, capture_output=True, text=True)
         logger.info(result.stdout.rstrip('\n'))
@@ -405,6 +407,7 @@ def Compileresults_QC():
         passed = False
     
     # Get read length if differs from args.length
+    '''
     try:
         multiqc = open('%sAnalysis_Results/QC_Rawreads/Rawreads_QC_%s.html'%(OUT_DIR, args.logfile.rstrip('.log')), 'r')
         content = multiqc.read()
@@ -435,7 +438,7 @@ def Compileresults_QC():
     except Exception as e:
         logger.exception(e)
         passed = False
-    
+    '''
     passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/QC_Rawreads/Rawreads_QC_%s.html'%args.logfile.rstrip('.log'))
     return passed
 
