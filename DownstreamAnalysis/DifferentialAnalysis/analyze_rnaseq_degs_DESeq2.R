@@ -29,7 +29,8 @@ suppressWarnings(suppressPackageStartupMessages({
 option_list = list(
   make_option(c("-c", "--countsfile"), type="character", help="Count matrix file", metavar="character"),
   make_option(c("-s", "--sampleinfo"), type="character", help="File containing samples and their experimental conditions info (row names must match matrix file column names)", metavar="character"),
-  make_option(c("-o", "--organism"), type="character", default="mouse", help="Organism to annotate genes (mouse (mm10) or human (hg38) or rat (rn6))", metavar="character"),
+  make_option(c("-a", "--assembly"), type="character", default="mm10", help="Assembly to annotate genes/peaks (e.g. hg19, hg38, mm9, mm10, rn6)", metavar="character"),
+  make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
   make_option(c("-r", "--result_dir"), type="character", default="DEG_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-f", "--filter"), action="store_true", type="logical", default=FALSE, help="Flag to filter read counts (removes genes < min_count from raw matrix, then removes genes < min_baseMean after normalizing", metavar="character"),
   make_option(c("--min_count"), type="integer", default=1, help="Minimum counts to include if filtering", metavar="integer"),
@@ -48,27 +49,71 @@ cat("log2FC of", opt$lfc, "equates to FC of", 2^opt$lfc)
 
 # ========= SETUP VARIABLES =========
 # Define references for GO/KEGG annotations
-if (tolower(opt$organism) == "mouse"){
-  #library(EnsDb.Mmusculus.v79)
-  library(TxDb.Mmusculus.UCSC.mm10.knownGene)
-  library(org.Mm.eg.db)
-  annoDb <- "org.Mm.eg.db"
-  keggOrg <- "mmu"
-} else if (tolower(opt$organism) == "human"){
-  #library(TxDb.Hsapiens.UCSC.hg19.knownGene)
-  #library(EnsDb.Hsapiens.v86)
-  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
-  library(org.Hs.eg.db)
-  annoDb <- "org.Hs.eg.db"
-  keggOrg <- "hsa"
-} else if (tolower(opt$organism) == "rat"){
-  #library(EnsDb.Rnorvegicus.v79)
-  library(TxDb.Rnorvegicus.UCSC.rn6.refGene)
-  library(org.Rn.eg.db)
-  annoDb <- "org.Rn.eg.db"
-  keggOrg <- "rno"
-} else{
-  stop("Invalid choice of organism")
+# Define Functions
+load_annotation <- function(assembly, database){
+  # ========= Get database references for annotations =========
+  if (assembly == "mm10" | assembly == "mm9"){
+    library(org.Mm.eg.db)
+    annoDb <- "org.Mm.eg.db"
+    keggOrg <- "mmu"
+    if (database == "ucsc"){
+      if (assembly == "mm10"){
+        library(TxDb.Mmusculus.UCSC.mm10.knownGene)
+        txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene
+      }else if (assembly == "mm9"){
+        library(TxDb.Mmusculus.UCSC.mm9.knownGene)
+        txdb <- TxDb.Mmusculus.UCSC.mm9.knownGene
+      }
+    }else if (database == "ensemble"){
+      library(EnsDb.Mmusculus.v79)
+      txdb <- EnsDb.Mmusculus.v79
+      seqlevelsStyle(txdb) <- "UCSC" # format ensembl genes using UCSC style
+    }
+    else{
+      stop("Invalid choice of annotation database")
+    }
+  } else if (assembly == "hg38" | assembly == "hg19"){
+    library(org.Hs.eg.db)
+    annoDb <- "org.Hs.eg.db"
+    keggOrg <- "hsa"
+    if (database == "ucsc"){
+      if (assembly == "hg38"){
+        library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+        txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
+      }else if (assembly == "hg19"){
+        library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+        txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
+      }
+    }else if (database == "ensemble"){
+      library(EnsDb.Hsapiens.v86)
+      txdb <- EnsDb.Hsapiens.v86
+      seqlevelsStyle(txdb) <- "UCSC" # format ensembl genes using UCSC style
+    } 
+    else{
+      stop("Invalid choice of annotation database")
+    }
+  } else if (assembly == "rn6"){
+    library(TxDb.Rnorvegicus.UCSC.rn6.refGene)
+    library(org.Rn.eg.db)
+    annoDb <- "org.Rn.eg.db"
+    keggOrg <- "rno"
+    if (database == "ucsc"){
+      txdb <- TxDb.Rnorvegicus.UCSC.rn6.refGene
+    }else if (database == "ensemble"){
+      library(EnsDb.Rnorvegicus.v79)
+      txdb <- EnsDb.Rnorvegicus.v79
+      seqlevelsStyle(txdb) <- "UCSC" # format ensembl genes using UCSC style
+    } 
+    else{
+      stop("Invalid choice of annotation database")
+    }
+  } else{
+    stop("Invalid choice of assembly")
+  }
+  
+  anno_ref <- list("txdb"=txdb, "annoDb"=annoDb, "keggOrg"=keggOrg)
+  
+  return(anno_ref)
 }
 
 # Define Functions
@@ -145,10 +190,11 @@ make_volcanoplot <- function(res, condition1, condition2, lfc_threshold, padj_th
                          pCutoff = padj_threshold,
                          FCcutoff = lfc_threshold,
                          cutoffLineType = 'dashed',
+                         pointSize = 2.0,
                          legendLabels=c('Not sig.','Log2FC','p-value','p-value & Log2FC'),
-                         labSize = 4,
+                         labSize = 3,
                          legendPosition = 'top',
-                         legendLabSize = 8,
+                         legendLabSize = 6,
   )
   return(plt)
 }
@@ -169,7 +215,7 @@ make_heatmapplot <- function(res, condition1, condition2, n = 50){
   
 }
 
-make_pheatmapplot <- function(anno, res, anno_type="GO", organism='mouse', heat_colour="PiYG", num_terms=25, num_genes=50, lfc=0.6, dendro=TRUE, sort_genes=TRUE, title="", xlabel="Gene", ylabel="Term"){
+make_pheatmapplot <- function(anno, res, anno_type="GO", assembly='mm10', heat_colour="PiYG", num_terms=25, num_genes=50, lfc=0.6, dendro=TRUE, sort_genes=TRUE, title="", xlabel="Gene", ylabel="Term"){
   
   # colour should be "Reds", "Greens", "Blues", or "PiYG"
   if ("ONTOLOGY" %in% colnames(anno)){
@@ -198,11 +244,11 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", organism='mouse', heat_
     gene_group <- strsplit(df[df$Description == a, ]$geneID, '/')[[1]]
     # For KEGG to convert EntrezID to gene Symbol
     if (anno_type == "KEGG"){
-      if (tolower(organism) == "human"){
+      if (assembly == "hg19" | assembly == "hg38"){
         gene_group <- mapIds(org.Hs.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
-      }else if (tolower(organism) == "mouse"){
+      }else if (assembly == "mm9" | assembly == "mm10"){
         gene_group <- mapIds(org.Mm.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
-      }else if (tolower(organism) == "rat"){
+      }else if (assembly == "rn6"){
         gene_group <- mapIds(org.Rn.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
       }
     }
@@ -249,10 +295,13 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", organism='mouse', heat_
   return(plt)
 }
 
+anno_ref <- load_annotation(opt$assembly, opt$database)
 
 # =========== Load Input Files ============
 count_mtx <- as.matrix(read.csv(opt$countsfile, sep=",", row.names=1, check.names=FALSE))
 sampleinfo <- read.csv(opt$sampleinfo, row.names=1)
+
+count_mtx <- count_mtx[, rownames(sampleinfo)]
 
 # Create output file directory and set as working directory
 if (!file.exists(opt$result_dir)) {
@@ -409,27 +458,41 @@ for (c in colnames(combs)){
   #invisible(capture.output(dev.off()))
   
   # ========== Organize DEGs ==============
+  out_dirs <- list()
+  out_dirs[combs[[c]][1]] <- paste(output_prefix, combs[[c]][1], '/', sep='')
+  out_dirs[combs[[c]][2]] <- paste(output_prefix, combs[[c]][2], '/', sep='')
+  out_dirs["DEGs"] <- paste(output_prefix, "DEGs", '/', sep='')
+  if (!file.exists(out_dirs[[1]])) {
+    dir.create(out_dirs[[1]])
+  }
+  if (!file.exists(out_dirs[[2]])) {
+    dir.create(out_dirs[[2]])
+  }
+  if (!file.exists(out_dirs[[3]])) {
+    dir.create(out_dirs[[3]])
+  }
+  
   # Remove any NAs
-  #res <- res[rowSums(is.na(res)) == 0, ]
+  res <- res[rowSums(is.na(res)) == 0, ]
   
   # Get significantly Upregulated (log2FoldChange > 0)
   res_up <- subset(res, log2FoldChange >= opt$lfc & pvalue <= opt$pvalue)
   res_up_sorted <- res_up[order(res_up$log2FoldChange, decreasing=TRUE),]
-  write.table(res_up_sorted, file=paste(output_prefix, "DESeq2_Result_", combs[[c]][1], ".csv", sep=""), sep=",", quote=F, col.names=NA)
+  write.table(res_up_sorted, file=paste(out_dirs[[1]], "DESeq2_Result_", combs[[c]][1], ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
   # Get significantly Downregulated (log2FoldChange < 0)
   res_down <- subset(res, log2FoldChange <= (0 - opt$lfc) & pvalue <= opt$pvalue)
   res_down_sorted <- res_down[order(res_down$log2FoldChange, decreasing=TRUE),]
-  write.table(res_down_sorted, file=paste(output_prefix, "DESeq2_Result_", combs[[c]][2], ".csv", sep=""), sep=",", quote=F, col.names=NA)
+  write.table(res_down_sorted, file=paste(out_dirs[[2]], "DESeq2_Result_", combs[[c]][2], ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
   # Get all significantly changed genes
   res_changed <- subset(res, (log2FoldChange >= opt$lfc | log2FoldChange <= (0 - opt$lfc)) & pvalue <= opt$pvalue)
   res_changed_sorted <- res_changed[order(abs(res_changed$log2FoldChange), decreasing=TRUE),]
-  write.table(res_changed_sorted, file=paste(output_prefix, "DESeq2_Result_DEGs", ".csv", sep=""), sep=",", quote=F, col.names=NA)
+  write.table(res_changed_sorted, file=paste(out_dirs["DEGs"], "DESeq2_Result_DEGs", ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
   # Heatmap
   plt <- make_heatmapplot(res_changed_sorted, combs[[c]][1], combs[[c]][2], n=40)
-  invisible(capture.output(ggsave(filename=paste(output_prefix, 'Heatmapplot.png', sep=''), plot=plt, dpi=320)))
+  invisible(capture.output(ggsave(filename=paste(out_dirs["DEGs"], 'Heatmapplot.png', sep=''), plot=plt, dpi=320)))
   
   genes <- list()
   if (dim(res_up_sorted)[1] != 0){
@@ -444,11 +507,11 @@ for (c in colnames(combs)){
   
   genes_entrez <- list()
   for (n in names(genes)){
-    if (tolower(opt$organism) == "human"){
+    if (opt$assembly == "hg19" | opt$assembly == "hg38"){
       genes_entrez[[n]] <- mapIds(org.Hs.eg.db, keys = genes[[n]], column = "ENTREZID", keytype = "SYMBOL")
-    }else if (tolower(opt$organism) == "mouse"){
+    }else if (opt$assembly == "mm9" | opt$assembly == "mm10"){
       genes_entrez[[n]] <- mapIds(org.Mm.eg.db, keys = genes[[n]], column = "ENTREZID", keytype = "SYMBOL")
-    }else if (tolower(opt$organism) == "rat"){
+    }else if (opt$assembly == "rn6"){
       genes_entrez[[n]] <- mapIds(org.Rn.eg.db, keys = genes[[n]], column = "ENTREZID", keytype = "SYMBOL")
     }
   }
@@ -473,7 +536,7 @@ for (c in colnames(combs)){
         for (ont in c('ALL', 'CC', 'MF', 'BP')){
           
           compGO <- compareCluster(geneCluster=genes[n],
-                                   OrgDb=annoDb,
+                                   OrgDb=anno_ref$annoDb,
                                    fun="enrichGO",
                                    keyType="SYMBOL", #ENSEMBL
                                    pvalueCutoff=0.05,
@@ -486,16 +549,16 @@ for (c in colnames(combs)){
             compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
             #plt <- dotplot(compGO, showCategory = 8, title = paste("GO -", n, sep=""))
             plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term", colour=colour, n=15)
-            invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_', ont, '_', n, '.png', sep=''), plot=plt, dpi=320)))
+            invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GO_', ont, '_', n, '.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
             # Write annotations to csv
-            write.table(as.data.frame(compGO), file=paste(output_prefix, 'GO_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+            write.table(as.data.frame(compGO), file=paste(out_dirs[[n]], 'GO_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
             
-            plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term")
-            invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_', ont, '_', n, '_pheatmap_by_gene.png', sep=''), plot=plt, dpi=320)))
+            plt <- make_pheatmapplot(compGO@compareClusterResult, res, assembly=opt$assembly, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term")
+            invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GO_', ont, '_', n, '_pheatmap_by_gene.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
-            plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term")
-            invisible(capture.output(ggsave(filename=paste(output_prefix, 'GO_', ont, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+            plt <- make_pheatmapplot(compGO@compareClusterResult, res, assembly=opt$assembly, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term")
+            invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GO_', ont, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
           }
           
@@ -515,21 +578,21 @@ for (c in colnames(combs)){
                                    fun="enrichKEGG",
                                    pvalueCutoff=0.05,
                                    pAdjustMethod="BH",
-                                   organism=keggOrg
+                                   organism=anno_ref$keggOrg
         ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
         if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
           #plt <- dotplot(compKEGG, showCategory = 8, title = paste("KEGG -", n, sep=""))
           plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', n, sep=""), ylabel="KEGG Category", colour=colour, n=15)
-          invisible(capture.output(ggsave(filename=paste(output_prefix, 'KEGG_annotation_', n, '.png', sep=''), plot=plt, dpi=320)))
+          invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '.png', sep=''), plot=plt, dpi=320)))
           remove(plt)
           # Write annotations to csv
-          write.table(as.data.frame(compKEGG), file=paste(output_prefix, 'KEGG_annotation_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+          write.table(as.data.frame(compKEGG), file=paste(out_dirs[[n]], 'KEGG_annotation_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
           
-          plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
-          invisible(capture.output(ggsave(filename=paste(output_prefix, 'KEGG_annotation_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
+          plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
+          invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
           remove(plt)
-          plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", organism=opt$organism, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
-          invisible(capture.output(ggsave(filename=paste(output_prefix, 'KEGG_annotation_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+          plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
+          invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
           remove(plt)
           
         }
@@ -557,7 +620,7 @@ for (c in colnames(combs)){
                         maxGSSize = 800, 
                         pvalueCutoff = 0.05, 
                         verbose = TRUE, 
-                        OrgDb = annoDb, 
+                        OrgDb = anno_ref$annoDb, 
                         pAdjustMethod = "BH"
           )
           if ((!is.null(gsea)) & (dim(gsea@result)[1] > 0)){
@@ -566,17 +629,17 @@ for (c in colnames(combs)){
             plt <- dotplot(gsea, showCategory = 20, title = paste("GSEA (", ont, ") - ", n, sep=""))
             df <- plt$data
             plt <- make_dotplot(df, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", colour=colour, n=15)
-            invisible(capture.output(ggsave(filename=paste(output_prefix, 'GSEA_', ont, '_', n, '.png', sep=''), plot=plt, dpi=320)))
+            invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
             
             # Write annotations to csv
-            write.table(as.data.frame(gsea$result), file=paste(output_prefix, 'GSEA_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+            write.table(as.data.frame(gsea$result), file=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
             
-            plt <- make_pheatmapplot(df, res, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", heat_colour=heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE)
-            invisible(capture.output(ggsave(filename=paste(output_prefix, 'GSEA_', ont, '_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
+            plt <- make_pheatmapplot(df, res, assembly=opt$assembly, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", heat_colour=heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE)
+            invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
-            plt <- make_pheatmapplot(df, res, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", heat_colour=heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE)
-            invisible(capture.output(ggsave(filename=paste(output_prefix, 'GSEA_', ont, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+            plt <- make_pheatmapplot(df, res, assembly=opt$assembly, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", heat_colour=heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE)
+            invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
           }
           
