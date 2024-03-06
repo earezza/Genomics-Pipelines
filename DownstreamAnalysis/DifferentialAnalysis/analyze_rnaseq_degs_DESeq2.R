@@ -159,7 +159,7 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
   return(plt)
 }
 
-make_volcanoplot <- function(res, condition1, condition2, lfc_threshold, padj_threshold){
+make_volcanoplot <- function(res, condition1, condition2, lfc_threshold, padj_threshold, subtitle='DESeq2 Results'){
   df <- as.data.frame(res)
   
   keyvals <- ifelse(df$log2FoldChange <= (0-lfc_threshold), 'darkred', 'black')
@@ -186,7 +186,7 @@ make_volcanoplot <- function(res, condition1, condition2, lfc_threshold, padj_th
                          colCustom = keyvals,
                          lab = rownames(df),
                          title = paste(condition1, ' vs ', condition2, sep=''),
-                         subtitle = 'DESeq2 Results',
+                         subtitle = subtitle,
                          pCutoff = padj_threshold,
                          FCcutoff = lfc_threshold,
                          cutoffLineType = 'dashed',
@@ -488,11 +488,11 @@ for (c in colnames(combs)){
   # Get all significantly changed genes
   res_changed <- subset(res, (log2FoldChange >= opt$lfc | log2FoldChange <= (0 - opt$lfc)) & pvalue <= opt$pvalue)
   res_changed_sorted <- res_changed[order(abs(res_changed$log2FoldChange), decreasing=TRUE),]
-  write.table(res_changed_sorted, file=paste(out_dirs["DEGs"], "DESeq2_Result_DEGs", ".csv", sep=""), sep=",", quote=F, col.names=NA)
+  write.table(res_changed_sorted, file=paste(out_dirs[["DEGs"]], "DESeq2_Result_DEGs", ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
   # Heatmap
   plt <- make_heatmapplot(res_changed_sorted, combs[[c]][1], combs[[c]][2], n=40)
-  invisible(capture.output(ggsave(filename=paste(out_dirs["DEGs"], 'Heatmapplot.png', sep=''), plot=plt, dpi=320)))
+  invisible(capture.output(ggsave(filename=paste(out_dirs[["DEGs"]], 'Heatmapplot.png', sep=''), plot=plt, dpi=320)))
   
   genes <- list()
   if (dim(res_up_sorted)[1] != 0){
