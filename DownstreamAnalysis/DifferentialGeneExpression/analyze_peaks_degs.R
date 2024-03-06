@@ -275,8 +275,13 @@ if (!file.exists(result_dir)) {
   dir.create(result_dir)
 }
 
-output_prefix <- gsub('.csv', '_', paste(result_dir, samplesheet, sep=""))
-output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
+supplementary_dir <- paste(result_dir, "Supplementary/", sep='')
+if (!file.exists(supplementary_dir)) {
+  dir.create(supplementary_dir)
+}
+
+#output_prefix <- gsub('.csv', '_', paste(result_dir, samplesheet, sep=""))
+#output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
 
 # Get annotations reference and respective promoter regions
 anno_ref <- load_annotation(opt$assembly, opt$database)
@@ -287,7 +292,7 @@ fragment_size <- 1:length(read.csv(samplesheet)$SampleID)
 frag_sizes <- list()
 for (b in unique(read.csv(samplesheet)$Condition)){
   for (r in unique(read.csv(samplesheet)$Replicate)){
-    png(paste(output_prefix, 'fragment_length_', b, '-', r, '.png', sep=""))
+    png(paste(supplementary_dir, 'fragment_length_', b, '-', r, '.png', sep=""))
     mean_fragment_size <- average_fragment_length(read.csv(samplesheet)$bamReads[[which(read.csv(samplesheet)$Condition == b)[1]]], plot=TRUE)
     for (i in which(read.csv(samplesheet)$Condition == b & read.csv(samplesheet)$Replicate == r)){
       fragment_size[i] <- mean_fragment_size
@@ -319,14 +324,14 @@ for (i in 1:length(unique(dbObj$samples$Condition))) {
   conditions_colour_code[[unique(dbObj$samples$Condition)[i]]] <- colours[i]
 }
 
-png(filename=paste(output_prefix, 'raw_heatmap.png', sep=''))
+png(filename=paste(supplementary_dir, 'raw_heatmap.png', sep=''))
 dba.plotHeatmap(dbObj)
 invisible(capture.output(dev.off()))
 invisible(capture.output(gc()))
 
 # Show overlap rates for each condition
 cat("Peak overlaps in at least (1, 2, ...) replicates/callers for each condition:\n")
-png(paste(output_prefix, "raw_overlap_rates.png", sep=""))
+png(paste(supplementary_dir, "raw_overlap_rates.png", sep=""))
 par(mfrow=c(length(unique(dbObj$samples$Condition)), 1), mar = c(2, 4, 4, 2))
 for (c in unique(dbObj$samples$Condition)) {
   cat('\n', c, '\n')
@@ -352,14 +357,14 @@ if (!opt$blacklisted_keep){
   dbObj.noblacklist <- dbObj
 }
 
-png(paste(output_prefix, 'raw_noblacklist_heatmap.png', sep=''))
+png(paste(supplementary_dir, 'raw_noblacklist_heatmap.png', sep=''))
 dba.plotHeatmap(dbObj.noblacklist)
 invisible(capture.output( dev.off() ))
 invisible(capture.output(gc()))
 
 # Show overlap rates for each condition
 cat("Peak overlaps in at least (1, 2, ...) replicates/callers for each condition:\n")
-png(paste(output_prefix, "raw_noblacklist_overlap_rates.png", sep=""))
+png(paste(supplementary_dir, "raw_noblacklist_overlap_rates.png", sep=""))
 par(mfrow=c(length(unique(dbObj$samples$Condition)), 1), mar = c(2, 4, 4, 2))
 for (c in unique(dbObj$samples$Condition)) {
   cat('\n', c, '\n')
@@ -496,7 +501,7 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
                          #cat.pos=c(0,0),
                          cat.dist = c(0,0))
   plt <- grid.arrange(gTree(children=g), top="Binding Site Overlaps", bottom=gsub('/', '', opt$result_dir))
-  invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_consensus_peaks.png', sep=''), plot=plt)))
+  invisible(capture.output(ggsave(filename=paste(result_dir, 'consensus_peaks_venn.png', sep=''), plot=plt)))
   rm(g)
 }else if (length(unique(dba.show(dbObj.consensus)$Condition)) == 3){
   e = c(
@@ -517,7 +522,7 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
   
   #png(paste(output_prefix, 'raw_consensus_peaks.png', sep=""))
   plt <- plot(euler(e), main=gsub('/', '', opt$result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
-  invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_consensus_peaks.png', sep=''), plot=plt)))
+  invisible(capture.output(ggsave(filename=paste(result_dir, 'consensus_peaks_venn.png', sep=''), plot=plt)))
   #invisible(capture.output(dev.off()))
   rm(e)
 }else if (length(unique(dba.show(dbObj.consensus)$Condition)) == 4){
@@ -554,14 +559,14 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
   
   #png(paste(output_prefix, 'raw_consensus_peaks.png', sep=""))
   plt <- plot(euler(e), main=gsub('/', '', opt$result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
-  invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_consensus_peaks.png', sep=''), plot=plt)))
+  invisible(capture.output(ggsave(filename=paste(result_dir, 'consensus_peaks_venn.png', sep=''), plot=plt)))
   #invisible(capture.output(dev.off()))
   rm(e)
 }
 
 invisible(capture.output(gc()))
 
-png(paste(output_prefix, 'raw_consensus_heatmap.png', sep=''))
+png(paste(supplementary_dir, 'consensus_heatmap.png', sep=''))
 dba.plotHeatmap(dbObj.consensus)
 invisible(capture.output( dev.off() ))
 invisible(capture.output(gc()))
@@ -571,11 +576,11 @@ tryCatch(
   {
     plt <- dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours))
     #plt$main <- "PCA"
-    invisible(capture.output(ggsave(filename=paste(output_prefix, 'raw_pca_condition.png', sep=''), plot=grid.arrange(plt))))
+    invisible(capture.output(ggsave(filename=paste(supplementary_dir, 'pca_condition.png', sep=''), plot=grid.arrange(plt))))
     
     if(length(unique(dbObj$samples$Factor)) > 1){
       plt <- dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_FACTOR, label=DBA_ID)
-      invisible(capture.output( ggsave(filename=paste(output_prefix, 'raw_pca_factor.png', sep=''), plot=grid.arrange(plt)) ))
+      invisible(capture.output( ggsave(filename=paste(supplementary_dir, 'pca_factor.png', sep=''), plot=grid.arrange(plt)) ))
       #invisible(capture.output(dev.off()))
     }
   },error = function(e)
@@ -591,9 +596,9 @@ tryCatch(
     plt <- covplot(c(unique_peaks[1:length(unique(dbObj$samples$Condition))], shared_peaks), title="Peaks over Genome") + 
       scale_color_manual(values=rev(c(unlist(unname(conditions_colour_code[1:length(unique(dbObj$samples$Condition))])), 'grey'))) + 
       scale_fill_manual(values=rev(c(unlist(unname(conditions_colour_code[1:length(unique(dbObj$samples$Condition))])), 'grey')))
-    invisible(capture.output(ggsave(filename=paste(output_prefix, 'genome_peaks.png', sep=''), plot=plt, dpi=320)))
+    invisible(capture.output(ggsave(filename=paste(result_dir, 'genome_peaks.png', sep=''), plot=plt, dpi=320)))
     plt <- plt + facet_grid(chr ~ .id)
-    invisible(capture.output(ggsave(filename=paste(output_prefix, 'genome_peaks_split.png', sep=''), plot=plt, dpi=320)))
+    invisible(capture.output(ggsave(filename=paste(result_dir, 'genome_peaks_split.png', sep=''), plot=plt, dpi=320)))
     rm(plt)
   },error = function(e)
   {
@@ -602,11 +607,21 @@ tryCatch(
 )
 invisible(capture.output(gc()))
 
+result_dirs <- list()
+for (p in names(unique_peaks)){
+  result_dirs[[p]] <- paste(result_dir, p, "/", sep='')
+  if (!file.exists(result_dirs[[p]])) {
+    dir.create(result_dirs[[p]])
+  }
+}
+
+peaks <- c(unique_peaks, shared_peaks)
+
 # Plot peaks related to TSS sites
 tryCatch(
   {
     tagMatrices <- list()
-    for (p in names(unique_peaks)){
+    for (p in names(peaks)){
       tagMatrix <- getTagMatrix(unique_peaks[[p]], windows=promoters)
       if (length(tagMatrix) == 0){
         cat("No peaks at promoter sites for", p, "\n")
@@ -621,7 +636,7 @@ tryCatch(
                           title=paste(dim(tagMatrix)[[1]],'Peaks at Promoters', p, sep=" - "),
                           palette=if_else(conditions_colour_code[[p]] == "#00BFC4", 'Greens', 'Reds'), 
         )
-        invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_heatmap_', p, '_peaks.png', sep=''), plot=plt, dpi=320)))
+        invisible(capture.output(ggsave(paste(result_dirs[[p]], 'TSS_heatmap_', p, '_peaks.png', sep=''), plot=plt, dpi=320)))
         rm(tagMatrix)
         invisible(capture.output(gc()))
       }
@@ -640,17 +655,17 @@ tryCatch(
       plt <- plotAvgProf(tagMatrices[1:3], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
         scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
         scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
-      invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_profile_unique-peaks.png', sep=''), plot=plt, dpi=320)))
+      invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_unique-peaks.png', sep=''), plot=plt, dpi=320)))
       plt <- plotAvgProf(tagMatrices[4:6], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
         scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
         scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
-      invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_profile_pairs-peaks.png', sep=''), plot=plt, dpi=320)))
+      invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_pairs-peaks.png', sep=''), plot=plt, dpi=320)))
     }
     else{
       plt <- plotAvgProf(tagMatrices, xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
         scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
         scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
-      invisible(capture.output(ggsave(paste(output_prefix, 'raw_TSS_profile_peaks.png', sep=''), plot=plt, dpi=320)))
+      invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_peaks.png', sep=''), plot=plt, dpi=320)))
     }
     rm(tagMatrices)
     rm(plt)
@@ -661,11 +676,15 @@ tryCatch(
 )
 invisible(capture.output(gc()))
 
-peaks <- c(unique_peaks, shared_peaks)
+
+result_dirs[["Shared"]] <- paste(result_dir, "Shared/", sep='')
+if (!file.exists(result_dirs[["Shared"]])) {
+  dir.create(result_dirs[["Shared"]])
+}
 
 # Output to bed files
 for (p in names(peaks)){
-  write.table(as.data.frame(peaks[[p]]), file=paste(output_prefix, p, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+  write.table(as.data.frame(peaks[[p]]), file=paste(result_dirs[[p]], p, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
 }
 
 # ========= Get Annotations =========
@@ -690,13 +709,14 @@ for (p in names(peaks)){
   peakAnnoList[[p]] <- anno
   
   plt <- upsetplot(anno, vennpie=TRUE) + ggtitle(p)
-  invisible(capture.output(ggsave(paste(output_prefix, '_', p, '_annotated_peaks_upsetplot.png', sep=''), plot=plt, dpi=320, bg='white')))
+  invisible(capture.output(ggsave(paste(result_dirs[[p]], p, '_annotated_peaks_upsetplot.png', sep=''), plot=plt, dpi=320, bg='white')))
   
   tryCatch(
     {
-      #png(paste(output_prefix, 'peaks_annotation_pie', p, '.png', sep=''), width=875, height=625)
-      plt <- plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-5, cex.main=1.5, cex=1.25)
-      invisible(capture.output( ggsave(filename=paste(output_prefix, 'peaks_annotation_pie', p, '.png', sep=''), plot=grid.arrange(plt)) ))
+      png(paste(result_dirs[[p]], p, '_peaks_annotation_pie.png', sep=''), width=1680, height=1200)
+      plt <- plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-10, cex.main=3.25, cex=3)
+      invisible(capture.output( dev.off() ))
+      #invisible(capture.output( ggsave(filename=paste(result_dirs[[p]], p, '_peaks_annotation_pie.png', sep=''), plot=grid.arrange(plt)) ))
     },error = function(e)
     {
       message(e)
@@ -704,7 +724,7 @@ for (p in names(peaks)){
   )
   
   # Write annotation to file
-  write.table(anno, file=paste(output_prefix, 'annotated_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+  write.table(anno, file=paste(result_dirs[[p]], p, '_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
   
   tryCatch(
     {
@@ -722,10 +742,10 @@ for (p in names(peaks)){
       if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
         #plt <- dotplot(compKEGG, showCategory = 10, title = "KEGG Pathway Enrichment Analysis")
         plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
-        invisible(capture.output(ggsave(filename=paste(output_prefix, p, '_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+        invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
         
         # Write annotations to csv
-        write.table(as.data.frame(compKEGG), file=paste(output_prefix, p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+        write.table(as.data.frame(compKEGG), file=paste(result_dirs[[p]], p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
       }
     },error = function(e)
     {
@@ -755,10 +775,10 @@ for (p in names(peaks)){
           compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
           #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
           plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=colour, n=15)
-          invisible(capture.output(ggsave(filename=paste(output_prefix, '_', p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+          invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
           
           # Write annotations to csv
-          write.table(as.data.frame(compGO), file=paste(output_prefix, '_', p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+          write.table(as.data.frame(compGO), file=paste(result_dirs[[p]], p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
         }
       },error = function(e)
       {
@@ -773,7 +793,7 @@ for (p in names(peaks)){
 tryCatch(
   {
     plt <- plotAnnoBar(peakAnnoList)
-    invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_distribution.png', sep=''), plot=plt, dpi=320)))
+    invisible(capture.output(ggsave(filename=paste(result_dir, 'peaks_annotation_distribution_bar.png', sep=''), plot=plt, dpi=320)))
   },error = function(e)
   {
     message(e)
@@ -782,7 +802,7 @@ tryCatch(
 tryCatch(
   {
     plt <- plotDistToTSS(peakAnnoList)
-    invisible(capture.output(ggsave(filename=paste(output_prefix, 'peaks_annotation_TSS_distribution.png', sep=''), plot=plt, dpi=320)))
+    invisible(capture.output(ggsave(filename=paste(result_dir, 'peaks_annotation_TSS_distribution.png', sep=''), plot=plt, dpi=320)))
   },error = function(e)
   {
     message(e)
@@ -813,6 +833,12 @@ result_dir <- paste(opt$result_dir, 'Affinity_Analysis/', sep='')
 if (!file.exists(result_dir)) {
   dir.create(result_dir)
 }
+
+supplementary_dir <- paste(result_dir, "Supplementary/", sep='')
+if (!file.exists(supplementary_dir)) {
+  dir.create(supplementary_dir)
+}
+
 if (!file.exists(paste(result_dir, 'DESeq2/', sep=''))) {
   dir.create(paste(result_dir, 'DESeq2/', sep=''))
 }
@@ -820,21 +846,28 @@ if (!file.exists(paste(result_dir, 'edgeR/', sep=''))) {
   dir.create(paste(result_dir, 'edgeR/', sep=''))
 }
 
-change_dirs <- function(res_dir, sheetname, to_swap){
-  if ((to_swap == DBA_DESEQ2) | (to_swap == 'DESeq2')){
-    prefix <- gsub('.csv', '_', paste(paste(res_dir, 'DESeq2/', sep=''), sheetname, sep=""))
-    prefix <- gsub("diffbind_samplesheet_", "", prefix)
-  }else if ((to_swap == DBA_EDGER) | (to_swap == 'edgeR')){
-    prefix <- gsub('.csv', '_', paste(paste(res_dir, 'edgeR/', sep=''), sheetname, sep=""))
-    prefix <- gsub("diffbind_samplesheet_", "", prefix)
+
+change_dirs <- function(res_dir, method, subfolder){
+  if ((method == DBA_DESEQ2) | (method == 'DESeq2')){
+    method_dir <- paste(res_dir, 'DESeq2/', sep='')
+    if (!file.exists(paste(method_dir, subfolder, '/', sep=''))) {
+      dir.create(paste(method_dir, subfolder, '/', sep=''))
+    }
+  }else if ((method == DBA_EDGER) | (method == 'edgeR')){
+    method_dir <- paste(res_dir, 'edgeR/', sep='')
+    if (!file.exists(paste(method_dir, subfolder, '/', sep=''))) {
+      dir.create(paste(method_dir, subfolder, '/', sep=''))
+    }
   }else{
-    prefix <- gsub('.csv', '_', paste(paste(res_dir, sep=''), sheetname, sep=""))
-    prefix <- gsub("diffbind_samplesheet_", "", prefix)
+    method_dir <- paste(res_dir, method, '/', sep='')
+    if (!file.exists(paste(method_dir, subfolder, '/', sep=''))) {
+      dir.create(paste(method_dir, subfolder, '/', sep=''))
+    }
   }
-  return(prefix)
+  return(paste(method_dir, subfolder, '/', sep=''))
 }
 
-output_prefix <- change_dirs(result_dir, samplesheet, '')
+output_prefix <- change_dirs(result_dir, '', '')
 
 # Count fragments for peaks from bam files
 #dbObj.counted <- dba.count(dbObj.caller_consensus, bUseSummarizeOverlaps=TRUE, 
@@ -898,7 +931,7 @@ dbObj.counted
 # ========= Normalize Counts =========
 tryCatch(
   {
-    # Normalize ("safest method")
+    # Normalize ("safest general method")
     dbObj.norm <- dba.normalize(dbObj.counted, method=DBA_ALL_METHODS, 
                                 normalize=DBA_NORM_NATIVE,
                                 background=TRUE, library=DBA_LIBSIZE_DEFAULT,
@@ -919,11 +952,13 @@ cat("After normalizing:\n")
 dbObj.norm
 
 # Plots
-plt <- dba.plotHeatmap(dbObj.norm)
-invisible(capture.output( ggsave(filename=paste(output_prefix, 'consensus_peaks_counted_normalized_heatmap.png', sep=''), plot=grid.arrange(plt)) ))
+png(paste(supplementary_dir, 'consensus_peaks_counted_normalized_heatmap.png', sep=''))
+dba.plotHeatmap(dbObj.norm)
+invisible(capture.output( dev.off() ))
 
-plt <- dba.plotPCA(dbObj.norm, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours))
-invisible(capture.output( ggsave(filename=paste(output_prefix, 'consensus_peaks_counted_normalized_pca.png', sep=''), plot=grid.arrange(plt)) ))
+png(paste(supplementary_dir, 'consensus_peaks_counted_normalized_pca.png', sep=''))
+dba.plotPCA(dbObj.norm, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours))
+invisible(capture.output( dev.off() ))
 invisible(capture.output(gc()))
 
 # ========= Define contrasts between sample conditions (assumes 2 conditions) =========
@@ -955,16 +990,18 @@ dbObj.analyzed
 # Plots
 tryCatch(
   {
+    png(paste(result_dir, 'analyzed_venn.png', sep=''))
     plt <- dba.plotVenn(main="DE Binding Sites Identified by Method",
-                 dbObj.analyzed, 
-                 contrast=1, 
-                 method=DBA_ALL_METHODS
+                        dbObj.analyzed, 
+                        contrast=1, 
+                        method=DBA_ALL_METHODS
     )
-    invisible(capture.output( ggsave(filename=paste(output_prefix, 'analyzed_venn.png', sep=''), plot=grid.arrange(plt)) ))
+    invisible(capture.output( dev.off() ))
+    #invisible(capture.output( ggsave(filename=paste(result_dir, 'analyzed_venn.png', sep=''), plot=grid.arrange(plt)) ))
   }, error=function(e){
     message("No figure\n", e)
-    if (file.exists(paste(output_prefix, 'analyzed_venn.png', sep=''))){
-      invisible(file.remove(paste(output_prefix, 'analyzed_venn.png', sep='')))
+    if (file.exists(paste(result_dir, 'analyzed_venn.png', sep=''))){
+      invisible(file.remove(paste(result_dir, 'analyzed_venn.png', sep='')))
     }
     
   }
@@ -973,7 +1010,7 @@ invisible(capture.output(gc()))
 
 for (m in c(DBA_DESEQ2, DBA_EDGER)){
   
-  output_prefix <- change_dirs(result_dir, samplesheet, m)
+  output_prefix <- change_dirs(result_dir, m, '')
   
   tryCatch(
     {
@@ -1074,7 +1111,7 @@ for (m in c(DBA_DESEQ2, DBA_EDGER)){
   
 }
 
-output_prefix <- change_dirs(result_dir, samplesheet, '')
+output_prefix <- change_dirs(result_dir, '', '')
 
 tryCatch(
   {
@@ -1112,7 +1149,7 @@ reports[["edgeR"]] <- dba.report(dbObj.analyzed, method=DBA_EDGER, contrast=1, t
 
 for (report in names(reports)){
   
-  output_prefix <- change_dirs(result_dir, samplesheet, report)
+  output_prefix <- change_dirs(result_dir, report, '')
   
   # Write complete report to file
   res <- as.data.frame(reports[[report]])
@@ -1156,13 +1193,16 @@ for (report in names(reports)){
   
   # Write DE result to bed files
   if (dim(gained)[1] > 0){
+    output_prefix <- change_dirs(result_dir, report, dbObj.contrast$contrasts[[1]]$name1)
     write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
   }
   if (dim(lost)[1] > 0){
+    output_prefix <- change_dirs(result_dir, report, dbObj.contrast$contrasts[[1]]$name2)
     write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
   }
   
   # Plot profile heatmaps for all significant (FDR < opt$fdr) sites for each method
+  output_prefix <- change_dirs(result_dir, report, '')
   tryCatch(
     {
       profile_colors <- list()
@@ -1198,6 +1238,7 @@ for (report in names(reports)){
   
   # Write complete DE result to files
   if (dim(gained)[1] > 0){
+    output_prefix <- change_dirs(result_dir, report, dbObj.contrast$contrasts[[1]]$name1)
     gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=anno_ref$txdb, annoDb=anno_ref$annoDb,
                                          level=opt$annotation_level,
                                          tssRegion=c(-3000, 3000))@anno)
@@ -1205,6 +1246,7 @@ for (report in names(reports)){
     write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   }
   if (dim(lost)[1] > 0){
+    output_prefix <- change_dirs(result_dir, report, dbObj.contrast$contrasts[[1]]$name2)
     lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=anno_ref$txdb, annoDb=anno_ref$annoDb,
                                        level=opt$annotation_level,
                                        tssRegion=c(-3000, 3000))@anno)
@@ -1220,14 +1262,15 @@ for (report in names(reports)){
   names(gpeaks) <- c(dbObj.contrast$contrasts[[1]]$name1, dbObj.contrast$contrasts[[1]]$name2)
   
   # Plot peaks gained/lost over genome between conditions
+  output_prefix <- change_dirs(result_dir, report, '')
   tryCatch(
     {
       plt <- covplot(gpeaks, title=paste("Peaks over Genome", report, sep=' - '), weightCol='Fold') + 
         scale_color_manual(values=rev(c(colours[1:length(unique_peaks)]))) + 
         scale_fill_manual(values=rev(c(colours[1:length(unique_peaks)])))
-      invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_merged_peaks.png', sep=''), plot=plt, dpi=320)))
+      invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_significant_merged_peaks.png', sep=''), plot=plt, dpi=320)))
       plt <- plt + facet_grid(chr ~ .id)
-      invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_peaks.png', sep=''), plot=plt, dpi=320)))
+      invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_significant_peaks.png', sep=''), plot=plt, dpi=320)))
     }, error=function(e){
       message("No figure\n", e)
     }
@@ -1237,6 +1280,7 @@ for (report in names(reports)){
   # ========= Get Annotations =========
   peakAnnoList <- list()
   for (p in names(gpeaks)){
+    output_prefix <- change_dirs(result_dir, report, p)
     
     if (length(gpeaks[[p]]) == 0){
       cat("\nNo", p, "peaks to annotate...\n")
@@ -1275,9 +1319,10 @@ for (report in names(reports)){
       
       tryCatch(
         {
-          #png(paste(output_prefix,'_', report, 'peaks_annotation_pie', p, '.png', sep=''), width=875, height=625)
-          plt <- plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-5, cex.main=1.5, cex=1.25)
-          invisible(capture.output( ggsave(filename=paste(output_prefix, '_', report, 'peaks_annotation_pie', p, '.png', sep=''), plot=grid.arrange(plt)) ))
+          png(paste(output_prefix,'_', report, 'peaks_annotation_pie', p, '.png', sep=''), width=1680, height=1200)
+          plt <- plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-10, cex.main=3.25, cex=3)
+          invisible(capture.output( dev.off() ))
+          #invisible(capture.output( ggsave(filename=paste(output_prefix, report, 'peaks_annotation_pie', p, '.png', sep=''), plot=grid.arrange(plt)) ))
         },error = function(e)
         {
           message(e)
@@ -1285,7 +1330,7 @@ for (report in names(reports)){
       )
       
       plt <- upsetplot(anno, vennpie=TRUE) + ggtitle(p)
-      invisible(capture.output(ggsave(paste(output_prefix, '_', report, '_', p, '_annotated_peaks_upsetplot.png', sep=''), plot=plt, dpi=320, bg='white')))
+      invisible(capture.output(ggsave(paste(output_prefix, report, '_', p, '_annotated_peaks_upsetplot.png', sep=''), plot=plt, dpi=320, bg='white')))
       
       # Write annotation to file
       write.table(anno, file=paste(output_prefix, 'annotated_', report, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
@@ -1370,6 +1415,7 @@ for (report in names(reports)){
     }
   }
   
+  output_prefix <- change_dirs(result_dir, report, '')
   tryCatch(
     {
       plt <- plotAnnoBar(peakAnnoList)
@@ -1398,7 +1444,6 @@ if (is.null(dba.report(dbObj.analyzed, method=DBA_DESEQ2, contrast=1, th=opt$fdr
   q()
 }
 
-output_prefix <- change_dirs(result_dir, samplesheet, '')
 
 # For considering sites identified by DESeq2 AND edgeR
 #reports[["DESeq2_and_edgeR"]] <- c(reports[["DESeq2"]], reports[["edgeR"]])
@@ -1406,6 +1451,8 @@ output_prefix <- change_dirs(result_dir, samplesheet, '')
 df_both <- merge(as.data.frame(reports[["DESeq2"]]), as.data.frame(reports[["edgeR"]]), by=c("seqnames", "start", "end"), suffixes=c(".DESeq2", ".edgeR"))
 reports[["DESeq2_and_edgeR"]] <- GRanges(df_both)
 report <- "DESeq2_and_edgeR"
+
+output_prefix <- change_dirs(result_dir, report, '')
 
 # Write complete report to file
 res <- as.data.frame(reports[[report]])
@@ -1441,9 +1488,11 @@ cat('\n\t', dim(lost)[[1]], 'DE peaks log2FoldChange <', (0 - opt$lfc), 'in', db
 
 # Write DE result to bed files
 if (dim(gained)[1] > 0){
+  output_prefix <- change_dirs(result_dir, report, dbObj.contrast$contrasts[[1]]$name1)
   write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
 }
 if (dim(lost)[1] > 0){
+  output_prefix <- change_dirs(result_dir, report, dbObj.contrast$contrasts[[1]]$name2)
   write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
 }
 
@@ -1454,6 +1503,7 @@ lost <- out %>%
 
 
 if (dim(gained)[1] > 0){
+  output_prefix <- change_dirs(result_dir, report, dbObj.contrast$contrasts[[1]]$name1)
   gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=anno_ref$txdb, annoDb=anno_ref$annoDb,
                                        level=opt$annotation_level,
                                        tssRegion=c(-3000, 3000))@anno)
@@ -1461,6 +1511,7 @@ if (dim(gained)[1] > 0){
   write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
 }
 if (dim(lost)[1] > 0){
+  output_prefix <- change_dirs(result_dir, report, dbObj.contrast$contrasts[[1]]$name2)
   lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=anno_ref$txdb, annoDb=anno_ref$annoDb,
                                      level=opt$annotation_level,
                                      tssRegion=c(-3000, 3000))@anno)
@@ -1476,14 +1527,15 @@ gpeaks <- GenomicRanges::GRangesList(Gained=gained, Lost=lost)
 names(gpeaks) <- c(dbObj.contrast$contrasts[[1]]$name1, dbObj.contrast$contrasts[[1]]$name2)
 
 # Plot peaks gained/lost over genome between conditions
+output_prefix <- change_dirs(result_dir, report, '')
 tryCatch(
   {
     plt <- covplot(gpeaks, title=paste("Peaks over Genome", report, sep=' - '), ) + #weightCol='Fold') + 
       scale_color_manual(values=rev(c(colours[1:length(unique_peaks)]))) + 
       scale_fill_manual(values=rev(c(colours[1:length(unique_peaks)])))
-    invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_merged_peaks.png', sep=''), plot=plt, dpi=320)))
+    invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_significant_merged_peaks.png', sep=''), plot=plt, dpi=320)))
     plt <- plt + facet_grid(chr ~ .id)
-    invisible(capture.output(ggsave(filename=paste(output_prefix, '_', report, '_significant_peaks.png', sep=''), plot=plt, dpi=320)))
+    invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_significant_peaks.png', sep=''), plot=plt, dpi=320)))
   }, error=function(e){
     message("No figure\n", e)
     invisible(capture.output(dev.off()))
@@ -1494,6 +1546,7 @@ invisible(capture.output(gc()))
 # ========= Get Annotations =========
 peakAnnoList <- list()
 for (p in names(gpeaks)){
+  output_prefix <- change_dirs(result_dir, report, p)
   
   if (length(gpeaks[[p]]) == 0){
     cat("\nNo", p, "peaks to annotate...\n")
@@ -1533,9 +1586,10 @@ for (p in names(gpeaks)){
     
     tryCatch(
       {
-        #png(paste(output_prefix,'_', report, 'peaks_annotation_pie', p, '.png', sep=''), width=875, height=625)
-        plt <- plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-5, cex.main=1.5, cex=1.25)
-        invisible(capture.output( ggsave(filename=paste(output_prefix,'_', report, 'peaks_annotation_pie', p, '.png', sep=''), plot=grid.arrange(plt)) ))
+        png(paste(output_prefix,'_', report, 'peaks_annotation_pie', p, '.png', sep=''), width=1680, height=1200)
+        plt <- plotAnnoPie(anno, main=paste(p, '\n\n', length(anno@anno), ' Sites', sep=''), line=-10, cex.main=3.25, cex=3)
+        invisible(capture.output( dev.off() ))
+        #invisible(capture.output( ggsave(filename=paste(output_prefix, report, 'peaks_annotation_pie', p, '.png', sep=''), plot=grid.arrange(plt)) ))
       },error = function(e)
       {
         message(e)
@@ -1543,7 +1597,7 @@ for (p in names(gpeaks)){
     )
     
     plt <- upsetplot(anno, vennpie=TRUE) + ggtitle(p)
-    invisible(capture.output(ggsave(paste(output_prefix, '_', report, '_', p, '_annotated_peaks_upsetplot.png', sep=''), plot=plt, dpi=320, bg='white')))
+    invisible(capture.output(ggsave(paste(output_prefix, report, '_', p, '_annotated_peaks_upsetplot.png', sep=''), plot=plt, dpi=320, bg='white')))
     
     # Write annotation to file
     write.table(anno, file=paste(output_prefix, 'annotated_', report, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
@@ -1627,6 +1681,8 @@ for (p in names(gpeaks)){
   }
 }
 
+
+output_prefix <- change_dirs(result_dir, report, '')
 tryCatch(
   {
     plt <- plotAnnoBar(peakAnnoList)
