@@ -1500,9 +1500,9 @@ def Clean_up():
                 logger.warning(result.stderr.rstrip('\n'))
                 result = subprocess.run(('rm %sAll_output/Trimmed_reads/%s*'%(OUT_DIR, f)), shell=True, capture_output=True, text=True)
                 logger.info(result.stdout.rstrip('\n'))
-                logger.warning(result.stderr.rstrip('\n'))
-                result = subprocess.run(('rm %sAnalysis_Results/QC_Rawreads/%s*'%(OUT_DIR, f)), shell=True, capture_output=True, text=True)
-                logger.info(result.stdout.rstrip('\n'))
+                #logger.warning(result.stderr.rstrip('\n'))
+                #result = subprocess.run(('rm %sAnalysis_Results/QC_Rawreads/%s*'%(OUT_DIR, f)), shell=True, capture_output=True, text=True)
+                #logger.info(result.stdout.rstrip('\n'))
                 logger.warning(result.stderr.rstrip('\n'))
             except Exception as e:
                 logger.exception(e)
