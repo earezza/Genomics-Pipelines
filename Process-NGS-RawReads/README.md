@@ -121,19 +121,40 @@ ___
   
 &emsp;Analysis_Results/Peaks/  
 &emsp;&emsp;&emsp; ...stringent.bed  
-&emsp;&emsp;&emsp; ...peaks.narrowPeak (peaks files identifying enriched regions, useful in downstream analysis)  
+&emsp;&emsp;&emsp; ...peaks.narrowPeak or .broadPeak (peaks files identifying enriched regions, useful in downstream analysis)  
 &emsp;&emsp;&emsp; ...gopeaks_peaks.bed   
   
 &emsp;Analysis_Results/Peaks/  
 &emsp;&emsp;&emsp; ..._summits.bed (peak summits from MACS, useful in downstream analysis)  
+
+*Note: narrowPeak or broadPeak files should be viewed along their bigWigs for choosing the more appropriate peak file in downstream analysis.*  
+A general guide for enrichment sites of histones and choosing the right peaks file (refer to <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7808876/">this</a>):  
   
+BROAD Histone marks  
+H3K4me1  
+H3K9me3  
+H3K27me3  
+H3K36me3  
+H3K79me2  
+  
+NARROW Histone marks  
+H3K4me2  
+H3K4me3  
+H3K27ac  
+H3K9ac  
+  
+MIXED Histone marks  
+H3K4ac  
+H3K56ac  
+H3K79me1  
+
 &emsp;Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/  
 &emsp;&emsp;&emsp; ...bw (normalized bigwigs for viewing coverage in genome browsers)  
   
 &emsp;All_output/Processed_reads/  
 &emsp;&emsp;&emsp; ...bam  
 &emsp;&emsp;&emsp; ...bai  (alignment+index files (should always be together), required for many analysis tools)  
-___
+___  
 ### Additional Resources  
 <a href="https://www.nature.com/articles/s41467-019-09982-5">CUT&Tag</a>  
 <a href="https://yezhengstat.github.io/CUTTag_tutorial/">Pipeline example</a>  
