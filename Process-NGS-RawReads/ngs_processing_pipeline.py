@@ -6,9 +6,9 @@ Description:
     Processes NGS .fastq.gz sequence data to generate bam/bigwig/bed files
     for visualizing in genome browsers and downstream analysis.
     
-    Reads and md5sum.txt must be saved into their own directory.
+    Reads for each sample and md5sum.txt must be saved into their own directory.
     
-    Requires input files formatted as {SAMPLE_NAME}_{READ}.fastq.gz
+    Requires input files formatted as {SAMPLE-NAME}_{READ}.fastq.gz
     e.g.
         MY-SAMPLE-NAME_R1.fastq.gz
         MY-SAMPLE-NAME_R2.fastq.gz
@@ -30,20 +30,19 @@ Description:
             ...bai (alignment+index files (should always be together), required for many analysis tools)
         
         
-        For CUT&Tag, ChIP-Seq, ATAC-Seq...
         Analysis_Results/Normalized_and_Unnormalized_BigWigs/Normalized/
             ...bw (normalized bigwigs for viewing coverage in genome browsers)
             
         Analysis_Results/Peaks/
             ...stringent.bed
-            ...peaks.narrowPeak (peaks files identifying enriched regions, useful in downstream analysis)
+            ...peaks.narrowPeak or .broadPeak (peaks files identifying enriched regions, useful in downstream analysis)
             ...gopeaks_peaks.bed
        
         Analysis_Results/Peaks/
             ..._summits.bed (peak summits from MACS, useful in downstream analysis)
             
-        For RNA-Seq...
-        
+        Calling peaks is skipped for RNA-Seq.
+            
     
 @author: earezza
 """
@@ -1253,29 +1252,49 @@ def Peak_Calling():
                 logger.info('MACS - Using control %s'%c)
                 for r in fastqfiles:
                     if c != r:
-                        if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r):
+                        # Narrow peak calling
+                        if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r) and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.broadPeak'%r):
                             continue
                         try:
-                            result = subprocess.run(('macs3 callpeak -t %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -c %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s -q %s'%(OUT_DIR, r, OUT_DIR, c, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
+                            result = subprocess.run(('macs3 callpeak -t %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -c %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -f %s -g %s --keep-dup all --nolambda --nomodel --outdir %sAnalysis_Results/Peaks/ -n %s -q %s'%(OUT_DIR, r, OUT_DIR, c, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
                             logger.info(result.stdout.rstrip('\n'))
                             logger.warning(result.stderr.rstrip('\n'))
                         except Exception as e:
                             logger.exception(e)
                             passed = False
                         passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r)
+                        # Broad peak calling
+                        try:
+                            result = subprocess.run(('macs3 callpeak -t %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -c %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -f %s -g %s --keep-dup all --nolambda --nomodel --outdir %sAnalysis_Results/Peaks/ -n %s -q %s --broad'%(OUT_DIR, r, OUT_DIR, c, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
+                            logger.info(result.stdout.rstrip('\n'))
+                            logger.warning(result.stderr.rstrip('\n'))
+                        except Exception as e:
+                            logger.exception(e)
+                            passed = False
+                        passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.broadPeak'%r)
         else:
             logger.info('MACS - No control')
             for r in fastqfiles:
-                if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r):
+                if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r) and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.broadPeak'%r):
                     continue
+                # Narrow peak calling
                 try:
-                    result = subprocess.run(('macs3 callpeak -t %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s -q %s'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('macs3 callpeak -t %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -f %s -g %s --keep-dup all --nolambda --nomodel --outdir %sAnalysis_Results/Peaks/ -n %s -q %s'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
                     logger.exception(e)
                     passed = False
                 passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r)
+                # Broad peak calling
+                try:
+                    result = subprocess.run(('macs3 callpeak -t %sAll_output/Spike_mapped_reads/%s.coordsorted.bam -f %s -g %s --keep-dup all --nolambda --nomodel --outdir %sAnalysis_Results/Peaks/ -n %s -q %s --broad'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+                passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.broadPeak'%r)
         
         # ========== GoPeaks peak calling - spike-in ==========
         # If control reads given
@@ -1385,29 +1404,49 @@ def Peak_Calling():
                 logger.info('MACS - Using control %s'%c)
                 for r in fastqfiles:
                     if c != r:
-                        if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r):
+                        if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r) and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.broadPeak'%r):
                             continue
+                        # Narrow peak calling
                         try:
-                            result = subprocess.run(('macs3 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -c %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s -q %s'%(OUT_DIR, r, OUT_DIR, c, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
+                            result = subprocess.run(('macs3 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -c %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --keep-dup all --nolambda --nomodel --outdir %sAnalysis_Results/Peaks/ -n %s -q %s'%(OUT_DIR, r, OUT_DIR, c, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
                             logger.info(result.stdout.rstrip('\n'))
                             logger.warning(result.stderr.rstrip('\n'))
                         except Exception as e:
                             logger.exception(e)
                             passed = False
                         passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r)
+                        # Broad peak calling
+                        try:
+                            result = subprocess.run(('macs3 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -c %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --keep-dup all --nolambda --nomodel --outdir %sAnalysis_Results/Peaks/ -n %s -q %s --broad'%(OUT_DIR, r, OUT_DIR, c, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
+                            logger.info(result.stdout.rstrip('\n'))
+                            logger.warning(result.stderr.rstrip('\n'))
+                        except Exception as e:
+                            logger.exception(e)
+                            passed = False
+                        passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.broadPeak'%r)
         else:
             logger.info('MACS - No control')
             for r in fastqfiles:
-                if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r):
+                if os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r) and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.broadPeak'%r):
                     continue
+                # Narrow peak calling
                 try:
-                    result = subprocess.run(('macs3 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --outdir %sAnalysis_Results/Peaks/ -n %s -q %s'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
+                    result = subprocess.run(('macs3 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --keep-dup all --nolambda --nomodel --outdir %sAnalysis_Results/Peaks/ -n %s -q %s'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
                     logger.info(result.stdout.rstrip('\n'))
                     logger.warning(result.stderr.rstrip('\n'))
                 except Exception as e:
                     logger.exception(e)
                     passed = False
                 passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.narrowPeak'%r)
+                # Broad peak calling
+                try:
+                    result = subprocess.run(('macs3 callpeak -t %sAll_output/Processed_reads/%s.Mapped.MAPQ10.NoDups.bam -f %s -g %s --keep-dup all --nolambda --nomodel --outdir %sAnalysis_Results/Peaks/ -n %s -q %s --broad'%(OUT_DIR, r, bamformat, EFFECTIVEGENOMESIZE, OUT_DIR, r, args.macs_qvalue)), shell=True, capture_output=True, text=True)
+                    logger.info(result.stdout.rstrip('\n'))
+                    logger.warning(result.stderr.rstrip('\n'))
+                except Exception as e:
+                    logger.exception(e)
+                    passed = False
+                passed = passed and os.path.exists(OUT_DIR+'Analysis_Results/Peaks/%s_peaks.broadPeak'%r)
         
         # ========== GoPeaks peak calling - NO spike-in ==========
         # If control reads given
@@ -1500,9 +1539,9 @@ def Clean_up():
                 logger.warning(result.stderr.rstrip('\n'))
                 result = subprocess.run(('rm %sAll_output/Trimmed_reads/%s*'%(OUT_DIR, f)), shell=True, capture_output=True, text=True)
                 logger.info(result.stdout.rstrip('\n'))
-                #logger.warning(result.stderr.rstrip('\n'))
-                #result = subprocess.run(('rm %sAnalysis_Results/QC_Rawreads/%s*'%(OUT_DIR, f)), shell=True, capture_output=True, text=True)
-                #logger.info(result.stdout.rstrip('\n'))
+                logger.warning(result.stderr.rstrip('\n'))
+                result = subprocess.run(('rm %sAnalysis_Results/QC_Rawreads/%s*'%(OUT_DIR, f)), shell=True, capture_output=True, text=True)
+                logger.info(result.stdout.rstrip('\n'))
                 logger.warning(result.stderr.rstrip('\n'))
             except Exception as e:
                 logger.exception(e)
