@@ -386,7 +386,7 @@ if (opt$combine_replicates == TRUE){
 }else{
   rep_overlaps <- 2 # add only consensus peaks (peaks must be in at least 2 replicates)
 }
-          
+
 # If using peaks from multiple peak callers (defined in Factor column of samplesheet)
 if (length(unique(dbObj$samples$Factor)) > 1){
   # Get consensus overlaps in peaksets for each condition (peaks must be overlapping in majority (2/3rds) of peak callers) or add all callers' peaks
@@ -628,7 +628,7 @@ tryCatch(
   {
     tagMatrices <- list()
     for (p in names(peaks)){
-      tagMatrix <- getTagMatrix(unique_peaks[[p]], windows=promoters)
+      tagMatrix <- getTagMatrix(peaks[[p]], windows=promoters)
       if (length(tagMatrix) == 0){
         cat("No peaks at promoter sites for", p, "\n")
         rm(tagMatrix)
@@ -662,17 +662,25 @@ tryCatch(
         scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
         scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
       invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_unique-peaks.png', sep=''), plot=plt, dpi=320)))
+      invisible(capture.output(gc()))
       plt <- plotAvgProf(tagMatrices[4:6], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
         scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
         scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
       invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_pairs-peaks.png', sep=''), plot=plt, dpi=320)))
+      invisible(capture.output(gc()))
     }
     else{
       plt <- plotAvgProf(tagMatrices, xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
         scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
         scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
       invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_peaks.png', sep=''), plot=plt, dpi=320)))
+      invisible(capture.output(gc()))
     }
+    plt <- plotAvgProf(tagMatrices[['Shared']], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
+      #scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
+      #scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
+    invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_shared-peaks.png', sep=''), plot=plt, dpi=320)))
+    invisible(capture.output(gc()))
     rm(tagMatrices)
     rm(plt)
   },error = function(e)
@@ -714,6 +722,11 @@ for (p in names(peaks)){
   
   peakAnnoList[[p]] <- anno
   
+  # Mapper for EntrezID to gene SYMBOL
+  df <- as.data.frame(anno@anno)
+  mapper <- df[c('geneId', 'SYMBOL')]
+  mapper <- mapper[!duplicated(mapper), ]
+  
   plt <- upsetplot(anno, vennpie=TRUE) + ggtitle(p)
   invisible(capture.output(ggsave(paste(result_dirs[[p]], p, '_annotated_peaks_upsetplot.png', sep=''), plot=plt, dpi=320, bg='white')))
   
@@ -745,6 +758,15 @@ for (p in names(peaks)){
                                  pvalueCutoff=0.05,
                                  pAdjustMethod="BH",
                                  organism=anno_ref$keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+      
+      # Map EntrezIDs to gene SYMBOL
+      compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
+      myEntrez <- lapply(compKEGG@compareClusterResult$geneID, strsplit, '/')
+      for (i in 1:length(myEntrez)){
+        compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+      }
+      
+      
       if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
         #plt <- dotplot(compKEGG, showCategory = 10, title = "KEGG Pathway Enrichment Analysis")
         plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
@@ -1355,6 +1377,13 @@ for (report in names(reports)){
                                      pAdjustMethod="BH",
                                      organism=anno_ref$keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
           
+          # Map EntrezIDs to gene SYMBOL
+          compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
+          myEntrez <- lapply(compKEGG@compareClusterResult$geneID, strsplit, '/')
+          for (i in 1:length(myEntrez)){
+            compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+          }
+          
           if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
             plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
@@ -1621,6 +1650,13 @@ for (p in names(gpeaks)){
                                    pvalueCutoff=0.05,
                                    pAdjustMethod="BH",
                                    organism=anno_ref$keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+        
+        # Map EntrezIDs to gene SYMBOL
+        compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
+        myEntrez <- lapply(compKEGG@compareClusterResult$geneID, strsplit, '/')
+        for (i in 1:length(myEntrez)){
+          compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+        }
         
         if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
           plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
