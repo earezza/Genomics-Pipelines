@@ -24,7 +24,8 @@ option_list = list(
   make_option(c("-r", "--result_dir"), type="character", default="Peaks_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
   make_option(c("-l", "--annotation_level"), type="character", default="transcript", help="Level parameter for annotatePeak, 'gene' or 'transcript'", metavar="character"),
-  make_option(c("-c", "--combine_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add all peaks together from replicates instead of only taking their consensuspeaks", metavar="character"),
+  make_option(c("-c", "--combine_callers"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from callers instead of taking consensus peaks", metavar="character"),
+  make_option(c("-c", "--combine_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from replicates instead of taking consensus peaks", metavar="character"),
   make_option(c("-b", "--blacklisted_keep"), type="logical", action="store_true", default=FALSE, help="Flag to keep blacklisted regions in raw peaks files", metavar="character"),
   make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
   make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="integer")
@@ -385,10 +386,15 @@ if (opt$combine_replicates == TRUE){
 }else{
   rep_overlaps <- 2 # add only consensus peaks (peaks must be in at least 2 replicates)
 }
+          
 # If using peaks from multiple peak callers (defined in Factor column of samplesheet)
 if (length(unique(dbObj$samples$Factor)) > 1){
-  # Get consensus overlaps in peaksets for each condition (peaks must be overlapping in 2/3rds of peak callers)
-  dbObj.total <- dba.peakset(dbObj.noblacklist, consensus=c(DBA_CONDITION, DBA_REPLICATE), minOverlap=0.66)
+  # Get consensus overlaps in peaksets for each condition (peaks must be overlapping in majority (2/3rds) of peak callers) or add all callers' peaks
+  if (opt$combine_callers == TRUE){
+    dbObj.total <- dba.peakset(dbObj.noblacklist, consensus=c(DBA_CONDITION, DBA_REPLICATE), minOverlap=1)
+  }else{
+    dbObj.total <- dba.peakset(dbObj.noblacklist, consensus=c(DBA_CONDITION, DBA_REPLICATE), minOverlap=0.66)
+  }
   # resulting consensus between callers
   dbObj.caller_consensus <- dba(dbObj.total, mask=dbObj.total$masks$Consensus, minOverlap=1)
   if (length(unique(dbObj$samples$Replicate)) > 1){
