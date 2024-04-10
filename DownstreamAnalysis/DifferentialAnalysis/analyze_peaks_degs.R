@@ -461,6 +461,20 @@ conditions_colour_code <- temp
 # Consensus peaks from all conditions (all relevant peaks)
 consensus_peaks <- dba.peakset(dbObj.consensus, bRetrieve=TRUE)
 
+result_dirs <- list()
+for (p in unique(dba.show(dbObj.consensus)$Condition)){
+  result_dirs[[p]] <- paste(result_dir, p, "/", sep='')
+  if (!file.exists(result_dirs[[p]])) {
+    dir.create(result_dirs[[p]])
+  }
+}
+
+# Output consensus peaksets
+for (c in unique(dba.show(dbObj.consensus)$Condition)){
+  p <- dba.peakset(dbObj.consensus, dbObj.consensus$masks[[c]], bRetrieve=TRUE)
+  write.table(as.data.frame(p), file=paste(result_dirs[[c]], c, '_consensus.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+}
+          
 # Differentially bound peaks between conditions (peaks unique to each condition)
 differential_peaks <- dba.overlap(dbObj.consensus, dbObj.consensus$masks$All, DataType=DBA_DATA_GRANGES)
 unique_peaks <- list()
