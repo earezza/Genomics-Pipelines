@@ -627,15 +627,14 @@ tryCatch(
 )
 invisible(capture.output(gc()))
 
-result_dirs <- list()
-for (p in names(unique_peaks)){
+peaks <- c(unique_peaks, shared_peaks)
+
+for (p in names(peaks)){
   result_dirs[[p]] <- paste(result_dir, p, "/", sep='')
   if (!file.exists(result_dirs[[p]])) {
     dir.create(result_dirs[[p]])
   }
 }
-
-peaks <- c(unique_peaks, shared_peaks)
 
 # Plot peaks related to TSS sites
 tryCatch(
