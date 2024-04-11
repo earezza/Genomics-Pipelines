@@ -636,6 +636,11 @@ for (p in names(peaks)){
   }
 }
 
+# Output peaks to bed files
+for (p in names(peaks)){
+  write.table(as.data.frame(peaks[[p]]), file=paste(result_dirs[[p]], p, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+}
+
 # Plot peaks related to TSS sites
 tryCatch(
   {
@@ -702,17 +707,6 @@ tryCatch(
   }
 )
 invisible(capture.output(gc()))
-
-
-result_dirs[["Shared"]] <- paste(result_dir, "Shared/", sep='')
-if (!file.exists(result_dirs[["Shared"]])) {
-  dir.create(result_dirs[["Shared"]])
-}
-
-# Output to bed files
-for (p in names(peaks)){
-  write.table(as.data.frame(peaks[[p]]), file=paste(result_dirs[[p]], p, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-}
 
 # ========= Get Annotations =========
 peakAnnoList <- list()
