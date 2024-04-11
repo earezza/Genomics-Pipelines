@@ -472,10 +472,45 @@ for (p in unique(dba.show(dbObj.consensus)$Condition)){
 }
 
 # Output consensus peaksets
+raw_peaks <- list()
 for (c in unique(dba.show(dbObj.consensus)$Condition)){
   p <- dba.peakset(dbObj.consensus, dbObj.consensus$masks[[c]], bRetrieve=TRUE)
   write.table(as.data.frame(p), file=paste(result_dirs[[c]], c, '_consensus.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+  raw_peaks[[c]] <- p
 }
+
+# ========= Get Annotations =========
+peakAnnoList <- list()
+for (p in names(raw_peaks)){
+  cat("\nAnnotating", p, ' consensus\n')
+  anno <- annotatePeak(raw_peaks[[p]], 
+                       TxDb=anno_ref$txdb,
+                       annoDb=anno_ref$annoDb,
+                       level=opt$annotation_level,
+                       tssRegion=c(-3000, 3000)
+  )
+  peakAnnoList[[p]] <- anno
+  write.table(anno@anno, file=paste(result_dirs[[p]], c, '_consensus_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+}
+
+# Plot UpSet
+upsetlist <- list()
+for (p in names(peakAnnoList)) {
+  upsetlist[[p]] <- peakAnnoList[[p]]@anno$SYMBOL
+}
+png(paste(result_dir, 'consensus_annotated-genes_upsetplot.png', sep=''),
+    width=1200,
+    height=1200,
+    res=320)
+upset(fromList(upsetlist), 
+             order.by = "freq", 
+             nsets=length(names(peakAnnoList)),
+      #main="Conensus Peaks' Genes"
+      #matrix.color=unname(unlist(conditions_colour_code[names(peakAnnoList)]))
+      )
+dev.off()
+invisible(capture.output(gc()))
+
           
 # Differentially bound peaks between conditions (peaks unique to each condition)
 differential_peaks <- dba.overlap(dbObj.consensus, dbObj.consensus$masks$All, DataType=DBA_DATA_GRANGES)
@@ -847,6 +882,14 @@ tryCatch(
 )
 invisible(capture.output(gc()))
 
+# Plot UpSet
+upsetlist <- list()
+for (p in names(peakAnnoList)) {
+  upsetlist[[p]] <- peakAnnoList[[p]]@anno$SYMBOL
+}
+upset(fromList(upsetlist), order.by = "freq")
+
+          
 # ========= END OF OCCUPANCY ANALYSIS =========
 
 # Free up memory
