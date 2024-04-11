@@ -679,13 +679,13 @@ tryCatch(
   {
     if (length(unique(dba.show(dbObj.consensus)$Condition)) == 3){
       plt <- plotAvgProf(tagMatrices[1:3], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
-        scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
-        scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
+        scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[1:3]) +
+        scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[1:3])
       invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_unique-peaks.png', sep=''), plot=plt, dpi=320)))
       invisible(capture.output(gc()))
       plt <- plotAvgProf(tagMatrices[4:6], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
-        scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
-        scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
+        scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[4:6]) +
+        scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[4:6])
       invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_pairs-peaks.png', sep=''), plot=plt, dpi=320)))
       invisible(capture.output(gc()))
     }
@@ -697,8 +697,8 @@ tryCatch(
       invisible(capture.output(gc()))
     }
     plt <- plotAvgProf(tagMatrices[['Shared']], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
-      #scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
-      #scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
+      scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[length(conditions_colour_code)]) +
+      scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[length(conditions_colour_code)])
     invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_shared-peaks.png', sep=''), plot=plt, dpi=320)))
     invisible(capture.output(gc()))
     rm(tagMatrices)
