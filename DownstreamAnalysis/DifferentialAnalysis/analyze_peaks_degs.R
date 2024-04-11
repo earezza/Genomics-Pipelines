@@ -890,13 +890,6 @@ tryCatch(
 )
 invisible(capture.output(gc()))
 
-# Plot UpSet
-upsetlist <- list()
-for (p in names(peakAnnoList)) {
-  upsetlist[[p]] <- peakAnnoList[[p]]@anno$SYMBOL
-}
-upset(fromList(upsetlist), order.by = "freq")
-
           
 # ========= END OF OCCUPANCY ANALYSIS =========
 
