@@ -499,15 +499,23 @@ for (p in names(peakAnnoList)) {
   upsetlist[[p]] <- peakAnnoList[[p]]@anno$SYMBOL
 }
 png(paste(result_dir, 'consensus_annotated-genes_upsetplot.png', sep=''),
-    width=1200,
-    height=1200,
-    res=320)
+    width = 1920,
+    height = 1080,
+    res=200
+    )
 upset(fromList(upsetlist), 
              order.by = "freq", 
-             nsets=length(names(peakAnnoList)),
-      #main="Conensus Peaks' Genes"
-      #matrix.color=unname(unlist(conditions_colour_code[names(peakAnnoList)]))
-      )
+             nsets = length(names(peakAnnoList)),
+      sets.bar.color = unname(unlist(conditions_colour_code[names(peakAnnoList)])),
+      empty.intersections = "on",
+      set_size.show = TRUE,
+      set_size.angles = 0,
+      set_size.scale_max = dim(fromList(upsetlist))[[1]],
+      sets.x.label = "Gene Set Size",
+      mainbar.y.label = "Intersection Size of Gene Sets",
+      mb.ratio = c(0.7, 0.3)
+      ) 
+grid.text("Conensus Peaksets Annotated Genes",x = 0.65, y=0.95, gp=gpar(fontsize=10))
 dev.off()
 invisible(capture.output(gc()))
 
