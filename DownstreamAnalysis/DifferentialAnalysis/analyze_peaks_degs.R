@@ -512,6 +512,11 @@ upsetlist <- list()
 for (p in names(peakAnnoList)) {
   upsetlist[[p]] <- peakAnnoList[[p]]@anno$SYMBOL
 }
+upset_colors <- list()
+for (n in names(peakAnnoList)){
+  upset_colors[[ conditions_colour_code[[n]] ]] <- length(unique(peakAnnoList[[n]]@anno$SYMBOL))
+}
+upset_colors <- sort(unlist(upset_colors), decreasing=TRUE)
 png(paste(result_dir, 'consensus_annotated-genes_upsetplot.png', sep=''),
     width = 1920,
     height = 1080,
@@ -520,7 +525,7 @@ png(paste(result_dir, 'consensus_annotated-genes_upsetplot.png', sep=''),
 upset(fromList(upsetlist), 
              order.by = "freq", 
              nsets = length(names(peakAnnoList)),
-      sets.bar.color = unname(unlist(conditions_colour_code[names(peakAnnoList)])),
+      sets.bar.color = names(upset_colors),
       empty.intersections = "on",
       set_size.show = TRUE,
       set_size.angles = 0,
