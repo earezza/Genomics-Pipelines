@@ -358,16 +358,19 @@ tryCatch (
       cat("After blacklisted regions removed:\n")
       dbObj.noblacklist
     }else{
+      cat("\nBlacklisted regions not removed, proceeding with raw peaksets...\n")
       dbObj.noblacklist <- dbObj
     }
   },error = function(e)
   {
     message(e)
-    cat("\nBlacklisted regions not removed, proceeding with raw peaksets...\n")
-    dbObj.noblacklist <- dbObj
-    dbObj.noblacklist
   }
 )
+if (!exists("dbObj.noblacklist")) {
+  cat("\nBlacklisted regions not removed, proceeding with raw peaksets...\n")
+  dbObj.noblacklist <- dbObj
+  dbObj.noblacklist
+}
 
 png(paste(supplementary_dir, 'raw_noblacklist_heatmap.png', sep=''))
 dba.plotHeatmap(dbObj.noblacklist)
