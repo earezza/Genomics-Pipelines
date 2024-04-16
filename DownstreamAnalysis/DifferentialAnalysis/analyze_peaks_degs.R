@@ -350,14 +350,24 @@ invisible(capture.output(gc()))
 
 # ========= Remove Blacklisted Regions =========
 # Remove blacklisted regions to ignore irrelevant peaks (blacklisted regions from ENCODE, genome selected is based on prediction from bam files)
-if (!opt$blacklisted_keep){
-  dbObj.noblacklist <- dba.blacklist(dbObj, blacklist=TRUE, greylist=FALSE)
-  blacklisted_peaks <- dba.blacklist(dbObj.noblacklist, Retrieve=DBA_BLACKLISTED_PEAKS)
-  cat("After blacklisted regions removed:\n")
-  dbObj.noblacklist
-}else{
-  dbObj.noblacklist <- dbObj
-}
+tryCatch (
+  {
+    if (!opt$blacklisted_keep){
+      dbObj.noblacklist <- dba.blacklist(dbObj, blacklist=TRUE, greylist=FALSE)
+      blacklisted_peaks <- dba.blacklist(dbObj.noblacklist, Retrieve=DBA_BLACKLISTED_PEAKS)
+      cat("After blacklisted regions removed:\n")
+      dbObj.noblacklist
+    }else{
+      dbObj.noblacklist <- dbObj
+    }
+  },error = function(e)
+  {
+    message(e)
+    cat("\nBlacklisted regions not removed, proceeding with raw peaksets...\n")
+    dbObj.noblacklist <- dbObj
+    dbObj.noblacklist
+  }
+)
 
 png(paste(supplementary_dir, 'raw_noblacklist_heatmap.png', sep=''))
 dba.plotHeatmap(dbObj.noblacklist)
