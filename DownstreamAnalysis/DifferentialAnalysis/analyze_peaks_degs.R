@@ -319,7 +319,9 @@ cat("Raw peaksets:\n")
 dbObj
 
 # Colour codes for consistency in plots (add more colours if needed)
-colours <- c("#00BFC4", "#F8766D", "#7CAE00", "#C77CFF", "#e69e02", "#00A9FF", "#C77CFF", "#FF61CC")
+colours <- c("#00BFC4", "#F8766D", "#7CAE00", "#C77CFF", "#e69e02", "#00A9FF", "#C77CFF", "#FF61CC", 
+             "#FF0000", "#FF4D00", "#80FF00", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2" , "#D55E00" , "#CC79A7"
+             )
 conditions_colour_code <- list()
 for (i in 1:length(unique(dbObj$samples$Condition))) {
   conditions_colour_code[[unique(dbObj$samples$Condition)[i]]] <- colours[i]
@@ -553,17 +555,46 @@ if (length(unique(dbObj$samples$Condition)) == 3){
     cat("\n", paste(pair, collapse='_and_'), "have", length(unique_peaks[[paste(pair, collapse='_and_')]]), "shared peaks.\n")
   }
 }
+
+if (length(unique(dbObj$samples$Condition)) == 4){
+  e = c(
+    "A"=length(unique_peaks[[names(unique_peaks)[1]]]), 
+    "B"=length(unique_peaks[[names(unique_peaks)[2]]]),
+    "C"=length(unique_peaks[[names(unique_peaks)[3]]]),
+    "D"=length(unique_peaks[[names(unique_peaks)[4]]]),
+    "A&B"=length(differential_peaks$AandB),
+    "A&C"=length(differential_peaks$AandC),
+    "A&D"=length(differential_peaks$AandD),
+    "B&C"=length(differential_peaks$BandC),
+    "B&D"=length(differential_peaks$BandD),
+    "C&D"=length(differential_peaks$CandD),
+    "A&B&C"=length(differential_peaks$notD),
+    "A&B&D"=length(differential_peaks$notC),
+    "A&C&D"=length(differential_peaks$notB),
+    "B&C&D"=length(differential_peaks$notA),
+    "A&B&C&D"=length(shared_peaks[[names(shared_peaks)[1]]])
+  )
+  names(e) = c(names(unique_peaks)[1], names(unique_peaks)[2], names(unique_peaks)[3], names(unique_peaks)[4],
+               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2], sep=''),
+               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[3], sep=''),
+               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[4], sep=''),
+               paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[3], sep=''),
+               paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[4], sep=''),
+               paste(names(unique_peaks)[3] , '&' , names(unique_peaks)[4], sep=''),
+               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[3], sep=''),
+               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[4], sep=''),
+               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep=''),
+               paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep=''),
+               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep='')
+  )
+  for (c in (length(unique(dbObj$samples$Condition))+1):(length(names(e))-1) ){
+    combo <- str_replace_all(names(e)[c], "&", "_and_")
+    unique_peaks[[combo]] <- differential_peaks[[c, ]]
+    conditions_colour_code[[combo]] <- colours[i]
+    cat("\n", combo, "have", length(unique_peaks[[combo]]), "shared peaks.\n")
+  }
+}
 conditions_colour_code[['Shared']] <- "grey"
-          
-# if (length(unique(dbObj$samples$Condition)) == 4){
-#   for (c in unique(dba.show(dbObj.consensus)$Condition)){
-#     i <- which(unique(dba.show(dbObj.consensus)$Condition) == c) + 3
-#     pair <- unique(dba.show(dbObj.consensus)$Condition)[which(unique(dba.show(dbObj.consensus)$Condition) != c)]
-#     unique_peaks[[paste(pair, collapse='_and_')]] <- differential_peaks[[which(unique(dba.show(dbObj.consensus)$Condition) == c) + 3]]
-#     conditions_colour_code[[paste(pair, collapse='_and_')]] <- colours[i]
-#     cat("\n", paste(pair, collapse='_and_'), "have", length(unique_peaks[[paste(pair, collapse='_and_')]]), "shared peaks.\n")
-#   }
-# }
 
 
 
