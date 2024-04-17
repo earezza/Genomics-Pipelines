@@ -465,7 +465,7 @@ for (c in colnames(combs)){
   # DESeq2 
   if (opt$method == 'deseq2' | opt$method == 'all') {
     output_prefix <- change_dirs(opt$result_dir, 'DESeq2', comparison)
-    relevel(dds$Condition, ref= combs[[c]][1])
+    #relevel(dds$Condition, ref= combs[[c]][1])
     dds <- DESeq(dds)
     
     # Write filtered count matrix to file
@@ -476,7 +476,7 @@ for (c in colnames(combs)){
     write.table(normalized_count_mtx_dds, file=paste(output_prefix, "count_mtx_normalized.csv", sep=""), sep=",", quote=F, col.names=NA)
     
     # Obtain DEG results and output to file
-    res_dds <- results(dds, contrast=c("Condition", combs[[c]][2], combs[[c]][1]))
+    res_dds <- results(dds, contrast=c("Condition", combs[[c]][1], combs[[c]][2]))
     res_dds[['FoldChange']] <- 2^abs(res_dds[['log2FoldChange']])*(res_dds[['log2FoldChange']]/abs(res_dds[['log2FoldChange']]))
     write.table(res_dds[order(res_dds$log2FoldChange, decreasing=TRUE), ], file=paste(output_prefix, "DESeq2_FullResult_", comparison, ".csv", sep=""), sep=",", quote=F, col.names=NA)
     
