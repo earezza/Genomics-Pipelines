@@ -309,7 +309,7 @@ count_mtx <- count_mtx[, rownames(sampleinfo)]
 if (!file.exists(opt$result_dir)) {
   dir.create(opt$result_dir)
 }
-setwd(opt$result_dir)
+#setwd(opt$result_dir)
 cat("Output files will be in", opt$result_dir, "\n")
 
 
@@ -428,6 +428,13 @@ for (c in colnames(combs)){
       dds <- dds[keep_dds,]
       cat("DESeq2 percentiles after removing genes with sum(counts) <", opt$min_count, "\n")
       cat(quantile(rowSums(counts(dds)), probs = c(0, 0.1, 0.25, 0.5, 0.75, 0.9, 1)))
+      low_counts <- quantile(rowSums(counts(dds)), probs = c(0.10))
+      
+      # Remove bottom 10 percentile counts from remaining
+      keep_dds <- rowSums(counts(dds)) > low_counts
+      dds <- dds[keep_dds,]
+      cat("DESeq2 percentiles after removing genes with sum(counts) <=", low_counts, "\n")
+      cat(quantile(rowSums(counts(dds)), probs = c(0, 0.1, 0.25, 0.5, 0.75, 0.9, 1)))
       
       cat("DESeq2 genes and samples after filtering raw counts:\n", dim(dds), "\n")
     }
@@ -442,6 +449,13 @@ for (c in colnames(combs)){
       cat("EdgeR percentiles after removing genes with sum(counts) <", opt$min_count, "\n")
       cat(quantile(rowSums(edge$counts), probs = c(0, 0.1, 0.25, 0.5, 0.75, 0.9, 1)))
       
+      low_counts <- quantile(rowSums(edge$counts), probs = c(0.10))
+      
+      # Remove bottom 10 percentile counts from remaining
+      keep_edge <- rowSums(edge$counts) > low_counts
+      edge <- edge[keep_edge,]
+      cat("DESeq2 percentiles after removing genes with sum(counts) <=", low_counts, "\n")
+      cat(quantile(rowSums(edge$counts), probs = c(0, 0.1, 0.25, 0.5, 0.75, 0.9, 1)))
       cat("EdgeR genes and samples after filtering raw counts:\n", dim(edge), "\n")
     }
     
@@ -451,6 +465,7 @@ for (c in colnames(combs)){
   # DESeq2 
   if (opt$method == 'deseq2' | opt$method == 'all') {
     output_prefix <- change_dirs(opt$result_dir, 'DESeq2', comparison)
+    relevel(dds$Condition, ref= combs[[c]][1])
     dds <- DESeq(dds)
     
     # Write filtered count matrix to file
@@ -461,7 +476,7 @@ for (c in colnames(combs)){
     write.table(normalized_count_mtx_dds, file=paste(output_prefix, "count_mtx_normalized.csv", sep=""), sep=",", quote=F, col.names=NA)
     
     # Obtain DEG results and output to file
-    res_dds <- results(dds, contrast=c("Condition", combs[[c]][1], combs[[c]][2]))
+    res_dds <- results(dds, contrast=c("Condition", combs[[c]][2], combs[[c]][1]))
     res_dds[['FoldChange']] <- 2^abs(res_dds[['log2FoldChange']])*(res_dds[['log2FoldChange']]/abs(res_dds[['log2FoldChange']]))
     write.table(res_dds[order(res_dds$log2FoldChange, decreasing=TRUE), ], file=paste(output_prefix, "DESeq2_FullResult_", comparison, ".csv", sep=""), sep=",", quote=F, col.names=NA)
     
