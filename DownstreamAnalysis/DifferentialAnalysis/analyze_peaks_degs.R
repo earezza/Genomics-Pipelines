@@ -610,7 +610,7 @@ if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
                          area2=length(unique_peaks[[names(unique_peaks)[2]]])+length(shared_peaks[[names(shared_peaks)[1]]]),
                          cross.area=length(shared_peaks[[names(shared_peaks)[1]]]),
                          category=names(unique_peaks),
-                         fill=unname(unlist(conditions_colour_code)),
+                         fill=unname(unlist(conditions_colour_code))[1:2],
                          col=NA,
                          #cat.pos=c(0,0),
                          cat.dist = c(0,0))
