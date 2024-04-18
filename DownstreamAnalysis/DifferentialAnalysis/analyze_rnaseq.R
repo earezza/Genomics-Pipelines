@@ -341,10 +341,6 @@ change_dirs <- function(res_dir, method, subfolder){
 }
 
 
-# Get all pairwise combinations of conditions for comparing
-combs <- as.data.frame(combn(unique(sampleinfo$Condition), 2))
-
-
 # Perform global comparison (obtain PCA plot)
 # DESeq2
 if (opt$method == 'deseq2' | opt$method == 'all') {
@@ -404,6 +400,9 @@ if (opt$method == 'edger' | opt$method == 'all') {
   invisible(capture.output(dev.off()))
 }
 
+# Get all pairwise combinations of conditions for comparing
+combs <- as.data.frame(combn(unique(sampleinfo$Condition), 2))
+          
 # Iterate through condition combinations to compare DEG
 for (c in colnames(combs)){
   
