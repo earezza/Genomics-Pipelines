@@ -303,7 +303,13 @@ anno_ref <- load_annotation(opt$assembly, opt$database)
 count_mtx <- as.matrix(read.csv(opt$countsfile, sep=",", row.names=1, check.names=FALSE))
 sampleinfo <- read.csv(opt$sampleinfo, row.names=1)
 
+# Use only counts for samples listed in sample info file
 count_mtx <- count_mtx[, rownames(sampleinfo)]
+
+if (!all(colnames(count_mtx) == rownames(sampleinfo))){
+  cat("Check that column names in counts file matches row names in sample info file.\n")
+  q()
+}
 
 # Create output file directory and set as working directory
 if (!file.exists(opt$result_dir)) {
