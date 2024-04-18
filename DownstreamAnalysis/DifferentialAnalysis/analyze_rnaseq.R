@@ -680,16 +680,23 @@ for (c in colnames(combs)){
         genes[["DEGs"]] <- rownames(res_changed_sorted)
       }
       
+      df_mapper <- data.frame()
       genes_entrez <- list()
       for (n in names(genes)){
         if (opt$assembly == "hg19" | opt$assembly == "hg38"){
           genes_entrez[[n]] <- mapIds(org.Hs.eg.db, keys = genes[[n]], column = "ENTREZID", keytype = "SYMBOL")
+          df_mapper <- rbind(df_mapper, data.frame(geneId=unname(genes_entrez[[n]]), SYMBOL=names(genes_entrez[[n]])))
         }else if (opt$assembly == "mm9" | opt$assembly == "mm10"){
           genes_entrez[[n]] <- mapIds(org.Mm.eg.db, keys = genes[[n]], column = "ENTREZID", keytype = "SYMBOL")
+          df_mapper <- rbind(df_mapper, data.frame(geneId=unname(genes_entrez[[n]]), SYMBOL=names(genes_entrez[[n]])))
         }else if (opt$assembly == "rn6"){
           genes_entrez[[n]] <- mapIds(org.Rn.eg.db, keys = genes[[n]], column = "ENTREZID", keytype = "SYMBOL")
+          df_mapper <- rbind(df_mapper, data.frame(geneId=unname(genes_entrez[[n]]), SYMBOL=names(genes_entrez[[n]])))
         }
       }
+      
+      # Mapper for EntrezID to gene SYMBOL
+      mapper <- df_mapper[!duplicated(df_mapper), ]
       
       # ============= GO and KEGG Annotations ==============
       for (n in names(genes)){
@@ -755,6 +762,14 @@ for (c in colnames(combs)){
                                        pAdjustMethod="BH",
                                        organism=anno_ref$keggOrg
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+            
+            # Map EntrezIDs to gene SYMBOL
+            compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
+            myEntrez <- lapply(compKEGG@compareClusterResult$geneID, strsplit, '/')
+            for (i in 1:length(myEntrez)){
+              compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+            }
+            
             if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
               #plt <- dotplot(compKEGG, showCategory = 8, title = paste("KEGG -", n, sep=""))
               plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', n, sep=""), ylabel="KEGG Category", colour=colour, n=15)
