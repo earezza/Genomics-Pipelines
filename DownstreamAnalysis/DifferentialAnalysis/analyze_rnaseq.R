@@ -150,7 +150,7 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
                    size = unname(unlist(sapply(GeneRatio, function(x) eval(parse(text=x)))))*100,
                ),
     ) + 
-    theme_linedraw() +
+    theme_classic() +
     theme(axis.text.y = element_text(colour=rev(head(df$ycolour, n=n)))) +
     scale_color_gradient(low = "black", high = colour) +
     ggtitle(title)
