@@ -585,7 +585,7 @@ for (c in colnames(combs)){
   if (opt$method == 'edger' | opt$method == 'all') {
     output_prefix <- change_dirs(opt$result_dir, 'edgeR', comparison)
     disp <- estimateDisp(edge)
-    test <- exactTest(disp)
+    test <- exactTest(disp, pair = c(combs[[c]][2], combs[[c]][1]))
     res_edge <- topTags(test, n=dim(test$table)[1], adjust.method="BH", sort.by="logFC", p.value=1)
     
     # General plots
