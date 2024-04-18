@@ -647,14 +647,17 @@ for (c in colnames(combs)){
       # Remove any NAs
       res <- res[rowSums(is.na(res)) == 0, ]
       
-      # Get significantly Upregulated (log2FoldChange > 0)
+      # Get significantly Upregulated (log2FoldChange > 0) in condition 1
       res_up <- subset(res, log2FoldChange >= opt$lfc & pvalue <= opt$pvalue)
       res_up_sorted <- res_up[order(res_up$log2FoldChange, decreasing=TRUE),]
       write.table(res_up_sorted, file=paste(out_dirs[[1]], r, "_Result_", combs[[c]][1], ".csv", sep=""), sep=",", quote=F, col.names=NA)
       
-      # Get significantly Downregulated (log2FoldChange < 0)
+      # Get significantly Downregulated (log2FoldChange < 0) in condition 1
       res_down <- subset(res, log2FoldChange <= (0 - opt$lfc) & pvalue <= opt$pvalue)
-      res_down_sorted <- res_down[order(res_down$log2FoldChange, decreasing=TRUE),]
+      res_down_sorted <- res_down[order(res_down$log2FoldChange, decreasing=FALSE),]
+      # Flip negatives for intuitive understanding output of result (i.e. higher expression in condition 2 than 1)
+      res_down_sorted$log2FoldChange <- -1*res_down_sorted$log2FoldChange
+      res_down_sorted$stat <- -1*res_down_sorted$stat
       write.table(res_down_sorted, file=paste(out_dirs[[2]], r, "_Result_", combs[[c]][2], ".csv", sep=""), sep=",", quote=F, col.names=NA)
       
       # Get all significantly changed genes
