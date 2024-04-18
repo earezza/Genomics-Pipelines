@@ -400,6 +400,35 @@ if (opt$method == 'edger' | opt$method == 'all') {
   invisible(capture.output(dev.off()))
 }
 
+# Limma
+if (opt$method == 'limma' | opt$method == 'all') {
+  output_prefix <- change_dirs(opt$result_dir, 'Limma', '')
+  lim <- DGEList(count_mtx)
+  lim$samples$group <- sampleinfo$Group[which(rownames(sampleinfo) == rownames(lim$samples))]
+  lim <- calcNormFactors(lim)
+  cat("\nGenes and samples raw:", dim(lim), "\n")
+  
+  if (opt$filter) {
+    cat("Filtering counts...\n")
+    # Remove 0 counts (sum of all samples' counts) to avoid 0-bias and disregard irrelevant genes
+    keep_lim <- rowSums(lim$counts) >= opt$min_count
+    lim <- lim[keep_lim,]
+    cat("\nGenes and samples after removing genes with <", opt$min_count, "total counts:", dim(lim), "\n")
+    
+    # Remove bottom 10 percentile counts from remaining
+    low_counts <- quantile(rowSums(lim$counts), probs = c(0.10))
+    keep_lim <- rowSums(lim$counts) > low_counts
+    lim <- lim[keep_lim, ]
+    cat("\nGenes and samples after removing bottom 10% genes with <", low_counts, "total counts:", dim(lim), "\n")
+  }
+  
+  # Plot PCA
+  png(paste(output_prefix, 'MDSplot.png', sep=''))
+  plotMDS(lim, col=as.numeric(lim$samples$group), plot=TRUE)
+  invisible(capture.output(dev.off()))
+
+}
+          
 # Get all pairwise combinations of conditions for comparing
 combs <- as.data.frame(combn(unique(sampleinfo$Condition), 2))
           
@@ -437,6 +466,14 @@ for (c in colnames(combs)){
                     remove.zeros=FALSE)
     
     cat("EdgeR genes and samples:\n", dim(edge), "\n")
+  }
+
+  # Create limma object
+  if (opt$method == 'limma' | opt$method == 'all') {
+    lim <- DGEList(counts=mtx,
+                   group=mtx_info$Condition, 
+                   remove.zeros=FALSE)
+    cat("Limma genes and samples raw:", dim(lim), "\n")
   }
   
   # =========== Filter Count Matrix ============
@@ -487,6 +524,29 @@ for (c in colnames(combs)){
       
       cat("EdgeR genes and samples after filtering raw counts:\n", dim(edge), "\n")
     }
+
+    if (opt$method == 'limma' | opt$method == 'all') {
+      cat("Limma genes count sums over all samples:\n")
+      summary(rowSums(lim$counts))
+      quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95))
+      
+      keep_lim <- rowSums(lim$counts) >= opt$min_count
+      lim <- lim[keep_lim,]
+      cat("Limma after removing genes with sum(counts) <", opt$min_count, "\n")
+      summary(rowSums(lim$counts))
+      quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95))
+      
+      low_counts <- quantile(rowSums(lim$counts), probs = c(0.10))
+      
+      # Remove bottom 10 percentile counts from remaining
+      keep_lim <- rowSums(lim$counts) > low_counts
+      lim <- lim[keep_lim,]
+      cat("Limma after removing genes with sum(counts) <=", low_counts, "\n")
+      summary(rowSums(lim$counts))
+      quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95))
+      
+      cat("Limma genes and samples after filtering raw counts:\n", dim(lim), "\n")
+    }
     
   }
   
@@ -520,6 +580,16 @@ for (c in colnames(combs)){
     normalized_count_mtx_edge <- cpm(edge, normalized.lib.sizes=TRUE) # method called cpm, but uses norm factors from above with TMM
     write.table(normalized_count_mtx_edge, file=paste(output_prefix, "count_mtx_normalized.csv", sep=""), sep=",", quote=F, col.names=NA)
   }
+
+  # Limma
+  if (opt$method == 'limma' | opt$method == 'all') {
+    output_prefix <- change_dirs(opt$result_dir, 'Limma', '')
+    write.table(lim$counts, file=paste(output_prefix, "count_mtx_filtered.csv", sep=""), sep=",", quote=F, col.names=NA)
+    
+    lim <- calcNormFactors(lim)
+    normalized_count_mtx_limma <- cpm(lim, prior.count=2, log=TRUE)
+    write.table(normalized_count_mtx_limma, file=paste(output_prefix, "count_mtx_log-normalized.csv", sep=""), sep=",", quote=F, col.names=NA)
+  }
   
   # Filter out normalized low-expressed genes (bottom 10th percentile) by baseMean  REMOVE ALL < 10 baseMean
   if (opt$filter){
@@ -534,7 +604,7 @@ for (c in colnames(combs)){
       cat("DESeq2 genes and samples after filtering normalized genes:\n", dim(res_dds), "\n")
     }
     
-    # edgeR
+   # edgeR
     if (opt$method == 'edger' | opt$method == 'all') {
       output_prefix <- change_dirs(opt$result_dir, 'edgeR', comparison)
       cat("EdgeR genes and samples before filtering normalized genes:\n", dim(normalized_count_mtx_edge), "\n")
@@ -546,8 +616,51 @@ for (c in colnames(combs)){
       write.table(norm_filtered_count_mtx_edge, file=paste(output_prefix, "count_mtx_normalized_filtered.csv", sep=""), sep=",", quote=F, col.names=NA)
       
       # Update edgeR object with filtered genes
-      edge <- DGEList(counts = norm_filtered_count_mtx_edge, group=mtx_info$Condition, remove.zeros=FALSE, norm.factors = edge$samples$norm.factors)
+      edge <- DGEList(counts = norm_filtered_count_mtx_edge, 
+                      group=mtx_info$Condition, 
+                      remove.zeros=FALSE, 
+                      norm.factors = edge$samples$norm.factors)
     }
+    
+    # Limma
+    if (opt$method == 'limma' | opt$method == 'all') {
+      output_prefix <- change_dirs(opt$result_dir, 'Limma', comparison)
+      
+      normalized_count_mtx_limma <- cpm(lim)
+      cat("Limma genes and samples before filtering normalized genes:\n", dim(normalized_count_mtx_limma), "\n")
+      cat("Limma removing genes with sum expression <", opt$min_basemean, "\n")
+      norm_filtered_count_mtx_limma <- subset(normalized_count_mtx_limma, rowSums(normalized_count_mtx_limma) > opt$min_basemean)
+      cat("Limma genes and samples after filtering normalized genes:\n", dim(norm_filtered_count_mtx_limma), "\n")
+      write.table(norm_filtered_count_mtx_limma, file=paste(output_prefix, "count_mtx_normalized_filtered.csv", sep=""), sep=",", quote=F, col.names=NA)
+      
+      # Update limma object with filtered genes
+      lim <- DGEList(counts=norm_filtered_count_mtx_limma,
+                     group=mtx_info$Condition,
+                     remove.zeros=FALSE)
+      lim <- calcNormFactors(lim)
+    }
+  }else{
+    # DESeq2 object/results already done
+    # edgeR
+    if (opt$method == 'edger' | opt$method == 'all') {
+      # Update edgeR object with normalized non-baseMean-filtered matrix
+      edge <- DGEList(counts = normalized_count_mtx_edge, 
+                      group=mtx_info$Condition, 
+                      remove.zeros=FALSE, 
+                      norm.factors = edge$samples$norm.factors)
+    }
+    
+    # Limma
+    if (opt$method == 'limma' | opt$method == 'all') {
+      output_prefix <- change_dirs(opt$result_dir, 'Limma', comparison)
+      
+      # Update limma object with filtered genes
+      lim <- DGEList(counts=cpm(lim),
+                     group=mtx_info$Condition,
+                     remove.zeros=FALSE)
+      lim <- calcNormFactors(lim)
+    }
+    
   }
   
   # DESeq2
@@ -608,6 +721,42 @@ for (c in colnames(combs)){
     res_edge <- as.data.frame(res_edge)
     
     write.table(res_edge[order(res_edge$log2FoldChange, decreasing=TRUE), ], file=paste(output_prefix, "edgeR_FullResult_", comparison, ".csv", sep=""), sep=",", quote=F, col.names=NA)
+
+    plt <- make_volcanoplot(res_edge, combs[[c]][1], combs[[c]][2], opt$lfc, 0.1)
+    invisible(capture.output(ggsave(filename=paste(output_prefix, 'Volcanoplot.png', sep=''), plot=plt, dpi=320)))
+  }
+
+  # Limma
+  if (opt$method == 'limma' | opt$method == 'all') {
+    output_prefix <- change_dirs(opt$result_dir, 'Limma', comparison)
+    
+    # General plots
+    png(paste(output_prefix, 'MDSplot.png', sep=''))
+    plotMDS(lim, col=as.numeric(lim$samples$group), plot=TRUE)
+    invisible(capture.output(dev.off()))
+    
+    group <- interaction(lim$samples$group)
+    levels(group) <- c(combs[[c]][1], combs[[c]][2])
+    mm <- model.matrix(~0 + group)
+    
+    png(paste(output_prefix, 'mean-variance_trend.png', sep=''))
+    y <- voom(lim, mm, plot = T)
+    invisible(capture.output(dev.off()))
+    
+    fit <- lmFit(y, mm)
+    
+    contr <- makeContrasts(paste(colnames(coef(fit))[1], colnames(coef(fit))[2], sep=' - '), levels = colnames(coef(fit)))
+    tmp <- contrasts.fit(fit, contr)
+    tmp <- eBayes(tmp)
+    
+    res_limma <- topTable(tmp, sort.by = "logFC", n = Inf)
+    
+    colnames(res_limma) <- c('log2FoldChange', 'AveExpr', 't-stat', 'pvalue', 'padj', 'log-odds-diff')
+    res_limma[['FoldChange']] <- 2^abs(res_limma[['log2FoldChange']])*(res_limma[['log2FoldChange']]/abs(res_limma[['log2FoldChange']]))
+    write.table(res_limma[order(res_limma$log2FoldChange, decreasing=TRUE), ], file=paste(output_prefix, "limma_FullResult_", comparison, ".csv", sep=""), sep=",", quote=F, col.names=NA)
+  
+    plt <- make_volcanoplot(res_limma, combs[[c]][1], combs[[c]][2], opt$lfc, 0.1)
+    invisible(capture.output(ggsave(filename=paste(output_prefix, 'Volcanoplot.png', sep=''), plot=plt, dpi=320)))
   }
   
   # Analyze results from methods
@@ -617,6 +766,9 @@ for (c in colnames(combs)){
   }
   if (opt$method == 'edger' | opt$method == 'all') {
     results[['edgeR']] <- res_edge
+  }
+  if (opt$method == 'limma' | opt$method == 'all') {
+    results[['Limma']] <- res_limma
   }
   
   for (r in names(results)){
