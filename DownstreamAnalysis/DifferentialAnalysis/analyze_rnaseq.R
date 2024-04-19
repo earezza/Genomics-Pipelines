@@ -8,6 +8,7 @@ suppressWarnings(suppressPackageStartupMessages({
   library(DESeq2)
   library(edgeR)
   library(clusterProfiler)
+  #library(RDAVIDWebService)
   library(ggplot2)
   library(EnhancedVolcano)
   #library(ensembldb)
@@ -38,7 +39,8 @@ option_list = list(
   make_option(c("--min_count"), type="integer", default=1, help="Minimum counts to include if filtering", metavar="integer"),
   make_option(c("--min_basemean"), type="double", default=10, help="Minimum baseMean of normalized counts to include if filtering", metavar="integer"),
   make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
-  make_option(c("--pvalue"), type="double", default=0.05, help="Significance threshold for DEGs (pvalue instead of p.adjusted for case where small sample set results in p.adjust=NA)", metavar="integer")
+  make_option(c("--pvalue"), type="double", default=0.05, help="Significance threshold for DEGs (pvalue instead of p.adjusted for case where small sample set results in p.adjust=NA)", metavar="integer"),
+  make_option(c("--david_user"), type="character", default="earezza@ohri.ca", help="User email for DAVID web tools (must be registered, https://david.ncifcrf.gov/content.jsp?file=DAVID_WebService.html)", metavar="character")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -231,29 +233,32 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", assembly='mm10', heat_c
   for (d in 1:length(df$Description)){
     i <- 1
     s <- df$Description[d]
-    df$Description[d] <- ""
-    while (i < length(strsplit(s, ' ')[[1]])){
-      df$Description[d] <- paste(df$Description[d], paste(strsplit(s, ' ')[[1]][i:(i+5)], collapse = ' '), sep='\n')
-      i <- (i+6)
+    if (length(strsplit(s, ' ')[[1]]) > 1){
+      
+      df$Description[d] <- ""
+      while (i < length(strsplit(s, ' ')[[1]])){
+        df$Description[d] <- paste(df$Description[d], paste(strsplit(s, ' ')[[1]][i:(i+5)], collapse = ' '), sep='\n')
+        i <- (i+6)
+      }
+      df$Description[d] <- gsub(" NA", "", df$Description[d])
+      df$Description[d] <- substring(df$Description[d], 2, nchar(df$Description[d]))
     }
-    df$Description[d] <- gsub(" NA", "", df$Description[d])
-    df$Description[d] <- substring(df$Description[d], 2, nchar(df$Description[d]))
   }
   
   # Create dataframe (matrix) of annotation terms vs genes with gene's associated log2FoldChange
   d <- data.frame()
   for (a in df$Description){
-    gene_group <- strsplit(df[df$Description == a, ]$geneID, '/')[[1]]
-    # For KEGG to convert EntrezID to gene Symbol
-    if (anno_type == "KEGG"){
-      if (assembly == "hg19" | assembly == "hg38"){
-        gene_group <- mapIds(org.Hs.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
-      }else if (assembly == "mm9" | assembly == "mm10"){
-        gene_group <- mapIds(org.Mm.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
-      }else if (assembly == "rn6"){
-        gene_group <- mapIds(org.Rn.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
-      }
-    }
+    gene_group <- strsplit(df[df$Description == a, ]$SYMBOL, '/')[[1]]
+    # # For KEGG to convert EntrezID to gene Symbol
+    # if (anno_type == "KEGG" | anno_type == "DAVID"){
+    #   if (assembly == "hg19" | assembly == "hg38"){
+    #     gene_group <- mapIds(org.Hs.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
+    #   }else if (assembly == "mm9" | assembly == "mm10"){
+    #     gene_group <- mapIds(org.Mm.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
+    #   }else if (assembly == "rn6"){
+    #     gene_group <- mapIds(org.Rn.eg.db, keys = gene_group, column = "SYMBOL", keytype = "ENTREZID")
+    #   }
+    # }
     d[gene_group, a] <- res[gene_group, ]$log2FoldChange
   }
   # Sort by genes instead of by term (i.e. number of times gene found in all top terms)
@@ -280,8 +285,8 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", assembly='mm10', heat_c
   pheatmap(t(head(d, n=num_genes)), 
            border_color = "grey90",
            color = color, # "Reds, Greens, Blues, RdYlGn for DEGs
-           fontsize_row = 5,
-           fontsize_col = 5,
+           fontsize_row = 7,
+           fontsize_col = 7,
            na_col = "white",
            breaks = breaks,
            cluster_rows = dendro,
@@ -296,7 +301,6 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", assembly='mm10', heat_c
   
   return(plt)
 }
-
 anno_ref <- load_annotation(opt$assembly, opt$database)
 
 # =========== Load Input Files ============
@@ -1018,6 +1022,56 @@ for (c in colnames(combs)){
             message(e)
           }
         ) 
+        
+        # DAVID Annotation
+        tryCatch(
+          {
+            for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT")){
+              
+              compDAVID <- enrichDAVID(
+                unname(genes_entrez[[n]][!is.na(unname(genes_entrez[[n]]))]),
+                idType = "ENTREZ_GENE_ID",
+                minGSSize = 10,
+                maxGSSize = 500,
+                annotation = annotation_type,
+                pvalueCutoff = 0.05,
+                pAdjustMethod = "BH",
+                qvalueCutoff = 0.5,
+                #species = NA,
+                david.user=opt$david_user
+              )
+  
+              # Map EntrezIDs to gene SYMBOL
+              compDAVID@result$SYMBOL <- compDAVID@result$geneID
+              myEntrez <- lapply(compDAVID@result$geneID, strsplit, '/')
+              for (i in 1:length(myEntrez)){
+                compDAVID@result$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+              }
+              
+              if ((!is.null(compDAVID)) & (dim(compDAVID@result)[1] > 0)){
+                plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', n, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
+                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', n, '.png', sep=''), plot=plt, dpi=320)))
+                remove(plt)
+                # Write annotations to csv
+                write.table(as.data.frame(compDAVID), file=paste(out_dirs[[n]], 'DAVID_annotation_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+                
+                plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel=paste(annotation_type,"Category", sep=' '))
+                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
+                remove(plt)
+                plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel=paste(annotation_type,"Category", sep=' '))
+                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+                remove(plt)
+                
+              }
+              
+            }
+              
+          },error = function(e)
+          {
+            message(e)
+          }
+        )
+
       }
     
     }else{
