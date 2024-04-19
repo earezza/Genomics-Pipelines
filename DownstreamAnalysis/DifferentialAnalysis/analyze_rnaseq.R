@@ -808,7 +808,12 @@ for (c in colnames(combs)){
       res_down_sorted <- res_down[order(res_down$log2FoldChange, decreasing=FALSE),]
       # Flip negatives for intuitive understanding output of result (i.e. higher expression in condition 2 than 1)
       res_down_sorted$log2FoldChange <- -1*res_down_sorted$log2FoldChange
-      res_down_sorted$stat <- -1*res_down_sorted$stat
+      res_down_sorted$FoldChange <- -1*res_down_sorted$FoldChange
+      if (r == "DESeq2"){
+        res_down_sorted$stat <- res_down_sorted$stat*(-1)
+      }else if(r == "Limma"){
+        res_down_sorted[['t-stat']] <- res_down_sorted[['t-stat']]*(-1)
+      }
       write.table(res_down_sorted, file=paste(out_dirs[[2]], r, "_Result_", combs[[c]][2], ".csv", sep=""), sep=",", quote=F, col.names=NA)
       
       # Get all significantly changed genes
