@@ -1050,16 +1050,16 @@ for (c in colnames(combs)){
               
               if ((!is.null(compDAVID)) & (dim(compDAVID@result)[1] > 0)){
                 plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', n, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
-                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', n, '.png', sep=''), plot=plt, dpi=320)))
+                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 # Write annotations to csv
                 write.table(as.data.frame(compDAVID), file=paste(out_dirs[[n]], 'DAVID_annotation_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
                 
                 plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel=paste(annotation_type,"Category", sep=' '))
-                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
+                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel=paste(annotation_type,"Category", sep=' '))
-                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 
               }
