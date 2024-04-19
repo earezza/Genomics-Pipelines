@@ -914,7 +914,7 @@ for (c in colnames(combs)){
                 compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
                 #plt <- dotplot(compGO, showCategory = 8, title = paste("GO -", n, sep=""))
                 plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term", colour=colour, n=15)
-                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GO_', ont, '_', n, '.png', sep=''), plot=plt, dpi=320)))
+                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GO_', ont, '_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 # Write annotations to csv
                 write.table(as.data.frame(compGO), file=paste(out_dirs[[n]], 'GO_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
@@ -956,7 +956,7 @@ for (c in colnames(combs)){
             if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
               #plt <- dotplot(compKEGG, showCategory = 8, title = paste("KEGG -", n, sep=""))
               plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', n, sep=""), ylabel="KEGG Category", colour=colour, n=15)
-              invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '.png', sep=''), plot=plt, dpi=320)))
+              invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
               remove(plt)
               # Write annotations to csv
               write.table(as.data.frame(compKEGG), file=paste(out_dirs[[n]], 'KEGG_annotation_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
@@ -1002,7 +1002,7 @@ for (c in colnames(combs)){
                 plt <- dotplot(gsea, showCategory = 20, title = paste("GSEA (", ont, ") - ", n, sep=""))
                 df <- plt$data
                 plt <- make_dotplot(df, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", colour=colour, n=15)
-                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '.png', sep=''), plot=plt, dpi=320)))
+                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 
                 # Write annotations to csv
@@ -1050,7 +1050,7 @@ for (c in colnames(combs)){
               
               if ((!is.null(compDAVID)) & (dim(compDAVID@result)[1] > 0)){
                 plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', n, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
-                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '.png', sep=''), plot=plt, dpi=320)))
+                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 # Write annotations to csv
                 write.table(as.data.frame(compDAVID), file=paste(out_dirs[[n]], 'DAVID_annotation_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
