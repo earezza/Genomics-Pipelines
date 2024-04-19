@@ -28,7 +28,8 @@ option_list = list(
   make_option(c("--combine_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from replicates instead of taking consensus peaks", metavar="character"),
   make_option(c("-b", "--blacklisted_keep"), type="logical", action="store_true", default=FALSE, help="Flag to keep blacklisted regions in raw peaks files", metavar="character"),
   make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
-  make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="integer")
+  make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="integer"),
+  make_option(c("--occupancy_only"), type="logical", action="store_true", default=FALSE, help="Flag to only perform peaks occupany analysis", metavar="character")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -952,6 +953,12 @@ rm(compKEGG)
 rm(compGO)
 invisible(capture.output(gc()))
 
+
+if (opt$occupancy_only){
+  cat("Skipping affinity analysis.\nDone!\n")
+  q()
+}
+          
 # ========= START OF AFFINITY ANALYSIS =========
 # The consensus peaks determined above are used here
 # to focus on relevant peak regions only. This way, read
