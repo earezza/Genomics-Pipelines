@@ -351,24 +351,24 @@ if (opt$method == 'deseq2' | opt$method == 'all') {
                                 design = ~ Condition)
   cat("\nGenes and samples raw:", dim(dds), "\n")
   cat("DESEq2 genes count sums over all samples:\n")
-  cat(summary(rowSums(counts(dds))), "\n")
-  cat(quantile(rowSums(counts(dds)), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+  show(summary(rowSums(counts(dds))))
+  show(quantile(rowSums(counts(dds)), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
   if (opt$filter) {
     cat("Filtering counts...\n")
     # Remove 0 counts (sum of all samples' counts) to avoid 0-bias and disregard irrelevant genes
     keep_dds <- rowSums(counts(dds)) >= opt$min_count
     dds <- dds[keep_dds, ]
     cat("\nGenes and samples after removing genes with <", opt$min_count, "total counts:", dim(dds), "\n")
-    cat(summary(rowSums(counts(dds))), "\n")
-    cat(quantile(rowSums(counts(dds)), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+    show(summary(rowSums(counts(dds))))
+    show(quantile(rowSums(counts(dds)), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
     
     # Remove bottom 10 percentile counts from remaining
     low_counts <- quantile(rowSums(counts(dds)), probs = c(0.10))
     keep_dds <- rowSums(counts(dds)) > low_counts
     dds <- dds[keep_dds, ]
     cat("\nGenes and samples after removing bottom 10% genes with <", low_counts, "total counts:", dim(dds), "\n")
-    cat(summary(rowSums(counts(dds))), "\n")
-    cat(quantile(rowSums(counts(dds)), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+    show(summary(rowSums(counts(dds))))
+    show(quantile(rowSums(counts(dds)), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
   }
   dds <- DESeq(dds)
   
@@ -386,24 +386,24 @@ if (opt$method == 'edger' | opt$method == 'all') {
                   remove.zeros=FALSE)
   cat("\nGenes and samples raw:", dim(edge), "\n")
   cat("EdgeR genes count sums over all samples:\n")
-  cat(summary(rowSums(edge$counts)), "\n")
-  cat(quantile(rowSums(edge$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+  show(summary(rowSums(edge$counts)))
+  show(quantile(rowSums(edge$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
   if (opt$filter) {
     cat("Filtering counts...\n")
     # Remove 0 counts (sum of all samples' counts) to avoid 0-bias and disregard irrelevant genes
     keep_edge <- rowSums(edge$counts) >= opt$min_count
     edge <- edge[keep_edge, ]
     cat("\nGenes and samples after removing genes with <", opt$min_count, "total counts:", dim(edge), "\n")
-    cat(summary(rowSums(edge$counts)), "\n")
-    cat(quantile(rowSums(edge$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+    show(summary(rowSums(edge$counts)))
+    show(quantile(rowSums(edge$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
     
     # Remove bottom 10 percentile counts from remaining
     low_counts <- quantile(rowSums(edge$counts), probs = c(0.10))
     keep_edge <- rowSums(edge$counts) > low_counts
     edge <- edge[keep_edge, ]
     cat("\nGenes and samples after removing bottom 10% genes with <", low_counts, "total counts:", dim(edge), "\n")
-    cat(summary(rowSums(edge$counts)), "\n")
-    cat((quantile(rowSums(edge$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95))), "\n")
+    show(summary(rowSums(edge$counts)))
+    show((quantile(rowSums(edge$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95))))
   }
   edge <- calcNormFactors(edge, method="TMM")
   normalized_count_mtx_edge <- cpm(edge, normalized.lib.sizes=TRUE) 
@@ -423,8 +423,8 @@ if (opt$method == 'limma' | opt$method == 'all') {
   lim <- calcNormFactors(lim)
   cat("\nGenes and samples raw:", dim(lim), "\n")
   cat("Limma genes count sums over all samples:\n")
-  cat(summary(rowSums(lim$counts)), "\n")
-  cat(quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+  show(summary(rowSums(lim$counts)))
+  show(quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
   
   if (opt$filter) {
     cat("Filtering counts...\n")
@@ -432,16 +432,16 @@ if (opt$method == 'limma' | opt$method == 'all') {
     keep_lim <- rowSums(lim$counts) >= opt$min_count
     lim <- lim[keep_lim,]
     cat("\nGenes and samples after removing genes with <", opt$min_count, "total counts:", dim(lim), "\n")
-    cat(summary(rowSums(lim$counts)), "\n")
-    cat(quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+    show(summary(rowSums(lim$counts)))
+    show(quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
     
     # Remove bottom 10 percentile counts from remaining
     low_counts <- quantile(rowSums(lim$counts), probs = c(0.10))
     keep_lim <- rowSums(lim$counts) > low_counts
     lim <- lim[keep_lim, ]
     cat("\nGenes and samples after removing bottom 10% genes with <", low_counts, "total counts:", dim(lim), "\n")
-    cat(summary(rowSums(lim$counts)), "\n")
-    cat(quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+    show(summary(rowSums(lim$counts)))
+    show(quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
   }
   
   # Plot PCA
@@ -503,23 +503,23 @@ for (c in colnames(combs)){
     
     if (opt$method == 'deseq2' | opt$method == 'all') {
       cat("DESEq2 genes count sums over all samples:\n")
-      cat(summary(rowSums(counts(dds))), "\n")
-      cat(quantile(rowSums(counts(dds)), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+      show(summary(rowSums(counts(dds))))
+      show(quantile(rowSums(counts(dds)), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
       
       # Remove 0 counts (sum of all samples' counts) to avoid 0-bias and disregard irrelevant genes
       keep_dds <- rowSums(counts(dds)) >= opt$min_count
       dds <- dds[keep_dds,]
       cat("DESeq2 after removing genes with sum(counts) <", opt$min_count, "\n")
-      cat(summary(rowSums(counts(dds))), "\n")
-      cat(quantile(rowSums(counts(dds)), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+      show(summary(rowSums(counts(dds))))
+      show(quantile(rowSums(counts(dds)), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
       low_counts <- quantile(rowSums(counts(dds)), probs = c(0.10))
       
       # Remove bottom 10 percentile counts from remaining
       keep_dds <- rowSums(counts(dds)) > low_counts
       dds <- dds[keep_dds,]
       cat("DESeq2 after removing genes with sum(counts) <=", low_counts, "\n")
-      cat(summary(rowSums(counts(dds))), "\n")
-      cat(quantile(rowSums(counts(dds)), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+      show(summary(rowSums(counts(dds))))
+      show(quantile(rowSums(counts(dds)), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
       
       cat("DESeq2 genes and samples after filtering raw counts:\n", dim(dds), "\n")
     }
@@ -527,14 +527,14 @@ for (c in colnames(combs)){
     
     if (opt$method == 'edger' | opt$method == 'all') {
       cat("EdgeR genes count sums over all samples:\n")
-      cat(summary(rowSums(edge$counts)), "\n")
-      cat(quantile(rowSums(edge$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+      show(summary(rowSums(edge$counts)))
+      show(quantile(rowSums(edge$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
     
       keep_edge <- rowSums(edge$counts) >= opt$min_count
       edge <- edge[keep_edge,]
       cat("EdgeR after removing genes with sum(counts) <", opt$min_count, "\n")
-      cat(summary(rowSums(edge$counts)), "\n")
-      cat(quantile(rowSums(edge$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+      show(summary(rowSums(edge$counts)))
+      show(quantile(rowSums(edge$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
       
       low_counts <- quantile(rowSums(edge$counts), probs = c(0.10))
       
@@ -542,8 +542,8 @@ for (c in colnames(combs)){
       keep_edge <- rowSums(edge$counts) > low_counts
       edge <- edge[keep_edge,]
       cat("EdgeR after removing genes with sum(counts) <=", low_counts, "\n")
-      cat(summary(rowSums(edge$counts)), "\n")
-      cat((quantile(rowSums(edge$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95))), "\n")
+      show(summary(rowSums(edge$counts)))
+      show(quantile(rowSums(edge$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
       
       cat("EdgeR genes and samples after filtering raw counts:\n", dim(edge), "\n")
     }
@@ -551,14 +551,14 @@ for (c in colnames(combs)){
     
     if (opt$method == 'limma' | opt$method == 'all') {
       cat("Limma genes count sums over all samples:\n")
-      cat(summary(rowSums(lim$counts)), "\n")
-      cat(quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+      show(summary(rowSums(lim$counts)))
+      show(quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
       
       keep_lim <- rowSums(lim$counts) >= opt$min_count
       lim <- lim[keep_lim,]
       cat("Limma after removing genes with sum(counts) <", opt$min_count, "\n")
-      cat(summary(rowSums(lim$counts)), "\n")
-      cat(quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+      show(summary(rowSums(lim$counts)))
+      show(quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
       
       low_counts <- quantile(rowSums(lim$counts), probs = c(0.10))
       
@@ -566,12 +566,11 @@ for (c in colnames(combs)){
       keep_lim <- rowSums(lim$counts) > low_counts
       lim <- lim[keep_lim,]
       cat("Limma after removing genes with sum(counts) <=", low_counts, "\n")
-      cat(summary(rowSums(lim$counts)), "\n")
-      cat(quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)), "\n")
+      show(summary(rowSums(lim$counts)))
+      show(quantile(rowSums(lim$counts), probs = c(0.1, 0.25, 0.5, 0.75, 0.9, 0.95)))
       
       cat("Limma genes and samples after filtering raw counts:\n", dim(lim), "\n")
     }
-    
   }
   
   # ========== Normalize and Compute DEG Stats =============
