@@ -34,7 +34,7 @@ option_list = list(
   make_option(c("-a", "--assembly"), type="character", default="mm10", help="Assembly to annotate genes/peaks (e.g. hg19, hg38, mm9, mm10, rn6)", metavar="character"),
   make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
   make_option(c("-r", "--result_dir"), type="character", default="DEG_Analysis/", help="Directory name for saving output results", metavar="character"),
-  make_option(c("-m", "--method"), type="character", default="all", help="Method to analyze data, ('deseq2', 'edger', default: 'all')", metavar="character"), 
+  make_option(c("-m", "--method"), type="character", default="all", help="Method to analyze data, ('deseq2', 'edger', 'limma', default: 'all')", metavar="character"), 
   make_option(c("-f", "--filter"), action="store_true", type="logical", default=FALSE, help="Flag to filter read counts (removes genes < min_count from raw matrix, then removes genes < min_baseMean after normalizing", metavar="character"),
   make_option(c("--min_count"), type="integer", default=1, help="Minimum counts to include if filtering", metavar="integer"),
   make_option(c("--min_basemean"), type="double", default=10, help="Minimum baseMean of normalized counts to include if filtering", metavar="integer"),
