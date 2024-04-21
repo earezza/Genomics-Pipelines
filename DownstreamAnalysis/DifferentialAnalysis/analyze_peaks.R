@@ -2,6 +2,7 @@
 suppressWarnings(suppressPackageStartupMessages({
   library(DiffBind)
   library(tidyverse)
+  #library(RDAVIDWebService)
   library(ChIPseeker)
   library(ReactomePA)
   library(clusterProfiler)
@@ -29,7 +30,8 @@ option_list = list(
   make_option(c("-b", "--blacklisted_keep"), type="logical", action="store_true", default=FALSE, help="Flag to keep blacklisted regions in raw peaks files", metavar="character"),
   make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
   make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="integer"),
-  make_option(c("--occupancy_only"), type="logical", action="store_true", default=FALSE, help="Flag to only perform peaks occupany analysis", metavar="character")
+  make_option(c("--occupancy_only"), type="logical", action="store_true", default=FALSE, help="Flag to only perform peaks occupany analysis", metavar="character"),
+  make_option(c("--david_user"), type="character", default="earezza@ohri.ca", help="User email for DAVID web tools (must be registered, https://david.ncifcrf.gov/content.jsp?file=DAVID_WebService.html)", metavar="character")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -918,8 +920,56 @@ for (p in names(peaks)){
     invisible(capture.output(gc()))
     
   }
-}
 
+  genes_entrez <- list()
+  genes_entrez[[p]] <- anno@anno$geneId
+  names(genes_entrez) = sub("_", "\n", names(genes_entrez))
+  cat("\nGetting", p, 'DAVID annotations...\n')  
+  for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT")){
+    # DAVID Annotation
+    tryCatch(
+      {
+        compDAVID <- enrichDAVID(
+                  unname(genes_entrez[[p]][!is.na(unname(genes_entrez[[p]]))]),
+                  idType = "ENTREZ_GENE_ID",
+                  minGSSize = 10,
+                  maxGSSize = 500,
+                  annotation = annotation_type,
+                  pvalueCutoff = 0.05,
+                  pAdjustMethod = "BH",
+                  qvalueCutoff = 0.5,
+                  #species = NA,
+                  david.user=opt$david_user
+                )
+        # Map EntrezIDs to gene SYMBOL
+        compDAVID@result$SYMBOL <- compDAVID@result$geneID
+        myEntrez <- lapply(compDAVID@result$geneID, strsplit, '/')
+        for (i in 1:length(myEntrez)){
+          compDAVID@result$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+        }
+        if ((!is.null(compDAVID)) & (dim(compDAVID@result)[1] > 0)){
+          plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', p, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
+          invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '_dotplot.png', sep=''), plot=plt, dpi=320)))
+          remove(plt)
+          # Write annotations to csv
+          write.table(as.data.frame(compDAVID), file=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+          
+          plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE)
+          invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
+          remove(plt)
+          plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE)
+          invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+          remove(plt)
+        }
+      },error = function(e)
+      {
+        message(e)
+      }
+    )
+  }
+  
+}
+          
 tryCatch(
   {
     plt <- plotAnnoBar(peakAnnoList)
@@ -1553,6 +1603,52 @@ for (report in names(reports)){
         invisible(capture.output(gc()))
         
       }
+        genes_entrez <- list()
+        genes_entrez[[p]] <- anno@anno$geneId
+        names(genes_entrez) = sub("_", "\n", names(genes_entrez))
+        cat("\nGetting", p, 'DAVID annotations...\n')  
+        for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT")){
+          # DAVID Annotation
+          tryCatch(
+            {
+              compDAVID <- enrichDAVID(
+                        unname(genes_entrez[[p]][!is.na(unname(genes_entrez[[p]]))]),
+                        idType = "ENTREZ_GENE_ID",
+                        minGSSize = 10,
+                        maxGSSize = 500,
+                        annotation = annotation_type,
+                        pvalueCutoff = 0.05,
+                        pAdjustMethod = "BH",
+                        qvalueCutoff = 0.5,
+                        #species = NA,
+                        david.user=opt$david_user
+                      )
+              # Map EntrezIDs to gene SYMBOL
+              compDAVID@result$SYMBOL <- compDAVID@result$geneID
+              myEntrez <- lapply(compDAVID@result$geneID, strsplit, '/')
+              for (i in 1:length(myEntrez)){
+                compDAVID@result$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+              }
+              if ((!is.null(compDAVID)) & (dim(compDAVID@result)[1] > 0)){
+                plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', p, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
+                invisible(capture.output(ggsave(filename=paste(output_prefix, report, 'DAVID_annotation_', annotation_type, '_', p, '_dotplot.png', sep=''), plot=plt, dpi=320)))
+                remove(plt)
+                # Write annotations to csv
+                write.table(as.data.frame(compDAVID), file=paste(output_prefix, report, 'DAVID_annotation_', annotation_type, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+                
+                plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE)
+                invisible(capture.output(ggsave(filename=paste(output_prefix, report, 'DAVID_annotation_', annotation_type, '_', p, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
+                remove(plt)
+                plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE)
+                invisible(capture.output(ggsave(filename=paste(output_prefix, report, 'DAVID_annotation_', annotation_type, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+                remove(plt)
+              }
+            },error = function(e)
+            {
+              message(e)
+            }
+          )
+        }
     }
     else{
       cat("\nNo peaks to annotate for", p, '\n')
@@ -1826,6 +1922,54 @@ for (p in names(gpeaks)){
       invisible(capture.output(gc()))
       
     }
+        
+    genes_entrez <- list()
+    genes_entrez[[p]] <- anno@anno$geneId
+    names(genes_entrez) = sub("_", "\n", names(genes_entrez))
+    cat("\nGetting", p, 'DAVID annotations...\n')  
+    for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT")){
+      # DAVID Annotation
+      tryCatch(
+        {
+          compDAVID <- enrichDAVID(
+                    unname(genes_entrez[[p]][!is.na(unname(genes_entrez[[p]]))]),
+                    idType = "ENTREZ_GENE_ID",
+                    minGSSize = 10,
+                    maxGSSize = 500,
+                    annotation = annotation_type,
+                    pvalueCutoff = 0.05,
+                    pAdjustMethod = "BH",
+                    qvalueCutoff = 0.5,
+                    #species = NA,
+                    david.user=opt$david_user
+                  )
+          # Map EntrezIDs to gene SYMBOL
+          compDAVID@result$SYMBOL <- compDAVID@result$geneID
+          myEntrez <- lapply(compDAVID@result$geneID, strsplit, '/')
+          for (i in 1:length(myEntrez)){
+            compDAVID@result$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+          }
+          if ((!is.null(compDAVID)) & (dim(compDAVID@result)[1] > 0)){
+            plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', p, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
+            invisible(capture.output(ggsave(filename=paste(output_prefix, report, 'DAVID_annotation_', annotation_type, '_', p, '_dotplot.png', sep=''), plot=plt, dpi=320)))
+            remove(plt)
+            # Write annotations to csv
+            write.table(as.data.frame(compDAVID), file=paste(output_prefix, report, 'DAVID_annotation_', annotation_type, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+            
+            plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE)
+            invisible(capture.output(ggsave(filename=paste(output_prefix, report, 'DAVID_annotation_', annotation_type, '_', p, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
+            remove(plt)
+            plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE)
+            invisible(capture.output(ggsave(filename=paste(output_prefix, report, 'DAVID_annotation_', annotation_type, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+            remove(plt)
+          }
+        },error = function(e)
+        {
+          message(e)
+        }
+      )
+    }
+    
   }
   else{
     cat("No peaks to annotate for", p, '\n')
