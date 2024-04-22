@@ -1024,7 +1024,7 @@ for (c in colnames(combs)){
         ) 
         
         # DAVID Annotation
-        for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT")){
+        for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT", "KEGG_PATHWAY")){
           tryCatch(
             {
             
