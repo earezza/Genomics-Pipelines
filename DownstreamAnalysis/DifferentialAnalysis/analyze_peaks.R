@@ -31,7 +31,9 @@ option_list = list(
   make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
   make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="integer"),
   make_option(c("--occupancy_only"), type="logical", action="store_true", default=FALSE, help="Flag to only perform peaks occupany analysis", metavar="character"),
-  make_option(c("--david_user"), type="character", default="earezza@ohri.ca", help="User email for DAVID web tools (must be registered, https://david.ncifcrf.gov/content.jsp?file=DAVID_WebService.html)", metavar="character")
+  make_option(c("--david_user"), type="character", default="earezza@ohri.ca", help="User email for DAVID web tools (must be registered, https://david.ncifcrf.gov/content.jsp?file=DAVID_WebService.html)", metavar="character"),
+  make_option(c("--minGSSize"), type="integer", default=10, help="minimal size of genes annotated for testing", metavar="integer"),
+  make_option(c("--maxGSSize"), type="integer", default=500, help="maximal size of genes annotated for testing", metavar="integer")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -859,8 +861,10 @@ for (p in names(peaks)){
       # fun is "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" 
       compKEGG <- compareCluster(geneCluster=genes,
                                  fun="enrichKEGG",
-                                 pvalueCutoff=0.05,
+                                 pvalueCutoff=opt$fdr,
                                  pAdjustMethod="BH",
+                                 minGSSize = opt$minGSSize,
+                                 maxGSSize = opt$maxGSSize,
                                  organism=anno_ref$keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
       
       # Map EntrezIDs to gene SYMBOL
@@ -899,8 +903,10 @@ for (p in names(peaks)){
                                  OrgDb=anno_ref$annoDb,
                                  fun="enrichGO",
                                  ont=ont,
-                                 pvalueCutoff=0.05,
+                                 pvalueCutoff=opt$fdr,
                                  pAdjustMethod="BH",
+                                 minGSSize = opt$minGSSize,
+                                 maxGSSize = opt$maxGSSize,
                                  readable=TRUE
         ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
         if ((!is.null(compGO)) & (dim(compGO@compareClusterResult)[1] > 0)){
@@ -932,12 +938,11 @@ for (p in names(peaks)){
         compDAVID <- enrichDAVID(
                   unname(genes_entrez[[p]][!is.na(unname(genes_entrez[[p]]))]),
                   idType = "ENTREZ_GENE_ID",
-                  minGSSize = 10,
-                  maxGSSize = 500,
+                  minGSSize = opt$minGSSize,
+                  maxGSSize = opt$maxGSSize,
                   annotation = annotation_type,
-                  pvalueCutoff = 0.05,
+                  pvalueCutoff = opt$fdr,
                   pAdjustMethod = "BH",
-                  qvalueCutoff = 0.5,
                   #species = NA,
                   david.user=opt$david_user
                 )
@@ -1532,8 +1537,10 @@ for (report in names(reports)){
           # fun is "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" 
           compKEGG <- compareCluster(geneCluster=genes,
                                      fun="enrichKEGG",
-                                     pvalueCutoff=0.05,
+                                     pvalueCutoff=opt$fdr,
                                      pAdjustMethod="BH",
+                                     minGSSize = opt$minGSSize,
+                                     maxGSSize = opt$maxGSSize,
                                      organism=anno_ref$keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
           
           # Map EntrezIDs to gene SYMBOL
@@ -1574,8 +1581,10 @@ for (report in names(reports)){
                                      OrgDb=anno_ref$annoDb,
                                      fun="enrichGO",
                                      ont=ont,
-                                     pvalueCutoff=0.05,
+                                     pvalueCutoff=opt$fdr,
                                      pAdjustMethod="BH",
+                                     minGSSize = opt$minGSSize,
+                                     maxGSSize = opt$maxGSSize,
                                      readable=TRUE
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
             
@@ -1614,12 +1623,11 @@ for (report in names(reports)){
               compDAVID <- enrichDAVID(
                         unname(genes_entrez[[p]][!is.na(unname(genes_entrez[[p]]))]),
                         idType = "ENTREZ_GENE_ID",
-                        minGSSize = 10,
-                        maxGSSize = 500,
+                        minGSSize = opt$minGSSize,
+                        maxGSSize = opt$maxGSSize,
                         annotation = annotation_type,
-                        pvalueCutoff = 0.05,
+                        pvalueCutoff = opt$fdr,
                         pAdjustMethod = "BH",
-                        qvalueCutoff = 0.5,
                         #species = NA,
                         david.user=opt$david_user
                       )
@@ -1852,8 +1860,10 @@ for (p in names(gpeaks)){
         # fun is "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" 
         compKEGG <- compareCluster(geneCluster=genes,
                                    fun="enrichKEGG",
-                                   pvalueCutoff=0.05,
+                                   pvalueCutoff=opt$fdr,
                                    pAdjustMethod="BH",
+                                   minGSSize = opt$minGSSize,
+                                   maxGSSize = opt$maxGSSize,
                                    organism=anno_ref$keggOrg) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
         
         # Map EntrezIDs to gene SYMBOL
@@ -1892,8 +1902,10 @@ for (p in names(gpeaks)){
                                    OrgDb=anno_ref$annoDb,
                                    fun="enrichGO",
                                    ont=ont,
-                                   pvalueCutoff=0.05,
+                                   pvalueCutoff=opt$fdr,
                                    pAdjustMethod="BH",
+                                   minGSSize = opt$minGSSize,
+                                   maxGSSize = opt$maxGSSize,
                                    readable=TRUE
           ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
           
@@ -1934,12 +1946,11 @@ for (p in names(gpeaks)){
           compDAVID <- enrichDAVID(
                     unname(genes_entrez[[p]][!is.na(unname(genes_entrez[[p]]))]),
                     idType = "ENTREZ_GENE_ID",
-                    minGSSize = 10,
-                    maxGSSize = 500,
+                    minGSSize = opt$minGSSize,
+                    maxGSSize = opt$maxGSSize,
                     annotation = annotation_type,
-                    pvalueCutoff = 0.05,
+                    pvalueCutoff = opt$fdr,
                     pAdjustMethod = "BH",
-                    qvalueCutoff = 0.5,
                     #species = NA,
                     david.user=opt$david_user
                   )
