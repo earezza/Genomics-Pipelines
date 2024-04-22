@@ -925,7 +925,7 @@ for (p in names(peaks)){
   genes_entrez[[p]] <- anno@anno$geneId
   names(genes_entrez) = sub("_", "\n", names(genes_entrez))
   cat("\nGetting", p, 'DAVID annotations...\n')  
-  for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT")){
+  for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT", "KEGG_PATHWAY")){
     # DAVID Annotation
     tryCatch(
       {
@@ -1607,7 +1607,7 @@ for (report in names(reports)){
         genes_entrez[[p]] <- anno@anno$geneId
         names(genes_entrez) = sub("_", "\n", names(genes_entrez))
         cat("\nGetting", p, 'DAVID annotations...\n')  
-        for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT")){
+        for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT", "KEGG_PATHWAY")){
           # DAVID Annotation
           tryCatch(
             {
@@ -1927,7 +1927,7 @@ for (p in names(gpeaks)){
     genes_entrez[[p]] <- anno@anno$geneId
     names(genes_entrez) = sub("_", "\n", names(genes_entrez))
     cat("\nGetting", p, 'DAVID annotations...\n')  
-    for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT")){
+    for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT", "KEGG_PATHWAY")){
       # DAVID Annotation
       tryCatch(
         {
