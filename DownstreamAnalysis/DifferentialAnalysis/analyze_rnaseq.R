@@ -40,7 +40,9 @@ option_list = list(
   make_option(c("--min_basemean"), type="double", default=10, help="Minimum baseMean of normalized counts to include if filtering", metavar="integer"),
   make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
   make_option(c("--pvalue"), type="double", default=0.05, help="Significance threshold for DEGs (pvalue instead of p.adjusted for case where small sample set results in p.adjust=NA)", metavar="integer"),
-  make_option(c("--david_user"), type="character", default="earezza@ohri.ca", help="User email for DAVID web tools (must be registered, https://david.ncifcrf.gov/content.jsp?file=DAVID_WebService.html)", metavar="character")
+  make_option(c("--david_user"), type="character", default="earezza@ohri.ca", help="User email for DAVID web tools (must be registered, https://david.ncifcrf.gov/content.jsp?file=DAVID_WebService.html)", metavar="character"),
+  make_option(c("--minGSSize"), type="integer", default=10, help="minimal size of genes annotated for testing", metavar="integer"),
+  make_option(c("--maxGSSize"), type="integer", default=500, help="maximal size of genes annotated for testing", metavar="integer")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -904,8 +906,10 @@ for (c in colnames(combs)){
                                        OrgDb=anno_ref$annoDb,
                                        fun="enrichGO",
                                        keyType="SYMBOL", #ENSEMBL
-                                       pvalueCutoff=0.05,
+                                       pvalueCutoff=opt$pvalue,
                                        pAdjustMethod="BH",
+                                       minGSSize = opt$minGSSize,
+                                       maxGSSize = opt$maxGSSize,
                                        readable=TRUE,
                                        ont=ont
               ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
@@ -941,9 +945,11 @@ for (c in colnames(combs)){
             # fun is "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" 
             compKEGG <- compareCluster(geneCluster=genes_entrez[n],
                                        fun="enrichKEGG",
-                                       pvalueCutoff=0.05,
+                                       pvalueCutoff=opt$pvalue,
                                        pAdjustMethod="BH",
-                                       organism=anno_ref$keggOrg
+                                       organism=anno_ref$keggOrg,
+                                       minGSSize = opt$minGSSize,
+                                       maxGSSize = opt$maxGSSize
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
             
             # Map EntrezIDs to gene SYMBOL
@@ -989,9 +995,9 @@ for (c in colnames(combs)){
               gsea <- gseGO(geneList=gene_list, 
                             ont = ont, 
                             keyType = "SYMBOL", 
-                            minGSSize = 3, 
-                            maxGSSize = 800, 
-                            pvalueCutoff = 0.05, 
+                            minGSSize = opt$minGSSize,
+                            maxGSSize = opt$maxGSSize, 
+                            pvalueCutoff = opt$pvalue, 
                             verbose = TRUE, 
                             OrgDb = anno_ref$annoDb, 
                             pAdjustMethod = "BH"
@@ -1032,12 +1038,11 @@ for (c in colnames(combs)){
               compDAVID <- enrichDAVID(
                 unname(genes_entrez[[n]][!is.na(unname(genes_entrez[[n]]))]),
                 idType = "ENTREZ_GENE_ID",
-                minGSSize = 10,
-                maxGSSize = 500,
+                minGSSize = opt$minGSSize,
+                maxGSSize = opt$maxGSSize,
                 annotation = annotation_type,
-                pvalueCutoff = 0.05,
+                pvalueCutoff = opt$pvalue,
                 pAdjustMethod = "BH",
-                qvalueCutoff = 0.5,
                 #species = NA,
                 david.user=opt$david_user
               )
