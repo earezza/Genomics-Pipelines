@@ -1024,9 +1024,10 @@ for (c in colnames(combs)){
         ) 
         
         # DAVID Annotation
-        tryCatch(
-          {
-            for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT")){
+        for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT")){
+          tryCatch(
+            {
+            
               
               compDAVID <- enrichDAVID(
                 unname(genes_entrez[[n]][!is.na(unname(genes_entrez[[n]]))]),
@@ -1063,15 +1064,12 @@ for (c in colnames(combs)){
                 remove(plt)
                 
               }
-              
+            },error = function(e)
+            {
+              message(e)
             }
-              
-          },error = function(e)
-          {
-            message(e)
-          }
-        )
-
+          )
+        }
       }
     
     }else{
