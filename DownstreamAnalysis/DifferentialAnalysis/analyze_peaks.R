@@ -8,9 +8,9 @@
 
 # ======= Load Packages =======
 suppressWarnings(suppressPackageStartupMessages({
+  library(RDAVIDWebService)
   library(DiffBind)
   library(tidyverse)
-  library(RDAVIDWebService)
   library(ChIPseeker)
   library(ReactomePA)
   library(clusterProfiler)
