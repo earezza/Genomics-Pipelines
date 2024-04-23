@@ -1,3 +1,11 @@
+# -----------------------------------------------------------
+# Script Name: Analyze RNA-Seq
+# Purpose: This script performs differential peaks analysis using DESeq2, edgeR, and Limma/voom.
+# Author: Eric Arezza
+# Date: 2024-04-23
+# Version: 1.0
+# -----------------------------------------------------------
+
 # This script requires a count matrix file produced by featureCounts and/or htseq-count
 # and a sample info file to perform pairwise differential gene expression analysis using DESeq2.
 # Additionally provides GO and KEGG annotations from DEG.
@@ -35,11 +43,11 @@ option_list = list(
   make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
   make_option(c("-r", "--result_dir"), type="character", default="DEG_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-m", "--method"), type="character", default="all", help="Method to analyze data, ('deseq2', 'edger', 'limma', default: 'all')", metavar="character"), 
-  make_option(c("-f", "--filter"), action="store_true", type="logical", default=FALSE, help="Flag to filter read counts (removes genes < min_count from raw matrix, then removes genes < min_baseMean after normalizing", metavar="character"),
+  make_option(c("-f", "--filter"), action="store_true", type="logical", default=FALSE, help="Flag to filter read counts (removes genes < min_count from raw matrix, then removes genes < min_baseMean after normalizing", metavar="logical"),
   make_option(c("--min_count"), type="integer", default=1, help="Minimum counts to include if filtering", metavar="integer"),
   make_option(c("--min_basemean"), type="double", default=10, help="Minimum baseMean of normalized counts to include if filtering", metavar="integer"),
-  make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
-  make_option(c("--pvalue"), type="double", default=0.05, help="Significance threshold for DEGs (pvalue instead of p.adjusted for case where small sample set results in p.adjust=NA)", metavar="integer"),
+  make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="double"),
+  make_option(c("--pvalue"), type="double", default=0.05, help="Significance threshold for DEGs (pvalue instead of p.adjusted for case where small sample set results in p.adjust=NA)", metavar="double"),
   make_option(c("--david_user"), type="character", default="earezza@ohri.ca", help="User email for DAVID web tools (must be registered, https://david.ncifcrf.gov/content.jsp?file=DAVID_WebService.html)", metavar="character"),
   make_option(c("--minGSSize"), type="integer", default=10, help="minimal size of genes annotated for testing", metavar="integer"),
   make_option(c("--maxGSSize"), type="integer", default=500, help="maximal size of genes annotated for testing", metavar="integer")
