@@ -547,7 +547,7 @@ upset(fromList(upsetlist),
       mainbar.y.label = "Intersection Size of Gene Sets",
       mb.ratio = c(0.7, 0.3)
       ) 
-grid.text("Conensus Peaksets Annotated Genes",x = 0.65, y=0.95, gp=gpar(fontsize=10))
+grid.text("Consensus Peaksets Annotated Genes",x = 0.65, y=0.95, gp=gpar(fontsize=10))
 dev.off()
 invisible(capture.output(gc()))
 
