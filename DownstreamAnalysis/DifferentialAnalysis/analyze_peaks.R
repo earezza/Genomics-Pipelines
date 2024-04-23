@@ -966,13 +966,7 @@ for (p in names(peaks)){
           remove(plt)
           # Write annotations to csv
           write.table(as.data.frame(compDAVID), file=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-          
-          plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE)
-          invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
-          remove(plt)
-          plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE)
-          invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
-          remove(plt)
+
         }
       },error = function(e)
       {
