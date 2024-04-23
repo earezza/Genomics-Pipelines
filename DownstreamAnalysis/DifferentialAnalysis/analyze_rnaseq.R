@@ -16,7 +16,7 @@ suppressWarnings(suppressPackageStartupMessages({
   library(DESeq2)
   library(edgeR)
   library(clusterProfiler)
-  #library(RDAVIDWebService)
+  library(RDAVIDWebService)
   library(ggplot2)
   library(EnhancedVolcano)
   #library(ensembldb)
