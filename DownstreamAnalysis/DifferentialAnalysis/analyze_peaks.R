@@ -10,7 +10,7 @@
 suppressWarnings(suppressPackageStartupMessages({
   library(DiffBind)
   library(tidyverse)
-  #library(RDAVIDWebService)
+  library(RDAVIDWebService)
   library(ChIPseeker)
   library(ReactomePA)
   library(clusterProfiler)
