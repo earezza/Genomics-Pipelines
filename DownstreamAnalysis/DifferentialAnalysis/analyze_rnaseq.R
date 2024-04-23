@@ -12,11 +12,11 @@
 
 # ======= Load Packages =======
 suppressWarnings(suppressPackageStartupMessages({
+  library(RDAVIDWebService)
   library(Rsubread)
   library(DESeq2)
   library(edgeR)
   library(clusterProfiler)
-  library(RDAVIDWebService)
   library(ggplot2)
   library(EnhancedVolcano)
   #library(ensembldb)
