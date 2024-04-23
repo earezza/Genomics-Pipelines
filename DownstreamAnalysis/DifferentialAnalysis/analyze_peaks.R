@@ -1,3 +1,11 @@
+# -----------------------------------------------------------
+# Script Name: Analyze Peaks
+# Purpose: This script performs differential peaks analysis using DiffBind.
+# Author: Eric Arezza
+# Date: 2024-04-23
+# Version: 1.0
+# -----------------------------------------------------------
+
 # ======= Load Packages =======
 suppressWarnings(suppressPackageStartupMessages({
   library(DiffBind)
@@ -25,12 +33,12 @@ option_list = list(
   make_option(c("-r", "--result_dir"), type="character", default="Peaks_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
   make_option(c("-l", "--annotation_level"), type="character", default="transcript", help="Level parameter for annotatePeak, 'gene' or 'transcript'", metavar="character"),
-  make_option(c("--combine_callers"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from callers instead of taking consensus peaks", metavar="character"),
-  make_option(c("--combine_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from replicates instead of taking consensus peaks", metavar="character"),
-  make_option(c("-b", "--blacklisted_keep"), type="logical", action="store_true", default=FALSE, help="Flag to keep blacklisted regions in raw peaks files", metavar="character"),
-  make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="integer"),
-  make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="integer"),
-  make_option(c("--occupancy_only"), type="logical", action="store_true", default=FALSE, help="Flag to only perform peaks occupany analysis", metavar="character"),
+  make_option(c("--combine_callers"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from callers instead of taking consensus peaks", metavar="logical"),
+  make_option(c("--combine_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from replicates instead of taking consensus peaks", metavar="logical"),
+  make_option(c("-b", "--blacklisted_keep"), type="logical", action="store_true", default=FALSE, help="Flag to keep blacklisted regions in raw peaks files", metavar="logical"),
+  make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="double"),
+  make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="double"),
+  make_option(c("--occupancy_only"), type="logical", action="store_true", default=FALSE, help="Flag to only perform peaks occupancy analysis", metavar="logical"),
   make_option(c("--david_user"), type="character", default="earezza@ohri.ca", help="User email for DAVID web tools (must be registered, https://david.ncifcrf.gov/content.jsp?file=DAVID_WebService.html)", metavar="character"),
   make_option(c("--minGSSize"), type="integer", default=10, help="minimal size of genes annotated for testing", metavar="integer"),
   make_option(c("--maxGSSize"), type="integer", default=500, help="maximal size of genes annotated for testing", metavar="integer")
