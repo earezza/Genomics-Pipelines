@@ -317,6 +317,8 @@ anno_ref <- load_annotation(opt$assembly, opt$database)
 count_mtx <- as.matrix(read.csv(opt$countsfile, sep=",", row.names=1, check.names=FALSE))
 sampleinfo <- read.csv(opt$sampleinfo, row.names=1)
 #sampleinfo$Condition <- factor(sampleinfo$Condition)
+# change to R syntactically correct names
+sampleinfo$Condition <- gsub('-', '_', sampleinfo$Condition)
 
 # Use only counts for samples listed in sample info file
 count_mtx <- count_mtx[, rownames(sampleinfo)]
