@@ -1,6 +1,6 @@
 # -----------------------------------------------------------
 # Script Name: Analyze RNA-Seq
-# Purpose: This script performs differential peaks analysis using DESeq2, edgeR, and Limma/voom.
+# Purpose: This script performs differential expression analysis using DESeq2, edgeR, and Limma/voom.
 # Author: Eric Arezza
 # Date: 2024-04-23
 # Version: 1.0
