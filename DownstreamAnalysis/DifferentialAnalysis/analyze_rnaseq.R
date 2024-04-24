@@ -908,10 +908,10 @@ for (c in colnames(combs)){
         }
         
         # GO Annotation
-        tryCatch(
-          {
-            for (ont in c('ALL', 'CC', 'MF', 'BP')){
-              cat("\nGO - ", ont, "\n")
+        for (ont in c('ALL', 'CC', 'MF', 'BP')){
+          cat("\nGO - ", ont, "\n")
+          tryCatch(
+            {
               compGO <- compareCluster(geneCluster=genes[n],
                                        OrgDb=anno_ref$annoDb,
                                        fun="enrichGO",
@@ -942,15 +942,14 @@ for (c in colnames(combs)){
               } else{
                 cat("\nNo annotation results\n")
               }
-              
+
+              },error = function(e)
+            {
+              message(e)
             }
+          )
+        }
             
-          },error = function(e)
-          {
-            message(e)
-          }
-        )
-        
         # KEGG Annotation
         tryCatch(
           {
@@ -996,16 +995,16 @@ for (c in colnames(combs)){
         ) 
         
         # GSEA
-        tryCatch(
-          {
-            res <- res[order(res$log2FoldChange, decreasing=TRUE),]
-            original_gene_list <- res[genes[[n]],]$log2FoldChange
-            names(original_gene_list) <- rownames(res[genes[[n]],])
-            gene_list <- na.omit(original_gene_list)
-            gene_list <- gene_list[order(gene_list, decreasing=TRUE)]
+        res <- res[order(res$log2FoldChange, decreasing=TRUE),]
+        original_gene_list <- res[genes[[n]],]$log2FoldChange
+        names(original_gene_list) <- rownames(res[genes[[n]],])
+        gene_list <- na.omit(original_gene_list)
+        gene_list <- gene_list[order(gene_list, decreasing=TRUE)]
             
-            for (ont in c('ALL', 'CC', 'MF', 'BP')){
-              cat("\nGSEA - ", ont, "\n")
+        for (ont in c('ALL', 'CC', 'MF', 'BP')){
+          cat("\nGSEA - ", ont, "\n")
+          tryCatch(
+            {
               gsea <- gseGO(geneList=gene_list, 
                             ont = ont, 
                             keyType = "SYMBOL", 
@@ -1037,13 +1036,14 @@ for (c in colnames(combs)){
               } else{
                 cat("\nNo annotation results\n")
               }
-              
+
+            },error = function(e)
+            {
+              message(e)
             }
-          },error = function(e)
-          {
-            message(e)
-          }
-        ) 
+          ) 
+        }
+          
         
         # DAVID Annotation
         for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT", "KEGG_PATHWAY")){
