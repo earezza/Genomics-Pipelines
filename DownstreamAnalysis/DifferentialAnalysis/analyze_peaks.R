@@ -147,7 +147,7 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
     i <- 1
     s <- df$Description[d]
     df$Description[d] <- ""
-    while (i < length(strsplit(s, ' ')[[1]])){
+    while (i < length(strsplit(s, ' ')[[1]]) + 1){
       df$Description[d] <- paste(df$Description[d], paste(strsplit(s, ' ')[[1]][i:(i+5)], collapse = ' '), sep='\n')
       i <- (i+6)
     }
