@@ -895,7 +895,7 @@ for (c in colnames(combs)){
       
       # ============= GO and KEGG Annotations ==============
       for (n in names(genes)){
-        cat("Obtaining functional gene annotations for ", n, "\n")
+        cat("\nObtaining functional gene annotations for ", n, "\n")
         if (n == combs[[c]][1]){
           colour <- 'green'
           heat_colour <- "Greens"
