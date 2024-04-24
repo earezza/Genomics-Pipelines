@@ -939,6 +939,8 @@ for (c in colnames(combs)){
                 plt <- make_pheatmapplot(compGO@compareClusterResult, res, assembly=opt$assembly, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term")
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GO_', ont, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
+              } else{
+                cat("\nNo annotation results\n")
               }
               
             }
@@ -984,6 +986,8 @@ for (c in colnames(combs)){
               invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
               remove(plt)
               
+            } else{
+              cat("\nNo annotation results\n")
             }
           },error = function(e)
           {
@@ -1030,6 +1034,8 @@ for (c in colnames(combs)){
                 plt <- make_pheatmapplot(df, res, assembly=opt$assembly, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", heat_colour=heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE)
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
+              } else{
+                cat("\nNo annotation results\n")
               }
               
             }
@@ -1077,6 +1083,8 @@ for (c in colnames(combs)){
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 
+              } else{
+                cat("\nNo annotation results\n")
               }
             },error = function(e)
             {
