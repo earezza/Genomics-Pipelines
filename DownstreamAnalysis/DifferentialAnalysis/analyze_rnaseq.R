@@ -295,8 +295,8 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", assembly='mm10', heat_c
   pheatmap(t(head(d, n=num_genes)), 
            border_color = "grey90",
            color = color, # "Reds, Greens, Blues, RdYlGn for DEGs
-           fontsize_row = 7,
-           fontsize_col = 7,
+           fontsize_row = 6,
+           fontsize_col = 6,
            na_col = "white",
            breaks = breaks,
            cluster_rows = dendro,
