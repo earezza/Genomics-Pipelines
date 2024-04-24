@@ -940,6 +940,7 @@ for (c in colnames(combs)){
                 plt <- make_pheatmapplot(compGO@compareClusterResult, res, assembly=opt$assembly, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term")
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GO_', ont, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
+                remove(compGO)
               } else{
                 cat("\nNo annotation results\n")
               }
@@ -985,7 +986,7 @@ for (c in colnames(combs)){
               plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
               invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
               remove(plt)
-              
+              remove(compKEGG)
             } else{
               cat("\nNo annotation results\n")
             }
@@ -1036,6 +1037,7 @@ for (c in colnames(combs)){
                 plt <- make_pheatmapplot(df, res, assembly=opt$assembly, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", heat_colour=heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE)
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
+                remove(gsea)
               } else{
                 cat("\nNo annotation results\n")
               }
@@ -1085,7 +1087,7 @@ for (c in colnames(combs)){
                 plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel=paste(annotation_type,"Category", sep=' '))
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
-                
+                remove(compDAVID)
               } else{
                 cat("\nNo annotation results\n")
               }
