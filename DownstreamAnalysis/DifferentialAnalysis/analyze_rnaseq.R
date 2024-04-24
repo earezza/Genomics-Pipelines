@@ -926,6 +926,7 @@ for (c in colnames(combs)){
               # Only output if there's results
               if ((!is.null(compGO)) & (dim(compGO@compareClusterResult)[1] > 0)){
                 compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
+                compGO@compareClusterResult$SYMBOL <- compGO@compareClusterResult$geneID
                 #plt <- dotplot(compGO, showCategory = 8, title = paste("GO -", n, sep=""))
                 plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term", colour=colour, n=15)
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GO_', ont, '_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
@@ -1017,6 +1018,10 @@ for (c in colnames(combs)){
               )
               if ((!is.null(gsea)) & (dim(gsea@result)[1] > 0)){
                 gsea@result <- gsea@result[order(gsea@result$p.adjust, decreasing=FALSE),] # Sort by most signiicant
+                gsea@result$SYMBOL <- gsea@result$core_enrichment
+                # Write annotations to csv
+                write.table(as.data.frame(gsea), file=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+                
                 gsea@result <- head(gsea@result, n=20) # retain only top to plot
                 plt <- dotplot(gsea, showCategory = 20, title = paste("GSEA (", ont, ") - ", n, sep=""))
                 df <- plt$data
@@ -1024,8 +1029,6 @@ for (c in colnames(combs)){
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 
-                # Write annotations to csv
-                write.table(as.data.frame(gsea$result), file=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
                 
                 plt <- make_pheatmapplot(df, res, assembly=opt$assembly, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", heat_colour=heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE)
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
