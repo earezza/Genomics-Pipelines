@@ -891,6 +891,8 @@ for (p in names(peaks)){
         
         # Write annotations to csv
         write.table(as.data.frame(compKEGG), file=paste(result_dirs[[p]], p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+      } else{
+        cat("\nNo annotation results\n")
       }
     },error = function(e)
     {
@@ -926,6 +928,8 @@ for (p in names(peaks)){
           
           # Write annotations to csv
           write.table(as.data.frame(compGO), file=paste(result_dirs[[p]], p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+        } else{
+        cat("\nNo annotation results\n")
         }
       },error = function(e)
       {
@@ -969,6 +973,8 @@ for (p in names(peaks)){
           # Write annotations to csv
           write.table(as.data.frame(compDAVID), file=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
 
+        } else{
+        cat("\nNo annotation results\n")
         }
       },error = function(e)
       {
@@ -1570,6 +1576,8 @@ for (report in names(reports)){
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_KEGG_annotation_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
             
+          } else{
+            cat("\nNo annotation results\n")
           }
         },error = function(e)
         {
@@ -1609,6 +1617,8 @@ for (report in names(reports)){
               plt <- make_pheatmapplot(compGO@compareClusterResult, res, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=FALSE, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term")
               invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_GO-', ont, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
               remove(plt)
+            } else{
+              cat("\nNo annotation results\n")
             }
           },error = function(e)
           {
@@ -1658,6 +1668,8 @@ for (report in names(reports)){
                 plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE)
                 invisible(capture.output(ggsave(filename=paste(output_prefix, report, 'DAVID_annotation_', annotation_type, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
+              } else{
+                cat("\nNo annotation results\n")
               }
             },error = function(e)
             {
@@ -1896,6 +1908,8 @@ for (p in names(gpeaks)){
           plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
           invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_KEGG_annotation_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
           remove(plt)
+        } else{
+          cat("\nNo annotation results\n")
         }
       },error = function(e)
       {
@@ -1935,6 +1949,8 @@ for (p in names(gpeaks)){
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_GO-', ont, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
             
+          } else{
+            cat("\nNo annotation results\n")
           }
         },error = function(e)
         {
@@ -1985,6 +2001,8 @@ for (p in names(gpeaks)){
             plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE)
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, 'DAVID_annotation_', annotation_type, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
+          } else{
+            cat("\nNo annotation results\n")
           }
         },error = function(e)
         {
