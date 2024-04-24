@@ -895,7 +895,7 @@ for (c in colnames(combs)){
       
       # ============= GO and KEGG Annotations ==============
       for (n in names(genes)){
-        
+        cat("Obtaining functional gene annotations for ", n, "\n")
         if (n == combs[[c]][1]){
           colour <- 'green'
           heat_colour <- "Greens"
@@ -911,7 +911,7 @@ for (c in colnames(combs)){
         tryCatch(
           {
             for (ont in c('ALL', 'CC', 'MF', 'BP')){
-              
+              cat("\nGO - ", ont, "\n")
               compGO <- compareCluster(geneCluster=genes[n],
                                        OrgDb=anno_ref$annoDb,
                                        fun="enrichGO",
@@ -952,6 +952,7 @@ for (c in colnames(combs)){
         # KEGG Annotation
         tryCatch(
           {
+            cat("\nKEGG\n")
             # fun is "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" 
             compKEGG <- compareCluster(geneCluster=genes_entrez[n],
                                        fun="enrichKEGG",
@@ -962,15 +963,14 @@ for (c in colnames(combs)){
                                        maxGSSize = opt$maxGSSize
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
             
-            # Map EntrezIDs to gene SYMBOL
-            compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
-            myEntrez <- lapply(compKEGG@compareClusterResult$geneID, strsplit, '/')
-            for (i in 1:length(myEntrez)){
-              compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
-            }
-            
             if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
-              #plt <- dotplot(compKEGG, showCategory = 8, title = paste("KEGG -", n, sep=""))
+              # Map EntrezIDs to gene SYMBOL
+              compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
+              myEntrez <- lapply(compKEGG@compareClusterResult$geneID, strsplit, '/')
+              for (i in 1:length(myEntrez)){
+                compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+              }
+              
               plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', n, sep=""), ylabel="KEGG Category", colour=colour, n=15)
               invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
               remove(plt)
@@ -1001,7 +1001,7 @@ for (c in colnames(combs)){
             gene_list <- gene_list[order(gene_list, decreasing=TRUE)]
             
             for (ont in c('ALL', 'CC', 'MF', 'BP')){
-              
+              cat("\nGSEA - ", ont, "\n")
               gsea <- gseGO(geneList=gene_list, 
                             ont = ont, 
                             keyType = "SYMBOL", 
@@ -1043,8 +1043,7 @@ for (c in colnames(combs)){
         for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT", "KEGG_PATHWAY")){
           tryCatch(
             {
-            
-              
+              cat("\nDAVID - ", annotation_type, "\n")
               compDAVID <- enrichDAVID(
                 unname(genes_entrez[[n]][!is.na(unname(genes_entrez[[n]]))]),
                 idType = "ENTREZ_GENE_ID",
@@ -1056,15 +1055,15 @@ for (c in colnames(combs)){
                 #species = NA,
                 david.user=opt$david_user
               )
-  
-              # Map EntrezIDs to gene SYMBOL
-              compDAVID@result$SYMBOL <- compDAVID@result$geneID
-              myEntrez <- lapply(compDAVID@result$geneID, strsplit, '/')
-              for (i in 1:length(myEntrez)){
-                compDAVID@result$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
-              }
               
               if ((!is.null(compDAVID)) & (dim(compDAVID@result)[1] > 0)){
+                # Map EntrezIDs to gene SYMBOL
+                compDAVID@result$SYMBOL <- compDAVID@result$geneID
+                myEntrez <- lapply(compDAVID@result$geneID, strsplit, '/')
+                for (i in 1:length(myEntrez)){
+                  compDAVID@result$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+                }
+                
                 plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', n, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
