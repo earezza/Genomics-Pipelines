@@ -996,9 +996,9 @@ for (c in colnames(combs)){
         ) 
         
         # GSEA
-        res <- res[order(res$log2FoldChange, decreasing=TRUE),]
-        original_gene_list <- res[genes[[n]],]$log2FoldChange
-        names(original_gene_list) <- rownames(res[genes[[n]],])
+        res_gsea <- res[order(res$log2FoldChange, decreasing=TRUE),]
+        original_gene_list <- res_gsea[genes[[n]],]$log2FoldChange
+        names(original_gene_list) <- rownames(res_gsea[genes[[n]],])
         gene_list <- na.omit(original_gene_list)
         gene_list <- gene_list[order(gene_list, decreasing=TRUE)]
             
