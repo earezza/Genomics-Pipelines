@@ -948,13 +948,18 @@ for (c in colnames(combs)){
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GO_', ont, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 remove(compGO)
+                gc()
               } else{
                 cat("\nNo annotation results\n")
+                remove(compGO)
+                gc()
               }
 
               },error = function(e)
             {
               message(e)
+              remove(compGO)
+              gc()
             }
           )
         }
@@ -999,12 +1004,17 @@ for (c in colnames(combs)){
               invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
               remove(plt)
               remove(compKEGG)
+              gc()
             } else{
               cat("\nNo annotation results\n")
+              remove(compKEGG)
+              gc()
             }
           },error = function(e)
           {
             message(e)
+            remove(compKEGG)
+            gc()
           }
         ) 
         
@@ -1056,13 +1066,18 @@ for (c in colnames(combs)){
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 remove(gsea)
+                gc()
               } else{
                 cat("\nNo annotation results\n")
+                remove(gsea)
+                gc()
               }
 
             },error = function(e)
             {
               message(e)
+              remove(gsea)
+              gc()
             }
           ) 
         }
@@ -1186,13 +1201,18 @@ for (c in colnames(combs)){
                   invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                   remove(plt)
                   remove(compDAVID)
+                  gc()
                   }
               } else{
                 cat("\nNo annotation results\n")
+                remove(compDAVID)
+                gc()
               }
             },error = function(e)
             {
               message(e)
+              remove(compDAVID)
+              gc()
             }
           )
         }
