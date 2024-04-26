@@ -1153,7 +1153,7 @@ for (c in colnames(combs)){
                 
                 compDAVID <- new("enrichResult",
                             result         = compD,
-                            pvalueCutoff   = opt$pvalue,
+                            pvalueCutoff   = 1,
                             pAdjustMethod  = "BH",
                             organism       = opt$assembly,
                             ontology       = annotation_type,
