@@ -12,7 +12,6 @@
 
 # ======= Load Packages =======
 suppressWarnings(suppressPackageStartupMessages({
-  library(RDAVIDWebService)
   library(Rsubread)
   library(DESeq2)
   library(edgeR)
@@ -23,6 +22,8 @@ suppressWarnings(suppressPackageStartupMessages({
   library(RColorBrewer)
   library(pheatmap)
   library(grid)
+  library(reticulate)
+  library(qvalue)
   library(optparse)
 }))
 
