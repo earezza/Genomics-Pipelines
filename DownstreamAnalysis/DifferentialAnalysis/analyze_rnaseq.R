@@ -1056,17 +1056,90 @@ for (c in colnames(combs)){
           tryCatch(
             {
               cat("\nDAVID - ", annotation_type, "\n")
-              compDAVID <- enrichDAVID(
-                unname(genes_entrez[[n]][!is.na(unname(genes_entrez[[n]]))]),
-                idType = "ENTREZ_GENE_ID",
-                minGSSize = opt$minGSSize,
-                maxGSSize = opt$maxGSSize,
-                annotation = annotation_type,
-                pvalueCutoff = opt$pvalue,
-                pAdjustMethod = "BH",
-                #species = NA,
-                david.user=opt$david_user
-              )
+              entrez <- unname(genes_entrez[[n]][!is.na(unname(genes_entrez[[n]]))])
+
+              py_run_string("import pandas as pd")
+              py_run_string("import sys")
+              py_run_string("from suds.client import Client")
+
+              # create a service client using the wsdl.
+              py_run_string("client = Client('https://davidbioinformatics.nih.gov/webservice/services/DAVIDWebService?wsdl')")
+              py_run_string("client.wsdl.services[0].setlocation('https://davidbioinformatics.nih.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap11Endpoint/')")
+
+              #authenticate user email
+              py_run_string("client.service.authenticate(r.opt['david_user'])")
+
+              # Read input gene list file, convert ids to a comma-delimited string and upload the list to DAVID
+              py_run_string("inputIds = ','.join(r.entrez)")
+              py_run_string("client.service.addList(inputIds, 'ENTREZ_GENE_ID', r.n, 0)")
+
+              # setCategories
+              py_run_string("categorySting = str(client.service.setCategories(r.annotation_type))")
+
+              #getChartReport
+              py_run_string("thd = r.opt['pvalue']")
+              py_run_string("ct = r.opt['minGSSize']")
+              py_run_string("chartReport = client.service.getChartReport(thd,ct)")
+              py_run_string("chartRow = len(chartReport)")
+              py_run_string("print ('Total chart records:',chartRow)")
+              
+              if (py$chartRow > 0){
+                if (annotation_type == "KEGG_PATHWAY"){
+                  splitter <- ":"
+                }else{
+                  splitter <- "~"
+                }
+                # parse chartReport
+                py_run_string("records = pd.DataFrame()")
+                py_run_string("for simpleChartRecord in chartReport:
+                                df = pd.DataFrame(index=[records.shape[0]], data={
+                                    'ID' : simpleChartRecord['termName'].split(r.splitter)[0],
+                                    'Category' : simpleChartRecord['categoryName'],
+                                    'Description' : simpleChartRecord['termName'].split(r.splitter)[1],
+                                    'GeneRatio': str(simpleChartRecord['listHits']) + '/' + str(simpleChartRecord['listTotals']), 
+                                    'BgRatio': str(simpleChartRecord['popHits']) + '/' + str(simpleChartRecord['popTotals']), 
+                                    'pvalue' : simpleChartRecord['ease'],
+                                    'p.adjust' : simpleChartRecord['benjamini'],
+                                    'FDR' : simpleChartRecord['afdr'],
+                                    'geneID' : simpleChartRecord['geneIds'].replace(', ', '/'),
+                                    'Count' : simpleChartRecord['listHits'],
+                                    'foldEnrichment' : simpleChartRecord['foldEnrichment'],
+                                    'id' : simpleChartRecord['id']
+                                    })
+                                records = pd.concat([records, df])")
+                #py_run_string("records.reset_index(drop=True, inplace=True)")
+                compD <- py$records
+                
+                qobj <- tryCatch(qvalue(p=as.numeric(compD$pvalue), lambda=opt$pvalue, pi0.method="bootstrap"),
+                                 error=function(e) NULL)
+                if (class(qobj) == "qvalue") {
+                  qvalues <- qobj$qvalues
+                } else {
+                  qvalues <- NA
+                }
+                compD$qvalue <- qvalues
+                
+                compDAVID <- new("enrichResult",
+                            result         = compD,
+                            pvalueCutoff   = opt$pvalue,
+                            pAdjustMethod  = "BH",
+                            organism       = opt$assembly,
+                            ontology       = annotation_type,
+                            gene           = entrez,
+                            keytype        = "ENTREZ_GENE_ID")
+                rm(compD)
+              # old deprecated function
+              #compDAVID <- enrichDAVID(
+              #  unname(genes_entrez[[n]][!is.na(unname(genes_entrez[[n]]))]),
+              #  idType = "ENTREZ_GENE_ID",
+              #  minGSSize = opt$minGSSize,
+              #  maxGSSize = opt$maxGSSize,
+              #  annotation = annotation_type,
+              #  pvalueCutoff = opt$pvalue,
+              #  pAdjustMethod = "BH",
+              #  #species = NA,
+              #  david.user=opt$david_user
+              #)
               
               if ((!is.null(compDAVID)) & (dim(compDAVID@result)[1] > 0)){
                 # Map EntrezIDs to gene SYMBOL
@@ -1075,12 +1148,12 @@ for (c in colnames(combs)){
                 for (i in 1:length(myEntrez)){
                   compDAVID@result$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
                 }
+                # Write annotations to csv
+                write.table(as.data.frame(compDAVID), file=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
                 
                 plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', n, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
-                # Write annotations to csv
-                write.table(as.data.frame(compDAVID), file=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
                 
                 plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel=paste(annotation_type,"Category", sep=' '))
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
