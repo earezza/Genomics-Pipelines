@@ -8,7 +8,6 @@
 
 # ======= Load Packages =======
 suppressWarnings(suppressPackageStartupMessages({
-  library(RDAVIDWebService)
   library(DiffBind)
   library(tidyverse)
   library(ChIPseeker)
@@ -23,6 +22,8 @@ suppressWarnings(suppressPackageStartupMessages({
   library(RColorBrewer)
   library(pheatmap)
   library(grid)
+  library(reticulate)
+  library(qvalue)
   library(optparse)
 }))
 
