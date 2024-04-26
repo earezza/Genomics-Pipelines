@@ -924,16 +924,22 @@ for (c in colnames(combs)){
                                        readable=TRUE,
                                        ont=ont
               ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+              if (!class(compGO) == 'compareClusterResult'){
+                cat("No results.")
+                next
+              }else{
+                cat(length(compGO@compareClusterResult), 'results')
+              }
               # Only output if there's results
               if ((!is.null(compGO)) & (dim(compGO@compareClusterResult)[1] > 0)){
                 compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
                 compGO@compareClusterResult$SYMBOL <- compGO@compareClusterResult$geneID
-                #plt <- dotplot(compGO, showCategory = 8, title = paste("GO -", n, sep=""))
+                # Write annotations to csv
+                write.table(as.data.frame(compGO), file=paste(out_dirs[[n]], 'GO_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+                
                 plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term", colour=colour, n=15)
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GO_', ont, '_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
-                # Write annotations to csv
-                write.table(as.data.frame(compGO), file=paste(out_dirs[[n]], 'GO_', ont, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
                 
                 plt <- make_pheatmapplot(compGO@compareClusterResult, res, assembly=opt$assembly, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term")
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GO_', ont, '_', n, '_pheatmap_by_gene.png', sep=''), plot=plt, dpi=320)))
@@ -966,7 +972,12 @@ for (c in colnames(combs)){
                                        minGSSize = opt$minGSSize,
                                        maxGSSize = opt$maxGSSize
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-            
+            if (!class(compKEGG) == 'compareClusterResult'){
+              cat("No results.")
+              next
+            }else{
+              cat(length(compKEGG@compareClusterResult), 'results')
+            }
             if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
               # Map EntrezIDs to gene SYMBOL
               compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
@@ -974,12 +985,12 @@ for (c in colnames(combs)){
               for (i in 1:length(myEntrez)){
                 compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
               }
+              # Write annotations to csv
+              write.table(as.data.frame(compKEGG), file=paste(out_dirs[[n]], 'KEGG_annotation_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
               
               plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', n, sep=""), ylabel="KEGG Category", colour=colour, n=15)
               invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
               remove(plt)
-              # Write annotations to csv
-              write.table(as.data.frame(compKEGG), file=paste(out_dirs[[n]], 'KEGG_annotation_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
               
               plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
               invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
@@ -1018,6 +1029,12 @@ for (c in colnames(combs)){
                             OrgDb = anno_ref$annoDb, 
                             pAdjustMethod = "BH"
               )
+              if (!class(gsea) == 'gseaResult'){
+                cat("No results.")
+                next
+              }else{
+                cat(length(gsea@result), 'results')
+              }
               if ((!is.null(gsea)) & (dim(gsea@result)[1] > 0)){
                 gsea@result <- gsea@result[order(gsea@result$p.adjust, decreasing=FALSE),] # Sort by most signiicant
                 gsea@result$SYMBOL <- gsea@result$core_enrichment
@@ -1128,6 +1145,13 @@ for (c in colnames(combs)){
                             gene           = entrez,
                             keytype        = "ENTREZ_GENE_ID")
                 rm(compD)
+                
+                if (!class(compDAVID) == 'enrichResult'){
+                  cat("No results.")
+                  next
+                }else{
+                  cat(length(compDAVID@result), 'results')
+                }
               # old deprecated function
               #compDAVID <- enrichDAVID(
               #  unname(genes_entrez[[n]][!is.na(unname(genes_entrez[[n]]))]),
@@ -1141,27 +1165,28 @@ for (c in colnames(combs)){
               #  david.user=opt$david_user
               #)
               
-              if ((!is.null(compDAVID)) & (dim(compDAVID@result)[1] > 0)){
-                # Map EntrezIDs to gene SYMBOL
-                compDAVID@result$SYMBOL <- compDAVID@result$geneID
-                myEntrez <- lapply(compDAVID@result$geneID, strsplit, '/')
-                for (i in 1:length(myEntrez)){
-                  compDAVID@result$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
-                }
-                # Write annotations to csv
-                write.table(as.data.frame(compDAVID), file=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-                
-                plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', n, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
-                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
-                remove(plt)
-                
-                plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel=paste(annotation_type,"Category", sep=' '))
-                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
-                remove(plt)
-                plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel=paste(annotation_type,"Category", sep=' '))
-                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
-                remove(plt)
-                remove(compDAVID)
+                if ((!is.null(compDAVID)) & (dim(compDAVID@result)[1] > 0)){
+                  # Map EntrezIDs to gene SYMBOL
+                  compDAVID@result$SYMBOL <- compDAVID@result$geneID
+                  myEntrez <- lapply(compDAVID@result$geneID, strsplit, '/')
+                  for (i in 1:length(myEntrez)){
+                    compDAVID@result$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+                  }
+                  # Write annotations to csv
+                  write.table(as.data.frame(compDAVID), file=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+                  
+                  plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', n, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
+                  invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
+                  remove(plt)
+                  
+                  plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel=paste(annotation_type,"Category", sep=' '))
+                  invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
+                  remove(plt)
+                  plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel=paste(annotation_type,"Category", sep=' '))
+                  invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+                  remove(plt)
+                  remove(compDAVID)
+                  }
               } else{
                 cat("\nNo annotation results\n")
               }
