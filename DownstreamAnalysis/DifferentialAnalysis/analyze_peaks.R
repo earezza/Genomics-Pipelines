@@ -951,17 +951,98 @@ for (p in names(peaks)){
     # DAVID Annotation
     tryCatch(
       {
-        compDAVID <- enrichDAVID(
-                  unname(genes_entrez[[p]][!is.na(unname(genes_entrez[[p]]))]),
-                  idType = "ENTREZ_GENE_ID",
-                  minGSSize = opt$minGSSize,
-                  maxGSSize = opt$maxGSSize,
-                  annotation = annotation_type,
-                  pvalueCutoff = opt$fdr,
-                  pAdjustMethod = "BH",
-                  #species = NA,
-                  david.user=opt$david_user
-                )
+        cat("\nDAVID - ", annotation_type, "\n")
+        entrez <- unname(genes_entrez[[p]][!is.na(unname(genes_entrez[[p]]))])
+
+        py_run_string("import pandas as pd")
+        py_run_string("import sys")
+        py_run_string("from suds.client import Client")
+
+        # create a service client using the wsdl.
+        py_run_string("client = Client('https://davidbioinformatics.nih.gov/webservice/services/DAVIDWebService?wsdl')")
+        py_run_string("client.wsdl.services[0].setlocation('https://davidbioinformatics.nih.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap11Endpoint/')")
+
+        #authenticate user email
+        py_run_string("client.service.authenticate(r.opt['david_user'])")
+
+        # Read input gene list file, convert ids to a comma-delimited string and upload the list to DAVID
+        py_run_string("inputIds = ','.join(r.entrez)")
+        py_run_string("client.service.addList(inputIds, 'ENTREZ_GENE_ID', r.p, 0)")
+
+        # setCategories
+        py_run_string("categorySting = str(client.service.setCategories(r.annotation_type))")
+
+        #getChartReport
+        py_run_string("thd = r.opt['fdr']")
+        py_run_string("ct = r.opt['minGSSize']")
+        py_run_string("chartReport = client.service.getChartReport(thd,ct)")
+        py_run_string("chartRow = len(chartReport)")
+        py_run_string("print ('Total chart records:',chartRow)")
+        
+        if (py$chartRow > 0){
+          if (annotation_type == "KEGG_PATHWAY"){
+            splitter <- ":"
+          }else{
+            splitter <- "~"
+          }
+          # parse chartReport
+          py_run_string("records = pd.DataFrame()")
+          py_run_string("for simpleChartRecord in chartReport:
+                          df = pd.DataFrame(index=[records.shape[0]], data={
+                              'ID' : simpleChartRecord['termName'].split(r.splitter)[0],
+                              'Category' : simpleChartRecord['categoryName'],
+                              'Description' : simpleChartRecord['termName'].split(r.splitter)[1],
+                              'GeneRatio': str(simpleChartRecord['listHits']) + '/' + str(simpleChartRecord['listTotals']), 
+                              'BgRatio': str(simpleChartRecord['popHits']) + '/' + str(simpleChartRecord['popTotals']), 
+                              'pvalue' : simpleChartRecord['ease'],
+                              'p.adjust' : simpleChartRecord['benjamini'],
+                              'FDR' : simpleChartRecord['afdr'],
+                              'geneID' : simpleChartRecord['geneIds'].replace(', ', '/'),
+                              'Count' : simpleChartRecord['listHits'],
+                              'foldEnrichment' : simpleChartRecord['foldEnrichment'],
+                              'id' : simpleChartRecord['id']
+                              })
+                          records = pd.concat([records, df])")
+          #py_run_string("records.reset_index(drop=True, inplace=True)")
+          compD <- py$records
+          
+          qobj <- tryCatch(qvalue(p=as.numeric(compD$pvalue), lambda=opt$pvalue, pi0.method="bootstrap"),
+                           error=function(e) NULL)
+          if (class(qobj) == "qvalue") {
+            qvalues <- qobj$qvalues
+          } else {
+            qvalues <- NA
+          }
+          compD$qvalue <- qvalues
+          
+          compDAVID <- new("enrichResult",
+                      result         = compD,
+                      pvalueCutoff   = 1,
+                      pAdjustMethod  = "BH",
+                      organism       = opt$assembly,
+                      ontology       = annotation_type,
+                      gene           = entrez,
+                      keytype        = "ENTREZ_GENE_ID")
+          rm(compD)
+          
+          if (!class(compDAVID) == 'enrichResult'){
+            cat("\nNo results.\n")
+            next
+          }else{
+            cat('\n', dim(compDAVID@result)[1], 'results\n')
+          }
+        # old deprecated function
+        #compDAVID <- enrichDAVID(
+        #  unname(genes_entrez[[n]][!is.na(unname(genes_entrez[[n]]))]),
+        #  idType = "ENTREZ_GENE_ID",
+        #  minGSSize = opt$minGSSize,
+        #  maxGSSize = opt$maxGSSize,
+        #  annotation = annotation_type,
+        #  pvalueCutoff = opt$pvalue,
+        #  pAdjustMethod = "BH",
+        #  #species = NA,
+        #  david.user=opt$david_user
+        #)
         
         if ((!is.null(compDAVID)) & (dim(compDAVID@result)[1] > 0)){
           # Map EntrezIDs to gene SYMBOL
@@ -1640,17 +1721,98 @@ for (report in names(reports)){
           # DAVID Annotation
           tryCatch(
             {
-              compDAVID <- enrichDAVID(
-                        unname(genes_entrez[[p]][!is.na(unname(genes_entrez[[p]]))]),
-                        idType = "ENTREZ_GENE_ID",
-                        minGSSize = opt$minGSSize,
-                        maxGSSize = opt$maxGSSize,
-                        annotation = annotation_type,
-                        pvalueCutoff = opt$fdr,
-                        pAdjustMethod = "BH",
-                        #species = NA,
-                        david.user=opt$david_user
-                      )
+              cat("\nDAVID - ", annotation_type, "\n")
+              entrez <- unname(genes_entrez[[p]][!is.na(unname(genes_entrez[[p]]))])
+
+              py_run_string("import pandas as pd")
+              py_run_string("import sys")
+              py_run_string("from suds.client import Client")
+
+              # create a service client using the wsdl.
+              py_run_string("client = Client('https://davidbioinformatics.nih.gov/webservice/services/DAVIDWebService?wsdl')")
+              py_run_string("client.wsdl.services[0].setlocation('https://davidbioinformatics.nih.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap11Endpoint/')")
+
+              #authenticate user email
+              py_run_string("client.service.authenticate(r.opt['david_user'])")
+
+              # Read input gene list file, convert ids to a comma-delimited string and upload the list to DAVID
+              py_run_string("inputIds = ','.join(r.entrez)")
+              py_run_string("client.service.addList(inputIds, 'ENTREZ_GENE_ID', r.p, 0)")
+
+              # setCategories
+              py_run_string("categorySting = str(client.service.setCategories(r.annotation_type))")
+
+              #getChartReport
+              py_run_string("thd = r.opt['fdr']")
+              py_run_string("ct = r.opt['minGSSize']")
+              py_run_string("chartReport = client.service.getChartReport(thd,ct)")
+              py_run_string("chartRow = len(chartReport)")
+              py_run_string("print ('Total chart records:',chartRow)")
+              
+              if (py$chartRow > 0){
+                if (annotation_type == "KEGG_PATHWAY"){
+                  splitter <- ":"
+                }else{
+                  splitter <- "~"
+                }
+                # parse chartReport
+                py_run_string("records = pd.DataFrame()")
+                py_run_string("for simpleChartRecord in chartReport:
+                                df = pd.DataFrame(index=[records.shape[0]], data={
+                                    'ID' : simpleChartRecord['termName'].split(r.splitter)[0],
+                                    'Category' : simpleChartRecord['categoryName'],
+                                    'Description' : simpleChartRecord['termName'].split(r.splitter)[1],
+                                    'GeneRatio': str(simpleChartRecord['listHits']) + '/' + str(simpleChartRecord['listTotals']), 
+                                    'BgRatio': str(simpleChartRecord['popHits']) + '/' + str(simpleChartRecord['popTotals']), 
+                                    'pvalue' : simpleChartRecord['ease'],
+                                    'p.adjust' : simpleChartRecord['benjamini'],
+                                    'FDR' : simpleChartRecord['afdr'],
+                                    'geneID' : simpleChartRecord['geneIds'].replace(', ', '/'),
+                                    'Count' : simpleChartRecord['listHits'],
+                                    'foldEnrichment' : simpleChartRecord['foldEnrichment'],
+                                    'id' : simpleChartRecord['id']
+                                    })
+                                records = pd.concat([records, df])")
+                #py_run_string("records.reset_index(drop=True, inplace=True)")
+                compD <- py$records
+                
+                qobj <- tryCatch(qvalue(p=as.numeric(compD$pvalue), lambda=opt$pvalue, pi0.method="bootstrap"),
+                                 error=function(e) NULL)
+                if (class(qobj) == "qvalue") {
+                  qvalues <- qobj$qvalues
+                } else {
+                  qvalues <- NA
+                }
+                compD$qvalue <- qvalues
+                
+                compDAVID <- new("enrichResult",
+                            result         = compD,
+                            pvalueCutoff   = 1,
+                            pAdjustMethod  = "BH",
+                            organism       = opt$assembly,
+                            ontology       = annotation_type,
+                            gene           = entrez,
+                            keytype        = "ENTREZ_GENE_ID")
+                rm(compD)
+                
+                if (!class(compDAVID) == 'enrichResult'){
+                  cat("\nNo results.\n")
+                  next
+                }else{
+                  cat('\n', dim(compDAVID@result)[1], 'results\n')
+                }
+              # old deprecated function
+              #compDAVID <- enrichDAVID(
+              #  unname(genes_entrez[[n]][!is.na(unname(genes_entrez[[n]]))]),
+              #  idType = "ENTREZ_GENE_ID",
+              #  minGSSize = opt$minGSSize,
+              #  maxGSSize = opt$maxGSSize,
+              #  annotation = annotation_type,
+              #  pvalueCutoff = opt$pvalue,
+              #  pAdjustMethod = "BH",
+              #  #species = NA,
+              #  david.user=opt$david_user
+              #)
               
               if ((!is.null(compDAVID)) & (dim(compDAVID@result)[1] > 0)){
                 # Map EntrezIDs to gene SYMBOL
@@ -1975,17 +2137,98 @@ for (p in names(gpeaks)){
       # DAVID Annotation
       tryCatch(
         {
-          compDAVID <- enrichDAVID(
-                    unname(genes_entrez[[p]][!is.na(unname(genes_entrez[[p]]))]),
-                    idType = "ENTREZ_GENE_ID",
-                    minGSSize = opt$minGSSize,
-                    maxGSSize = opt$maxGSSize,
-                    annotation = annotation_type,
-                    pvalueCutoff = opt$fdr,
-                    pAdjustMethod = "BH",
-                    #species = NA,
-                    david.user=opt$david_user
-                  )
+          cat("\nDAVID - ", annotation_type, "\n")
+          entrez <- unname(genes_entrez[[p]][!is.na(unname(genes_entrez[[p]]))])
+
+          py_run_string("import pandas as pd")
+          py_run_string("import sys")
+          py_run_string("from suds.client import Client")
+
+          # create a service client using the wsdl.
+          py_run_string("client = Client('https://davidbioinformatics.nih.gov/webservice/services/DAVIDWebService?wsdl')")
+          py_run_string("client.wsdl.services[0].setlocation('https://davidbioinformatics.nih.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap11Endpoint/')")
+
+          #authenticate user email
+          py_run_string("client.service.authenticate(r.opt['david_user'])")
+
+          # Read input gene list file, convert ids to a comma-delimited string and upload the list to DAVID
+          py_run_string("inputIds = ','.join(r.entrez)")
+          py_run_string("client.service.addList(inputIds, 'ENTREZ_GENE_ID', r.p, 0)")
+
+          # setCategories
+          py_run_string("categorySting = str(client.service.setCategories(r.annotation_type))")
+
+          #getChartReport
+          py_run_string("thd = r.opt['fdr']")
+          py_run_string("ct = r.opt['minGSSize']")
+          py_run_string("chartReport = client.service.getChartReport(thd,ct)")
+          py_run_string("chartRow = len(chartReport)")
+          py_run_string("print ('Total chart records:',chartRow)")
+          
+          if (py$chartRow > 0){
+            if (annotation_type == "KEGG_PATHWAY"){
+              splitter <- ":"
+            }else{
+              splitter <- "~"
+            }
+            # parse chartReport
+            py_run_string("records = pd.DataFrame()")
+            py_run_string("for simpleChartRecord in chartReport:
+                            df = pd.DataFrame(index=[records.shape[0]], data={
+                                'ID' : simpleChartRecord['termName'].split(r.splitter)[0],
+                                'Category' : simpleChartRecord['categoryName'],
+                                'Description' : simpleChartRecord['termName'].split(r.splitter)[1],
+                                'GeneRatio': str(simpleChartRecord['listHits']) + '/' + str(simpleChartRecord['listTotals']), 
+                                'BgRatio': str(simpleChartRecord['popHits']) + '/' + str(simpleChartRecord['popTotals']), 
+                                'pvalue' : simpleChartRecord['ease'],
+                                'p.adjust' : simpleChartRecord['benjamini'],
+                                'FDR' : simpleChartRecord['afdr'],
+                                'geneID' : simpleChartRecord['geneIds'].replace(', ', '/'),
+                                'Count' : simpleChartRecord['listHits'],
+                                'foldEnrichment' : simpleChartRecord['foldEnrichment'],
+                                'id' : simpleChartRecord['id']
+                                })
+                            records = pd.concat([records, df])")
+            #py_run_string("records.reset_index(drop=True, inplace=True)")
+            compD <- py$records
+            
+            qobj <- tryCatch(qvalue(p=as.numeric(compD$pvalue), lambda=opt$pvalue, pi0.method="bootstrap"),
+                             error=function(e) NULL)
+            if (class(qobj) == "qvalue") {
+              qvalues <- qobj$qvalues
+            } else {
+              qvalues <- NA
+            }
+            compD$qvalue <- qvalues
+            
+            compDAVID <- new("enrichResult",
+                        result         = compD,
+                        pvalueCutoff   = 1,
+                        pAdjustMethod  = "BH",
+                        organism       = opt$assembly,
+                        ontology       = annotation_type,
+                        gene           = entrez,
+                        keytype        = "ENTREZ_GENE_ID")
+            rm(compD)
+            
+            if (!class(compDAVID) == 'enrichResult'){
+              cat("\nNo results.\n")
+              next
+            }else{
+              cat('\n', dim(compDAVID@result)[1], 'results\n')
+            }
+          # old deprecated function
+          #compDAVID <- enrichDAVID(
+          #  unname(genes_entrez[[n]][!is.na(unname(genes_entrez[[n]]))]),
+          #  idType = "ENTREZ_GENE_ID",
+          #  minGSSize = opt$minGSSize,
+          #  maxGSSize = opt$maxGSSize,
+          #  annotation = annotation_type,
+          #  pvalueCutoff = opt$pvalue,
+          #  pAdjustMethod = "BH",
+          #  #species = NA,
+          #  david.user=opt$david_user
+          #)
           
           if ((!is.null(compDAVID)) & (dim(compDAVID@result)[1] > 0)){
             # Map EntrezIDs to gene SYMBOL
