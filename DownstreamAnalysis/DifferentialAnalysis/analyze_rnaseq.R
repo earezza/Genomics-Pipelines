@@ -925,10 +925,10 @@ for (c in colnames(combs)){
                                        ont=ont
               ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
               if (!class(compGO) == 'compareClusterResult'){
-                cat("No results.")
+                cat("\nNo results.\n")
                 next
               }else{
-                cat(length(compGO@compareClusterResult), 'results')
+                cat('\n', dim(compGO@compareClusterResult)[1], 'results\n')
               }
               # Only output if there's results
               if ((!is.null(compGO)) & (dim(compGO@compareClusterResult)[1] > 0)){
@@ -973,10 +973,10 @@ for (c in colnames(combs)){
                                        maxGSSize = opt$maxGSSize
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
             if (!class(compKEGG) == 'compareClusterResult'){
-              cat("No results.")
+              cat("\nNo results.\n")
               next
             }else{
-              cat(length(compKEGG@compareClusterResult), 'results')
+              cat('\n', dim(compKEGG@compareClusterResult)[1], 'results\n')
             }
             if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
               # Map EntrezIDs to gene SYMBOL
@@ -1030,10 +1030,10 @@ for (c in colnames(combs)){
                             pAdjustMethod = "BH"
               )
               if (!class(gsea) == 'gseaResult'){
-                cat("No results.")
+                cat("\nNo results.\n")
                 next
               }else{
-                cat(length(gsea@result), 'results')
+                cat('\n', dim(gsea@result)[1], 'results\n')
               }
               if ((!is.null(gsea)) & (dim(gsea@result)[1] > 0)){
                 gsea@result <- gsea@result[order(gsea@result$p.adjust, decreasing=FALSE),] # Sort by most signiicant
@@ -1147,10 +1147,10 @@ for (c in colnames(combs)){
                 rm(compD)
                 
                 if (!class(compDAVID) == 'enrichResult'){
-                  cat("No results.")
+                  cat("\nNo results.\n")
                   next
                 }else{
-                  cat(length(compDAVID@result), 'results')
+                  cat('\n', dim(compDAVID@result)[1], 'results\n')
                 }
               # old deprecated function
               #compDAVID <- enrichDAVID(
