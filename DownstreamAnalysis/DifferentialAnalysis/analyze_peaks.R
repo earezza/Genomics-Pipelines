@@ -878,7 +878,12 @@ for (p in names(peaks)){
                                  maxGSSize = opt$maxGSSize,
                                  organism=anno_ref$keggOrg
                                 ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-      
+      if (!class(compKEGG) == 'compareClusterResult'){
+        cat("\nNo results.\n")
+        next
+      }else{
+        cat('\n', dim(compKEGG@compareClusterResult)[1], 'results\n')
+      }
       if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
         # Map EntrezIDs to gene SYMBOL
         compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
@@ -886,19 +891,24 @@ for (p in names(peaks)){
         for (i in 1:length(myEntrez)){
           compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
         }
-        #plt <- dotplot(compKEGG, showCategory = 10, title = "KEGG Pathway Enrichment Analysis")
-        plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
-        invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
-        
         # Write annotations to csv
         write.table(as.data.frame(compKEGG), file=paste(result_dirs[[p]], p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+        
+        plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
+        invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+        remove(plt)
         remove(compKEGG)
+        gc()
       } else{
-        cat("\nNo annotation results\n")
+          cat("\nNo annotation results\n")
+          remove(compKEGG)
+          gc()
       }
     },error = function(e)
     {
       message(e)
+      remove(compKEGG)
+      gc()
     }
   )
   invisible(capture.output(gc()))
@@ -922,21 +932,32 @@ for (p in names(peaks)){
                                  maxGSSize = opt$maxGSSize,
                                  readable=TRUE
         ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
+        if (!class(compGO) == 'compareClusterResult'){
+          cat("\nNo results.\n")
+          next
+        }else{
+          cat('\n', dim(compGO@compareClusterResult)[1], 'results\n')
+        }
         if ((!is.null(compGO)) & (dim(compGO@compareClusterResult)[1] > 0)){
           compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
-          #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
-          plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=colour, n=15)
-          invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
-          
           # Write annotations to csv
           write.table(as.data.frame(compGO), file=paste(result_dirs[[p]], p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+          
+          plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=colour, n=15)
+          invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+          remove(plt)
           remove(compGO)
+          gc()
         } else{
-        cat("\nNo annotation results\n")
+          cat("\nNo annotation results\n")
+          remove(compGO)
+          gc()
         }
       },error = function(e)
       {
         message(e)
+        remove(compGO)
+        gc()
       }
     )
     invisible(capture.output(gc()))
@@ -1051,18 +1072,24 @@ for (p in names(peaks)){
           for (i in 1:length(myEntrez)){
             compDAVID@result$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
           }
+          # Write annotations to csv
+          write.table(as.data.frame(compDAVID), file=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+          
           plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', p, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
           invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '_dotplot.png', sep=''), plot=plt, dpi=320)))
           remove(plt)
-          # Write annotations to csv
-          write.table(as.data.frame(compDAVID), file=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
           remove(compDAVID)
+          gc()
         } else{
-        cat("\nNo annotation results\n")
+          cat("\nNo annotation results\n")
+          remove(compDAVID)
+          gc()
         }
       },error = function(e)
       {
         message(e)
+        remove(compDAVID)
+        gc()
       }
     )
   }
@@ -1638,7 +1665,12 @@ for (report in names(reports)){
                                      maxGSSize = opt$maxGSSize,
                                      organism=anno_ref$keggOrg
                                     ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-          
+          if (!class(compKEGG) == 'compareClusterResult'){
+            cat("\nNo results.\n")
+            next
+          }else{
+            cat('\n', dim(compKEGG@compareClusterResult)[1], 'results\n')
+          }
           if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
             # Map EntrezIDs to gene SYMBOL
             compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
@@ -1660,12 +1692,17 @@ for (report in names(reports)){
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_KEGG_annotation_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
             remove(compKEGG)
+            gc()
           } else{
             cat("\nNo annotation results\n")
+            remove(compKEGG)
+            gc()
           }
         },error = function(e)
         {
           message(e)
+          remove(compKEGG)
+          gc()
         }
       )
       invisible(capture.output(gc()))
@@ -1685,7 +1722,12 @@ for (report in names(reports)){
                                      maxGSSize = opt$maxGSSize,
                                      readable=TRUE
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-            
+            if (!class(compGO) == 'compareClusterResult'){
+              cat("\nNo results.\n")
+              next
+            }else{
+              cat('\n', dim(compGO@compareClusterResult)[1], 'results\n')
+            }
             if (!is.null(compGO)){
               compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
               #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
@@ -1702,12 +1744,17 @@ for (report in names(reports)){
               invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_GO-', ont, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
               remove(plt)
               remove(compGO)
+              gc()
             } else{
               cat("\nNo annotation results\n")
+              remove(compGO)
+              gc()
             }
           },error = function(e)
           {
             message(e)
+            remove(compGO)
+            gc()
           }
         )
         invisible(capture.output(gc()))
@@ -1835,12 +1882,17 @@ for (report in names(reports)){
                 invisible(capture.output(ggsave(filename=paste(output_prefix, report, 'DAVID_annotation_', annotation_type, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 remove(compDAVID)
+                gc()
               } else{
                 cat("\nNo annotation results\n")
+                remove(compDAVID)
+                gc()
               }
             },error = function(e)
             {
               message(e)
+              remove(compDAVID)
+              gc()
             }
           )
         }
@@ -2054,7 +2106,12 @@ for (p in names(gpeaks)){
                                    maxGSSize = opt$maxGSSize,
                                    organism=anno_ref$keggOrg
                                   ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-        
+        if (!class(compKEGG) == 'compareClusterResult'){
+          cat("\nNo results.\n")
+          next
+        }else{
+          cat('\n', dim(compKEGG@compareClusterResult)[1], 'results\n')
+        }
         if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
           # Map EntrezIDs to gene SYMBOL
           compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
@@ -2076,12 +2133,17 @@ for (p in names(gpeaks)){
           invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_KEGG_annotation_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
           remove(plt)
           remove(compKEGG)
+          gc()
         } else{
           cat("\nNo annotation results\n")
+          remove(compKEGG)
+          gc()
         }
       },error = function(e)
       {
         message(e)
+        remove(compKEGG)
+        gc()
       }
     )
     invisible(capture.output(gc()))
@@ -2100,7 +2162,12 @@ for (p in names(gpeaks)){
                                    maxGSSize = opt$maxGSSize,
                                    readable=TRUE
           ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-          
+          if (!class(compGO) == 'compareClusterResult'){
+            cat("\nNo results.\n")
+            next
+          }else{
+            cat('\n', dim(compGO@compareClusterResult)[1], 'results\n')
+          }
           if ((!is.null(compGO)) & (dim(compGO@compareClusterResult)[1] > 0)){
             compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
             #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
@@ -2117,12 +2184,17 @@ for (p in names(gpeaks)){
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_GO-', ont, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
             remove(compGO)
+            gc()
           } else{
             cat("\nNo annotation results\n")
+            remove(compGO)
+            gc()
           }
         },error = function(e)
         {
           message(e)
+          remove(compGO)
+          gc()
         }
       )
       invisible(capture.output(gc()))
@@ -2251,12 +2323,17 @@ for (p in names(gpeaks)){
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, 'DAVID_annotation_', annotation_type, '_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
             remove(compDAVID)
+            gc()
           } else{
             cat("\nNo annotation results\n")
+            remove(compDAVID)
+            gc()
           }
         },error = function(e)
         {
           message(e)
+          remove(compDAVID)
+          gc()
         }
       )
     }
