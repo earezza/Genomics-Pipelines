@@ -979,7 +979,7 @@ for (c in colnames(combs)){
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
             if (!class(compKEGG) == 'compareClusterResult'){
               cat("\nNo results.\n")
-              next
+              #next
             }else{
               cat('\n', dim(compKEGG@compareClusterResult)[1], 'results\n')
             }
