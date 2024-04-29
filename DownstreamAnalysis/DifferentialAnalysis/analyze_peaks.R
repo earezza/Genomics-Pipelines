@@ -1992,7 +1992,7 @@ for (report in names(reports)){
     gained <- as.data.frame(annotatePeak(GRanges(gained), TxDb=anno_ref$txdb, annoDb=anno_ref$annoDb,
                                          level=opt$annotation_level,
                                          tssRegion=c(-3000, 3000))@anno)
-    gained <- gained[order(gained$Fold, decreasing=TRUE), ]
+    gained <- gained[order(gained$Fold.DESeq2, decreasing=TRUE), ]
     write.table(gained, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name1, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   }
   if (dim(lost)[1] > 0){
@@ -2000,7 +2000,7 @@ for (report in names(reports)){
     lost <- as.data.frame(annotatePeak(GRanges(lost), TxDb=anno_ref$txdb, annoDb=anno_ref$annoDb,
                                        level=opt$annotation_level,
                                        tssRegion=c(-3000, 3000))@anno)
-    lost <- lost[order(lost$Fold, decreasing=FALSE), ]
+    lost <- lost[order(lost$Fold.DESeq2, decreasing=FALSE), ]
     write.table(lost, file=paste(output_prefix, 'analyzed_report_', report, '_', dbObj.contrast$contrasts[[1]]$name2, '.tsv', sep=''), sep="\t", quote=F, row.names=F)
   }
   
