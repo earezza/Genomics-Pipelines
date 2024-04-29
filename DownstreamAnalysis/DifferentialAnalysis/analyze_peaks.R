@@ -518,7 +518,7 @@ for (p in names(raw_peaks)){
                        tssRegion=c(-3000, 3000)
   )
   peakAnnoList[[p]] <- anno
-  write.table(anno@anno, file=paste(result_dirs[[p]], c, '_consensus_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+  write.table(anno@anno, file=paste(result_dirs[[p]], p, '_consensus_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
 }
 
 # Plot UpSet
