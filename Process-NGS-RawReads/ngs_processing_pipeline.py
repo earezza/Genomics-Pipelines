@@ -184,9 +184,13 @@ global read_files
 read_files = [ f for f in os.listdir(args.reads) if '.fastq.gz' in f and '.md5' not in f ]
 read_files.sort()
 global reads
-reads = set([ re.findall(r'(.+)+_+(R\d)+(.fastq.gz)', r)[0][1] for r in read_files ])
 global fastqfiles
-fastqfiles = set([ re.findall(r'(.+)+_+(R\d)+(.fastq.gz)', r)[0][0] for r in read_files ])
+if args.reads_type == "paired":
+    reads = set([ re.findall(r'(.+)+_+(R\d)+(.fastq.gz)', r)[0][1] for r in read_files ])
+    fastqfiles = set([ re.findall(r'(.+)+_+(R\d)+(.fastq.gz)', r)[0][0] for r in read_files ])
+else:
+    reads = {''}
+    fastqfiles = set([ r.replace('.fastq.gz', '') for r in read_files ])
 
 # Control vs non-Control files
 IGGREADS = set(args.controls)
