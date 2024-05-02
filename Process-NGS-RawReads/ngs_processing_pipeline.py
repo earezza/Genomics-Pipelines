@@ -184,9 +184,9 @@ global read_files
 read_files = [ f for f in os.listdir(args.reads) if '.fastq.gz' in f and '.md5' not in f ]
 read_files.sort()
 global reads
-reads = set([ r.replace('.fastq.gz', '').split('_')[-1] for r in read_files ])
+reads = set([ re.findall(r'(.+)+_+(R\d)+(.fastq.gz)', r)[0][1] for r in read_files ])
 global fastqfiles
-fastqfiles = set([ r.replace('.fastq.gz', '').split('_')[0] for r in read_files ])
+fastqfiles = set([ re.findall(r'(.+)+_+(R\d)+(.fastq.gz)', r)[0][0] for r in read_files ])
 
 # Control vs non-Control files
 IGGREADS = set(args.controls)
