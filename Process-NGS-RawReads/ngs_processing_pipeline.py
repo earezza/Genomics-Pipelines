@@ -307,8 +307,8 @@ def md5sum_check():
         global reads
         global fastqfiles
         if args.reads_type == "paired":
-            reads = set([ re.findall(r'()+(R\d)', r)[0][-1] for r in read_files ])
-            fastqfiles = set(np.array([ re.findall(r'(.+)_R\d.fastq.gz', r) for r in read_files]).flatten())
+            reads = set([ re.findall(r'(.+)+_+(R\d)+(.fastq.gz)', r)[0][1] for r in read_files ])
+            fastqfiles = set([ re.findall(r'(.+)+_+(R\d)+(.fastq.gz)', r)[0][0] for r in read_files ])
         else:
             #reads = set([ r.replace('.fastq.gz', '') for r in read_files ])
             reads = {''}
