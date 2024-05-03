@@ -1,0 +1,13 @@
+SampleID,Condition,Replicate,Peaks,PeakCaller,PeakFormat,bamReads,Factor
+WT-01-macs,WT,1,WT-01_peaks.narrowPeak,bed,bed,WT-01.bam,MACS
+WT-01-seacr,WT,1,WT-01_peaks.stringent.bed,bed,bed,WT-01.bam,SEACR
+WT-01-gopeaks,WT,1,WT-01_peaks.bed,bed,bed,WT-01.bam,GoPeaks
+WT-02-macs,WT,2,WT-02_peaks.narrowPeak,bed,bed,WT-02.bam,MACS
+WT-02-seacr,WT,2,WT-02_peaks.stringent.bed,bed,bed,WT-02.bam,SEACR
+WT-02-gopeaks,WT,2,WT-02_peaks.bed,bed,bed,WT-02.bam,GoPeaks
+KO-01-macs,KO,1,KO-01_peaks.narrowPeak,bed,bed,KO-01.bam,MACS
+KO-01-seacr,KO,1,KO-01_peaks.stringent.bed,bed,bed,KO-01.bam,SEACR
+KO-01-gopeaks,KO,1,KO-01_peaks.bed,bed,bed,KO-01.bam,GoPeaks
+KO-02-macs,KO,2,KO-02_peaks.narrowPeak,bed,bed,KO-02.bam,MACS
+KO-02-seacr,KO,2,KO-02_peaks.stringent.bed,bed,bed,KO-02.bam,SEACR
+KO-02-gopeaks,KO,2,KO-02_peaks.bed,bed,bed,KO-02.bam,GoPeaks
