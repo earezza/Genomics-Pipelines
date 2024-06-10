@@ -841,7 +841,7 @@ for (c in colnames(combs)){
       # Get significantly Upregulated (log2FoldChange > 0) in condition 1
       res_up <- subset(res, log2FoldChange >= opt$lfc & pvalue <= opt$pvalue)
       res_up_sorted <- res_up[order(res_up$log2FoldChange, decreasing=TRUE),]
-      write.table(res_up_sorted, file=paste(out_dirs[[1]], r, "_Result_", combs[[c]][1], ".csv", sep=""), sep=",", quote=F, col.names=NA)
+      write.table(res_up_sorted, file=paste(out_dirs[[2]], r, "_Result_", combs[[c]][2], ".csv", sep=""), sep=",", quote=F, col.names=NA)
       
       # Get significantly Downregulated (log2FoldChange < 0) in condition 1
       res_down <- subset(res, log2FoldChange <= (0 - opt$lfc) & pvalue <= opt$pvalue)
@@ -854,7 +854,7 @@ for (c in colnames(combs)){
       }else if(r == "Limma"){
         res_down_sorted[['t-stat']] <- res_down_sorted[['t-stat']]*(-1)
       }
-      write.table(res_down_sorted, file=paste(out_dirs[[2]], r, "_Result_", combs[[c]][2], ".csv", sep=""), sep=",", quote=F, col.names=NA)
+      write.table(res_down_sorted, file=paste(out_dirs[[1]], r, "_Result_", combs[[c]][1], ".csv", sep=""), sep=",", quote=F, col.names=NA)
       
       # Get all significantly changed genes
       res_changed <- subset(res, (log2FoldChange >= opt$lfc | log2FoldChange <= (0 - opt$lfc)) & pvalue <= opt$pvalue)
@@ -867,13 +867,24 @@ for (c in colnames(combs)){
       
       genes <- list()
       if (dim(res_up_sorted)[1] != 0){
-        genes[[combs[[c]][1]]] <- rownames(res_up_sorted)
+        genes[[combs[[c]][2]]] <- rownames(res_up_sorted)
       }
       if (dim(res_down_sorted)[1] != 0){
-        genes[[combs[[c]][2]]] <- rownames(res_down_sorted)
+        genes[[combs[[c]][1]]] <- rownames(res_down_sorted)
       }
       if (dim(res_changed_sorted)[1] != 0){
         genes[["DEGs"]] <- rownames(res_changed_sorted)
+      }
+
+      result_dfs <- list()
+      if (dim(res_up_sorted)[1] != 0){
+        result_dfs[[combs[[c]][2]]] <- res_up_sorted
+      }
+      if (dim(res_down_sorted)[1] != 0){
+        result_dfs[[combs[[c]][1]]] <- res_down_sorted
+      }
+      if (dim(res_changed_sorted)[1] != 0){
+        result_dfs[["DEGs"]] <- res_changed_sorted
       }
       
       df_mapper <- data.frame()
@@ -941,10 +952,10 @@ for (c in colnames(combs)){
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GO_', ont, '_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 
-                plt <- make_pheatmapplot(compGO@compareClusterResult, res, assembly=opt$assembly, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term")
+                plt <- make_pheatmapplot(compGO@compareClusterResult, result_dfs[[n]], assembly=opt$assembly, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term")
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GO_', ont, '_', n, '_pheatmap_by_gene.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
-                plt <- make_pheatmapplot(compGO@compareClusterResult, res, assembly=opt$assembly, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term")
+                plt <- make_pheatmapplot(compGO@compareClusterResult, result_dfs[[n]], assembly=opt$assembly, heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, title=paste("GO (", ont, ") - ", n, sep=""), ylabel="GO Term")
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GO_', ont, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 remove(compGO)
@@ -997,10 +1008,10 @@ for (c in colnames(combs)){
               invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
               remove(plt)
               
-              plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
+              plt <- make_pheatmapplot(compKEGG@compareClusterResult, result_dfs[[n]], anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
               invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
               remove(plt)
-              plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
+              plt <- make_pheatmapplot(compKEGG@compareClusterResult, result_dfs[[n]], anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
               invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
               remove(plt)
               remove(compKEGG)
@@ -1059,10 +1070,10 @@ for (c in colnames(combs)){
                 remove(plt)
                 
                 
-                plt <- make_pheatmapplot(df, res, assembly=opt$assembly, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", heat_colour=heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE)
+                plt <- make_pheatmapplot(df, result_dfs[[n]], assembly=opt$assembly, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", heat_colour=heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE)
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
-                plt <- make_pheatmapplot(df, res, assembly=opt$assembly, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", heat_colour=heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE)
+                plt <- make_pheatmapplot(df, result_dfs[[n]], assembly=opt$assembly, title=paste("GSEA (", ont, ") - ", n, sep=""), ylabel="GSEA", heat_colour=heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE)
                 invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'GSEA_', ont, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 remove(gsea)
@@ -1194,10 +1205,10 @@ for (c in colnames(combs)){
                   invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
                   remove(plt)
                   
-                  plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel=paste(annotation_type,"Category", sep=' '))
+                  plt <- make_pheatmapplot(compDAVID@result, result_dfs[[n]], anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel=paste(annotation_type,"Category", sep=' '))
                   invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
                   remove(plt)
-                  plt <- make_pheatmapplot(compDAVID@result, res, anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel=paste(annotation_type,"Category", sep=' '))
+                  plt <- make_pheatmapplot(compDAVID@result, result_dfs[[n]], anno_type="DAVID", assembly=opt$assembly, title=paste('DAVID - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel=paste(annotation_type,"Category", sep=' '))
                   invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'DAVID_annotation_', annotation_type, '_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
                   remove(plt)
                   remove(compDAVID)
