@@ -605,7 +605,7 @@ for (c in colnames(combs)){
     write.table(normalized_count_mtx_dds, file=paste(output_prefix, "count_mtx_normalized.csv", sep=""), sep=",", quote=F, col.names=NA)
     
     # Obtain DEG results and output to file
-    res_dds <- results(dds, contrast=c("Condition", combs[[c]][1], combs[[c]][2]))
+    res_dds <- results(dds, contrast=c("Condition", combs[[c]][2], combs[[c]][1]))
     res_dds[['FoldChange']] <- 2^abs(res_dds[['log2FoldChange']])*(res_dds[['log2FoldChange']]/abs(res_dds[['log2FoldChange']]))
     write.table(res_dds[order(res_dds$log2FoldChange, decreasing=TRUE), ], file=paste(output_prefix, "DESeq2_FullResult_", comparison, ".csv", sep=""), sep=",", quote=F, col.names=NA)
     
@@ -737,7 +737,7 @@ for (c in colnames(combs)){
   if (opt$method == 'edger' | opt$method == 'all') {
     output_prefix <- change_dirs(opt$result_dir, 'edgeR', comparison)
     disp <- estimateDisp(edge)
-    test <- exactTest(disp, pair = c(combs[[c]][2], combs[[c]][1]))
+    test <- exactTest(disp, pair = c(combs[[c]][1], combs[[c]][2]))
     res_edge <- topTags(test, n=dim(test$table)[1], adjust.method="BH", sort.by="logFC", p.value=1)
     
     # General plots
@@ -785,7 +785,7 @@ for (c in colnames(combs)){
     
     fit <- lmFit(y, mm)
     
-    contr <- makeContrasts(paste(colnames(coef(fit))[1], colnames(coef(fit))[2], sep=' - '), levels = colnames(coef(fit)))
+    contr <- makeContrasts(paste(colnames(coef(fit))[2], colnames(coef(fit))[1], sep=' - '), levels = colnames(coef(fit)))
     tmp <- contrasts.fit(fit, contr)
     tmp <- eBayes(tmp)
     
