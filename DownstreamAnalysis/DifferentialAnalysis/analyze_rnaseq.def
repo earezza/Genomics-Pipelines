@@ -1,0 +1,91 @@
+Bootstrap: docker
+From: rocker/r-ver:4.3.3
+
+%files
+	analyze_rnaseq.R ./
+
+%environment
+	export LANG=C.UTF-8 LC_ALL=C.UTF-8
+%setup
+	mkdir ${APPTAINER_ROOTFS}/data/
+
+%post
+	# Update os software
+	apt-get update && apt-get -y upgrade
+
+	# Install general os packages
+	apt-get install locales
+	export TZ=America
+	ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+	locale-gen "en_US.UTF-8"
+	dpkg-reconfigure --frontend noninteractive locales
+
+	# Install Java
+        apt-get install -y openjdk-17-jre openjdk-17-jdk
+	apt-get install -y default-jre default-jdk
+
+	apt-get update
+	apt-get install -y build-essential curl software-properties-common ca-certificates r-base \
+	libbz2-dev liblzma-dev libcurl4-openssl-dev gfortran libglpk-dev libxml2-dev libmagick++-dev r-cran-rjava python3-pip
+
+	Rscript -e "install.packages(c('BiocManager', 'devtools', 'optparse', 'tidyverse', 'VennDiagram', 'eulerr', 'UpSetR', 'ggupset', 'ggimage', 'gridExtra', 'pheatmap'))"
+	Rscript -e "BiocManager::install('DiffBind')"
+	Rscript -e "BiocManager::install('ChIPseeker')"
+	Rscript -e "BiocManager::install('clusterProfiler')"
+	Rscript -e "BiocManager::install('Rsamtools')"
+	Rscript -e "BiocManager::install('edgeR')"
+	Rscript -e "BiocManager::install('biomaRt')"
+	Rscript -e "BiocManager::install('profileplyr')"
+	Rscript -e "BiocManager::install('ensembldb')"
+	Rscript -e "BiocManager::install('ReactomePA')"
+	Rscript -e "BiocManager::install('csaw')"
+	Rscript -e "BiocManager::install('vulcan')"
+	Rscript -e "BiocManager::install('topGO')"
+	Rscript -e "BiocManager::install('Rgraphviz')"
+	Rscript -e "BiocManager::install('org.Hs.eg.db')"
+	Rscript -e "BiocManager::install('org.Mm.eg.db')"
+	Rscript -e "BiocManager::install('org.Rn.eg.db')"
+	Rscript -e "BiocManager::install('EnsDb.Hsapiens.v86')"
+	Rscript -e "BiocManager::install('EnsDb.Mmusculus.v79')"
+	Rscript -e "BiocManager::install('EnsDb.Rnorvegicus.v79')"
+	Rscript -e "BiocManager::install('TxDb.Hsapiens.UCSC.hg19.knownGene')"
+	Rscript -e "BiocManager::install('TxDb.Hsapiens.UCSC.hg38.knownGene')"
+	Rscript -e "BiocManager::install('TxDb.Mmusculus.UCSC.mm9.knownGene')"
+	Rscript -e "BiocManager::install('TxDb.Mmusculus.UCSC.mm10.knownGene')"
+	Rscript -e "BiocManager::install('TxDb.Rnorvegicus.UCSC.rn6.refGene')"
+	Rscript -e "BiocManager::install('EnhancedVolcano')"
+	Rscript -e "BiocManager::install('Rsubread')"
+	Rscript -e "BiocManager::install('Category')"
+	Rscript -e "BiocManager::install('GOstats')"
+	Rscript -e "install.packages('reticulate')"
+#	Rscript -e "BiocManager::install('qvalue')"
+
+	pip3 install pandas
+	pip3 install suds
+
+#	R CMD javareconf
+#	Rscript -e "install.packages('rJava')"
+#        Rscript -e "BiocManager::install('Category')"
+#        Rscript -e "BiocManager::install('GOstats')"
+#        Rscript -e "install.packages('https://bioconductor.org/packages//2.13/bioc/src/contrib/RDAVIDWebService_1.0.0.tar.gz', repos=NULL, type='source')"
+%test
+	R --version
+	ls /data/
+	Rscript /analyze_rnaseq.R --help
+
+%runscript
+	
+	Rscript /analyze_rnaseq.R $*	
+
+%labels
+	Author Eric Arezza
+	Version v1.0.0
+
+%help
+	This container is used to run a pipeline that will perform a differential expression analysis using DESeq2, edgeR, and Limma/voom for data from RNA-Seq experiments.
+	A counts file must first be created prior as well as a sample info file to define the samples used for differential comparison (see template on https://github.com/earezza/Genomics-Pipelines/tree/main/DownstreamAnalysis/DifferentialAnalysis/).
+	Input options can be used to define the assembly for annotations (e.g. mm10, hg38, rn6), statistical significance levels, and more (see https://github.com/earezza/Genomics-Pipelines/tree/main/DownstreamAnalysis/DifferentialAnalysis/README.md for more info).
+	Output files will be organized by the method used to get results with subfolders for the differential results.
+	Note: Column names of the counts file should match those in the sample info file's Sample column
+	Example command:
+		apptainer run --bind data/:/data/ analyze_rnaseq.sif --countsfile /data/counts.csv --sampleinfo /data/samplegroups.csv --result_dir /data/Example/ --assembly mm10 --filter
