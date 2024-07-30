@@ -166,6 +166,9 @@ if args.reads_type == "paired":
     if args.qctrim:
         TRIM = '-m 20 -q 20,20 -u 11 -U 11'
 else:
+    args.bamCov_default = args.bamCov_default.replace("--extendReads", "")
+    args.bamCov_min = args.bamCov_min.replace("--extendReads", "")
+    args.bamCov_RPGC = args.bamCov_RPGC.replace("--extendReads", "")
     if MAPPER == 'bowtie2':
         args.genome_align = "-p %s --local --very-sensitive-local --no-unal --phred33"%os.cpu_count()
     else:
