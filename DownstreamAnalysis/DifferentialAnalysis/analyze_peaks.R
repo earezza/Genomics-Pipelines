@@ -543,7 +543,7 @@ upset(fromList(upsetlist),
       empty.intersections = "on",
       set_size.show = TRUE,
       set_size.angles = 0,
-      set_size.scale_max = dim(fromList(upsetlist))[[1]],
+      set_size.scale_max = dim(fromList(upsetlist))[[1]]*1.25,
       sets.x.label = "Gene Set Size",
       mainbar.y.label = "Intersection Size of Gene Sets",
       mb.ratio = c(0.7, 0.3)
