@@ -146,6 +146,7 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
   for (d in 1:length(df$Description)){
     i <- 1
     s <- df$Description[d]
+    s <- str_remove(s, " - Mus musculus \\(house mouse\\)")
     df$Description[d] <- ""
     while (i < length(strsplit(s, ' ')[[1]]) + 1){
       df$Description[d] <- paste(df$Description[d], paste(strsplit(s, ' ')[[1]][i:(i+5)], collapse = ' '), sep='\n')
