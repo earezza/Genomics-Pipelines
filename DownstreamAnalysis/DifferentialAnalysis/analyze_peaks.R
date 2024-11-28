@@ -535,7 +535,7 @@ upset_colors <- sort(unlist(upset_colors), decreasing=TRUE)
 png(paste(result_dir, 'consensus_annotated-genes_upsetplot.png', sep=''),
     width = 1920,
     height = 1080,
-    res=200
+    res=300
 )
 upset(fromList(upsetlist), 
       order.by = "freq", 
@@ -565,6 +565,15 @@ for (c in unique(dba.show(dbObj.consensus)$Condition)){
 shared_peaks <- list()
 shared_peaks[["Shared"]] <- differential_peaks$inAll
 cat("\n", length(shared_peaks[["Shared"]]), "all shared peaks.\n")
+write.table(as.data.frame(p), file=paste(result_dirs[[c]], '../Shared_consensus.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+anno <- annotatePeak(shared_peaks[["Shared"]], 
+                     TxDb=anno_ref$txdb,
+                     annoDb=anno_ref$annoDb,
+                     level=opt$annotation_level,
+                     tssRegion=c(-3000, 3000)
+)
+write.table(anno@anno, file=paste(result_dirs[[c]], '../Shared_consensus_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+
 
 if (length(unique(dbObj$samples$Condition)) == 3){
   for (c in unique(dba.show(dbObj.consensus)$Condition)){
