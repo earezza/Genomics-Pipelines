@@ -115,9 +115,9 @@ parser.add_argument('-SEACRLoc', '--SEACRLoc', help='Location of SEACR .sh', typ
 parser.add_argument('-genome_index', '--genome_index', help='Location of genome index files for mapping reads', type=str, default='../Reference_Files/bowtie2/' + parser.parse_args().assembly + '/genome')
 # Usually unchanged command line options for programs
 parser.add_argument('-spike_align', '--spike_align', help='Command input options for spikein alignment', type=str, default="-p 8 --end-to-end --very-sensitive --no-overlap --no-dovetail --no-mixed --no-discordant --phred33 -I 10 -X 700")
-parser.add_argument('-bamCov_default', '--bamCov_default', help='Command input default for bamCoverage', type=str, default="--binSize 1 --ignoreForNormalization 'chrM' --extendReads --numberOfProcessors max")
-parser.add_argument('-bamCov_min', '--bamCov_min', help='Command input options for bamCoverage', type=str, default="--binSize 1 --extendReads --numberOfProcessors max")
-parser.add_argument('-bamCov_RPGC', '--bamCov_RPGC', help='Command input options for bamCoverage, reads per genomic content (1x normalization)', type=str, default="--binSize 1 --normalizeUsing 'RPGC' --ignoreForNormalization 'chrM' --extendReads --numberOfProcessors max")
+parser.add_argument('-bamCov_default', '--bamCov_default', help='Command input default for bamCoverage', type=str, default="--binSize 10 --ignoreForNormalization 'chrM' --extendReads --numberOfProcessors max")
+parser.add_argument('-bamCov_min', '--bamCov_min', help='Command input options for bamCoverage', type=str, default="--binSize 10 --extendReads --numberOfProcessors max")
+parser.add_argument('-bamCov_RPGC', '--bamCov_RPGC', help='Command input options for bamCoverage, reads per genomic content (1x normalization)', type=str, default="--binSize 10 --normalizeUsing 'RPGC' --ignoreForNormalization 'chrM' --extendReads --numberOfProcessors max")
 parser.add_argument('-blacklist', '--blacklist', help='Bed file containing blacklist regions to remove in bamCoverage', type=str, default="")
 parser.add_argument('-genome_align', '--genome_align', help='Command input options for genome alignment', type=str, default="-p %s --local --very-sensitive-local --no-unal --no-mixed --no-discordant --phred33 -I 10 -X 700"%os.cpu_count())
 parser.add_argument('-samtools_mapq', '--samtools_mapq', help='Command input option for samtools view min alignment Q-score', type=str, default="-q 10")
@@ -166,6 +166,9 @@ if args.reads_type == "paired":
     if args.qctrim:
         TRIM = '-m 20 -q 20,20 -u 11 -U 11'
 else:
+    args.bamCov_default = args.bamCov_default.replace("--extendReads", "")
+    args.bamCov_min = args.bamCov_min.replace("--extendReads", "")
+    args.bamCov_RPGC = args.bamCov_RPGC.replace("--extendReads", "")
     if MAPPER == 'bowtie2':
         args.genome_align = "-p %s --local --very-sensitive-local --no-unal --phred33"%os.cpu_count()
     else:
