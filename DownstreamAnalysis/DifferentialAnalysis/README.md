@@ -4,6 +4,8 @@
 These pipelines and tools are performed in R. Packages which may be required can be found in the provided <strong>Renv_packages.txt</strong> file.  
   
 R version 4.3.1  
+or download my_packages.txt and perform the following from command-line with your newer R version:  
+Rscript -e 'packages <- readLines("my_packages.txt"); install.packages(packages)'  
   
 ### For RNA-Seq (analyze_rnaseq_degs_<DESeq2 or edgeR>.R)  
 #### Create count matrix with get_rnaseq_counts.R  
