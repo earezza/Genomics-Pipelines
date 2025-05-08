@@ -45,6 +45,7 @@ option_list = list(
   make_option(c("-r", "--result_dir"), type="character", default="DEG_Analysis/", help="Directory name for saving output results", metavar="character"),
   make_option(c("-m", "--method"), type="character", default="all", help="Method to analyze data, ('deseq2', 'edger', 'limma', default: 'all')", metavar="character"), 
   make_option(c("-f", "--filter"), action="store_true", type="logical", default=FALSE, help="Flag to filter read counts (removes genes < min_count from raw matrix, then removes genes < min_baseMean after normalizing", metavar="logical"),
+  make_option(c("-b", "--batch_correct"), action="store_true", type="logical", default=FALSE, help="Flag to apply batch correction according to batches defined in sampleinfo sheet", metavar="logical"),
   make_option(c("--min_count"), type="integer", default=1, help="Minimum counts to include if filtering", metavar="integer"),
   make_option(c("--min_basemean"), type="double", default=10, help="Minimum baseMean of normalized counts to include if filtering", metavar="integer"),
   make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="double"),
@@ -313,30 +314,6 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", assembly='mm10', heat_c
   
   return(plt)
 }
-anno_ref <- load_annotation(opt$assembly, opt$database)
-
-# =========== Load Input Files ============
-count_mtx <- as.matrix(read.csv(opt$countsfile, sep=",", row.names=1, check.names=FALSE))
-sampleinfo <- read.csv(opt$sampleinfo, row.names=1)
-#sampleinfo$Condition <- factor(sampleinfo$Condition)
-# change to R syntactically correct names
-sampleinfo$Condition <- gsub('-', '_', sampleinfo$Condition)
-
-# Use only counts for samples listed in sample info file
-count_mtx <- count_mtx[, rownames(sampleinfo)]
-
-if (!all(colnames(count_mtx) == rownames(sampleinfo))){
-  cat("Check that column names in counts file matches row names in sample info file.\n")
-  q()
-}
-
-# Create output file directory and set as working directory
-if (!file.exists(opt$result_dir)) {
-  dir.create(opt$result_dir)
-}
-#setwd(opt$result_dir)
-cat("Output files will be in", opt$result_dir, "\n")
-
 
 change_dirs <- function(res_dir, method, subfolder){
   if ((method == 'DESeq2')){
@@ -356,6 +333,44 @@ change_dirs <- function(res_dir, method, subfolder){
     }
   }
   return(paste(method_dir, subfolder, '/', sep=''))
+}
+
+anno_ref <- load_annotation(opt$assembly, opt$database)
+
+# =========== Load Input Files ============
+count_mtx <- as.matrix(read.csv(opt$countsfile, sep=",", row.names=1, check.names=FALSE))
+sampleinfo <- read.csv(opt$sampleinfo, row.names=1)
+#sampleinfo$Condition <- factor(sampleinfo$Condition)
+# change to R syntactically correct names
+sampleinfo$Condition <- gsub('-', '_', sampleinfo$Condition)
+
+# Use only counts for samples listed in sample info file
+count_mtx <- count_mtx[, rownames(sampleinfo)]
+
+# Create output file directory and set as working directory
+if (!file.exists(opt$result_dir)) {
+  dir.create(opt$result_dir)
+}
+cat("Output files will be in", opt$result_dir, "\n")
+
+if (!all(colnames(count_mtx) == rownames(sampleinfo))){
+  cat("Check that column names in counts file matches row names in sample info file.\n")
+  q()
+}
+
+# Adjust for batch effects
+if (opt$batch_correct){
+  if (!"Batch" %in% colnames(sampleinfo)){
+    cat('No "Batch" column in sampleinfo .csv, specify numerical values for sample batches...')
+    q()
+  }
+  batch <- factor(sampleinfo$Batch)
+  group <- factor(sampleinfo$Condition)
+  # Re-define count matric using batch-corrected counts
+  count_mtx <- ComBat_seq(count_mtx,
+                          batch=batch,
+                          group=group)
+  write.table(count_mtx, file=paste(opt$result_dir, "batch-corrected_counts.csv", sep=''), sep=",", quote=F, col.names=NA)
 }
 
 
@@ -437,7 +452,7 @@ if (opt$method == 'edger' | opt$method == 'all') {
 if (opt$method == 'limma' | opt$method == 'all') {
   output_prefix <- change_dirs(opt$result_dir, 'Limma', '')
   lim <- DGEList(count_mtx)
-  lim$samples$group <- sampleinfo$Group[which(rownames(sampleinfo) == rownames(lim$samples))]
+  lim$samples$group <- as.numeric(factor(sampleinfo$Condition[which(rownames(sampleinfo) == rownames(lim$samples))], levels=unique(sampleinfo$Condition)))
   lim <- calcNormFactors(lim)
   cat("\nGenes and samples raw:", dim(lim), "\n")
   cat("Limma genes count sums over all samples:\n")
