@@ -24,6 +24,7 @@ suppressWarnings(suppressPackageStartupMessages({
   library(grid)
   library(reticulate)
   library(qvalue)
+  library(sva)
   library(optparse)
 }))
 
