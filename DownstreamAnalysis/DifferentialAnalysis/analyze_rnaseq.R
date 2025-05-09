@@ -178,7 +178,7 @@ make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n
   return(plt)
 }
 
-make_volcanoplot <- function(res, condition1, condition2, lfc_threshold, padj_threshold, subtitle=''){
+make_volcanoplot <- function(res, condition2, condition1, lfc_threshold, padj_threshold, subtitle=''){
   df <- as.data.frame(res)
   
   keyvals <- ifelse(df$log2FoldChange <= (0-lfc_threshold), 'darkred', 'black')
@@ -187,11 +187,16 @@ make_volcanoplot <- function(res, condition1, condition2, lfc_threshold, padj_th
   keyvals <- ifelse(df$log2FoldChange >= lfc_threshold & df$padj <= padj_threshold, 'green', keyvals)
   
   keyvals[is.na(keyvals)] <- 'black'
-  names(keyvals)[keyvals == 'darkgreen'] <- condition1
-  names(keyvals)[keyvals == 'green'] <- paste(condition1, '(significant)', sep=' ')
+  # names(keyvals)[keyvals == 'darkgreen'] <- condition1
+  # names(keyvals)[keyvals == 'green'] <- paste(condition1, '(significant)', sep=' ')
+  # names(keyvals)[keyvals == 'black'] <- 'Not DEG'
+  # names(keyvals)[keyvals == 'darkred'] <- condition2
+  # names(keyvals)[keyvals == 'red'] <- paste(condition2, '(significant)', sep=' ')
+  names(keyvals)[keyvals == 'darkgreen'] <- "Upregulated"
+  names(keyvals)[keyvals == 'green'] <- paste("Upregulated", '\n(significant)', sep='')
   names(keyvals)[keyvals == 'black'] <- 'Not DEG'
-  names(keyvals)[keyvals == 'darkred'] <- condition2
-  names(keyvals)[keyvals == 'red'] <- paste(condition2, '(significant)', sep=' ')
+  names(keyvals)[keyvals == 'darkred'] <- "Downregulated"
+  names(keyvals)[keyvals == 'red'] <- paste("Downregulated", '\n(significant)', sep='')
   
   plt <- EnhancedVolcano(df, 
                          x = 'log2FoldChange', 
@@ -199,12 +204,14 @@ make_volcanoplot <- function(res, condition1, condition2, lfc_threshold, padj_th
                          xlab = "Log2FoldChange",
                          ylab = "-Log(adjusted p-value)",
                          caption = paste0("Total = ", nrow(df), " genes\n", 
-                                          condition1, " = ", nrow(subset(df, log2FoldChange >= lfc_threshold)), ' DEGs\n',
-                                          condition2, " = ", nrow(subset(df, log2FoldChange <= (0-lfc_threshold))), ' DEGS'
+                                          # condition1, " = ", nrow(subset(df, log2FoldChange >= lfc_threshold)), ' DEGs\n',
+                                          # condition2, " = ", nrow(subset(df, log2FoldChange <= (0-lfc_threshold))), ' DEGS'
+                                          "Upregulated", " = ", nrow(subset(df, log2FoldChange >= lfc_threshold)), ' DEGs\n',
+                                          "Downregulated", " = ", nrow(subset(df, log2FoldChange <= (0-lfc_threshold))), ' DEGS'
                          ),
                          colCustom = keyvals,
                          lab = rownames(df),
-                         title = paste(condition1, ' vs ', condition2, sep=''),
+                         title = paste("Gene Expression\n", condition2, ' relative to ', condition1, sep=''),
                          subtitle = subtitle,
                          pCutoff = padj_threshold,
                          FCcutoff = lfc_threshold,
@@ -213,7 +220,7 @@ make_volcanoplot <- function(res, condition1, condition2, lfc_threshold, padj_th
                          legendLabels=c('Not sig.','Log2FC','p-value','p-value & Log2FC'),
                          labSize = 3,
                          legendPosition = 'top',
-                         legendLabSize = 6,
+                         legendLabSize = 10,
   )
   return(plt)
 }
@@ -230,7 +237,6 @@ make_heatmapplot <- function(res, condition1, condition2, n = 50, subtitle=''){
     xlab("Condition") +
     ylab("Gene") 
   return(plt)
-  
   
 }
 
@@ -740,7 +746,7 @@ for (c in colnames(combs)){
     abline(h=c((0-opt$lfc), opt$lfc), col="red", lwd=2)
     invisible(capture.output(dev.off()))
     
-    plt <- make_volcanoplot(res_dds, combs[[c]][1], combs[[c]][2], opt$lfc, 0.1)
+    plt <- make_volcanoplot(res_dds, combs[[c]][2], combs[[c]][1], opt$lfc, 0.1)
     invisible(capture.output(ggsave(filename=paste(output_prefix, 'Volcanoplot.png', sep=''), plot=plt, dpi=320)))
     
     vsd <- vst(dds, blind=FALSE)
@@ -780,7 +786,7 @@ for (c in colnames(combs)){
     
     write.table(res_edge[order(res_edge$log2FoldChange, decreasing=TRUE), ], file=paste(output_prefix, "edgeR_FullResult_", comparison, ".csv", sep=""), sep=",", quote=F, col.names=NA)
 
-    plt <- make_volcanoplot(res_edge, combs[[c]][1], combs[[c]][2], opt$lfc, 0.1)
+    plt <- make_volcanoplot(res_edge, combs[[c]][2], combs[[c]][1], opt$lfc, 0.1)
     invisible(capture.output(ggsave(filename=paste(output_prefix, 'Volcanoplot.png', sep=''), plot=plt, dpi=320)))
   }
 
@@ -813,7 +819,7 @@ for (c in colnames(combs)){
     res_limma[['FoldChange']] <- 2^abs(res_limma[['log2FoldChange']])*(res_limma[['log2FoldChange']]/abs(res_limma[['log2FoldChange']]))
     write.table(res_limma[order(res_limma$log2FoldChange, decreasing=TRUE), ], file=paste(output_prefix, "limma_FullResult_", comparison, ".csv", sep=""), sep=",", quote=F, col.names=NA)
   
-    plt <- make_volcanoplot(res_limma, combs[[c]][1], combs[[c]][2], opt$lfc, 0.1)
+    plt <- make_volcanoplot(res_limma, combs[[c]][2], combs[[c]][1], opt$lfc, 0.1)
     invisible(capture.output(ggsave(filename=paste(output_prefix, 'Volcanoplot.png', sep=''), plot=plt, dpi=320)))
   }
   
@@ -929,7 +935,7 @@ for (c in colnames(combs)){
         if (n == combs[[c]][1]){
           colour <- 'green'
           heat_colour <- "Greens"
-        }else if (n== combs[[c]][2]){
+        }else if (n == combs[[c]][2]){
           colour <- 'red'
           heat_colour <- "Reds"
         }else{
