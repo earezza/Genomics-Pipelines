@@ -220,7 +220,7 @@ make_volcanoplot <- function(res, condition2, condition1, lfc_threshold, padj_th
                          legendLabels=c('Not sig.','Log2FC','p-value','p-value & Log2FC'),
                          labSize = 3,
                          legendPosition = 'top',
-                         legendLabSize = 10,
+                         legendLabSize = 6,
   )
   return(plt)
 }
@@ -498,7 +498,7 @@ combs <- as.data.frame(combn(unique(sampleinfo$Condition), 2))
 # Iterate through condition combinations to compare DEG
 for (c in colnames(combs)){
   
-  comparison <- paste(combs[[c]][1], combs[[c]][2], sep="_vs_")
+  comparison <- paste(combs[[c]][2], combs[[c]][1], sep="_relative-to_")
   cat("\n==========", comparison, "==========\n")
   
   # Isolate matrix for relevant samples
@@ -846,9 +846,11 @@ for (c in colnames(combs)){
     
       # ========== Organize DEGs ==============
       out_dirs <- list()
-      out_dirs[combs[[c]][1]] <- paste(output_prefix, combs[[c]][1], '/', sep='')
-      out_dirs[combs[[c]][2]] <- paste(output_prefix, combs[[c]][2], '/', sep='')
-      out_dirs["DEGs"] <- paste(output_prefix, "DEGs", '/', sep='')
+      # out_dirs[combs[[c]][1]] <- paste(output_prefix, combs[[c]][1], '/', sep='')
+      # out_dirs[combs[[c]][2]] <- paste(output_prefix, combs[[c]][2], '/', sep='')
+      out_dirs["Downregulated"] <- paste(output_prefix, "Downregulated", '/', sep='')
+      out_dirs["Upregulated"] <- paste(output_prefix, "Upregulated", '/', sep='')
+      out_dirs["DEGs"] <- paste(output_prefix, "All_DEGs", '/', sep='')
       if (!file.exists(out_dirs[[1]])) {
         dir.create(out_dirs[[1]])
       }
@@ -865,7 +867,8 @@ for (c in colnames(combs)){
       # Get significantly Upregulated (log2FoldChange > 0) in condition 1
       res_up <- subset(res, log2FoldChange >= opt$lfc & pvalue <= opt$pvalue)
       res_up_sorted <- res_up[order(res_up$log2FoldChange, decreasing=TRUE),]
-      write.table(res_up_sorted, file=paste(out_dirs[[2]], r, "_Result_", combs[[c]][2], ".csv", sep=""), sep=",", quote=F, col.names=NA)
+      #write.table(res_up_sorted, file=paste(out_dirs[[2]], r, "_Result_", combs[[c]][2], ".csv", sep=""), sep=",", quote=F, col.names=NA)
+      write.table(res_up_sorted, file=paste(out_dirs[[2]], r, "_Result_", "Upregulated", ".csv", sep=""), sep=",", quote=F, col.names=NA)
       
       # Get significantly Downregulated (log2FoldChange < 0) in condition 1
       res_down <- subset(res, log2FoldChange <= (0 - opt$lfc) & pvalue <= opt$pvalue)
@@ -878,12 +881,13 @@ for (c in colnames(combs)){
       }else if(r == "Limma"){
         res_down_sorted[['t-stat']] <- res_down_sorted[['t-stat']]*(-1)
       }
-      write.table(res_down_sorted, file=paste(out_dirs[[1]], r, "_Result_", combs[[c]][1], ".csv", sep=""), sep=",", quote=F, col.names=NA)
+      #write.table(res_down_sorted, file=paste(out_dirs[[1]], r, "_Result_", combs[[c]][1], ".csv", sep=""), sep=",", quote=F, col.names=NA)
+      write.table(res_down_sorted, file=paste(out_dirs[[1]], r, "_Result_", "Downregulated", ".csv", sep=""), sep=",", quote=F, col.names=NA)
       
       # Get all significantly changed genes
       res_changed <- subset(res, (log2FoldChange >= opt$lfc | log2FoldChange <= (0 - opt$lfc)) & pvalue <= opt$pvalue)
       res_changed_sorted <- res_changed[order(abs(res_changed$log2FoldChange), decreasing=TRUE),]
-      write.table(res_changed_sorted, file=paste(out_dirs[["DEGs"]], r, "_Result_DEGs", ".csv", sep=""), sep=",", quote=F, col.names=NA)
+      write.table(res_changed_sorted, file=paste(out_dirs[["DEGs"]], r, "_Result_All_DEGs", ".csv", sep=""), sep=",", quote=F, col.names=NA)
       
       # Heatmap
       plt <- make_heatmapplot(res_changed_sorted, combs[[c]][1], combs[[c]][2], n=40)
@@ -891,10 +895,12 @@ for (c in colnames(combs)){
       
       genes <- list()
       if (dim(res_up_sorted)[1] != 0){
-        genes[[combs[[c]][2]]] <- rownames(res_up_sorted)
+        #genes[[combs[[c]][2]]] <- rownames(res_up_sorted)
+        genes[["Upregulated"]] <- rownames(res_up_sorted)
       }
       if (dim(res_down_sorted)[1] != 0){
-        genes[[combs[[c]][1]]] <- rownames(res_down_sorted)
+        #genes[[combs[[c]][1]]] <- rownames(res_down_sorted)
+        genes[["Downregulated"]] <- rownames(res_down_sorted)
       }
       if (dim(res_changed_sorted)[1] != 0){
         genes[["DEGs"]] <- rownames(res_changed_sorted)
@@ -902,10 +908,12 @@ for (c in colnames(combs)){
 
       result_dfs <- list()
       if (dim(res_up_sorted)[1] != 0){
-        result_dfs[[combs[[c]][2]]] <- res_up_sorted
+        #result_dfs[[combs[[c]][2]]] <- res_up_sorted
+        result_dfs[["Upregulated"]] <- res_up_sorted
       }
       if (dim(res_down_sorted)[1] != 0){
-        result_dfs[[combs[[c]][1]]] <- res_down_sorted
+        #result_dfs[[combs[[c]][1]]] <- res_down_sorted
+        result_dfs[["Downregulated"]] <- res_down_sorted
       }
       if (dim(res_changed_sorted)[1] != 0){
         result_dfs[["DEGs"]] <- res_changed_sorted
@@ -932,10 +940,20 @@ for (c in colnames(combs)){
       # ============= GO and KEGG Annotations ==============
       for (n in names(genes)){
         cat("\nObtaining functional gene annotations for ", n, "\n")
-        if (n == combs[[c]][1]){
+        # if (n == combs[[c]][1]){
+        #   colour <- 'green'
+        #   heat_colour <- "Greens"
+        # }else if (n == combs[[c]][2]){
+        #   colour <- 'red'
+        #   heat_colour <- "Reds"
+        # }else{
+        #   colour <- "#56B1F7"
+        #   heat_colour <- "PiYG"
+        # }
+        if (n == "Upregulated"){
           colour <- 'green'
           heat_colour <- "Greens"
-        }else if (n == combs[[c]][2]){
+        }else if (n == "Downregulated"){
           colour <- 'red'
           heat_colour <- "Reds"
         }else{
@@ -1258,5 +1276,6 @@ for (c in colnames(combs)){
     }
     cat("Completed", r,  "\n")
   }
+  
   
 }
