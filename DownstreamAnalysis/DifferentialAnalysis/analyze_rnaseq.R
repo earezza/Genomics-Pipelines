@@ -372,13 +372,17 @@ if (opt$batch_correct){
     cat('No "Batch" column in sampleinfo .csv, specify numerical values for sample batches...')
     q()
   }
-  batch <- factor(sampleinfo$Batch)
-  group <- factor(sampleinfo$Condition)
-  # Re-define count matric using batch-corrected counts
-  count_mtx <- ComBat_seq(count_mtx,
-                          batch=batch,
-                          group=group)
-  write.table(count_mtx, file=paste(opt$result_dir, "batch-corrected_counts.csv", sep=''), sep=",", quote=F, col.names=NA)
+  if (length(unique(smapleinfo$Batch)) > 1){
+    batch <- factor(sampleinfo$Batch)
+    group <- factor(sampleinfo$Condition)
+    # Re-define count matric using batch-corrected counts
+    count_mtx <- ComBat_seq(count_mtx,
+                            batch=batch,
+                            group=group)
+    write.table(count_mtx, file=paste(opt$result_dir, "batch-corrected_counts.csv", sep=''), sep=",", quote=F, col.names=NA)
+  } else {
+    cat("\nOnly 1 batch defined, skipping batch correction...\n")
+  }
 }
 
 
