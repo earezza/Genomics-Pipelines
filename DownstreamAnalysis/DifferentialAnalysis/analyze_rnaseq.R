@@ -372,7 +372,7 @@ if (opt$batch_correct){
     cat('No "Batch" column in sampleinfo .csv, specify numerical values for sample batches...')
     q()
   }
-  if (length(unique(smapleinfo$Batch)) > 1){
+  if (length(unique(sampleinfo$Batch)) > 1){
     batch <- factor(sampleinfo$Batch)
     group <- factor(sampleinfo$Condition)
     # Re-define count matric using batch-corrected counts
