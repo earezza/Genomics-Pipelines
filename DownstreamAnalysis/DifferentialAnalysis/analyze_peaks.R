@@ -279,7 +279,8 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", assembly='mm10', heat_c
 # ========= Load peaksets =========
 setwd(dirname(opt$file))
 samplesheet <- basename(opt$file)
-
+sample_table <- read.csv(samplesheet)
+          
 # Set directories
 if (!file.exists(opt$result_dir)) {
   dir.create(opt$result_dir)
@@ -306,18 +307,35 @@ promoters <- getPromoters(TxDb=anno_ref$txdb, upstream=3000, downstream=3000)
 # Average for each sample
 fragment_size <- 1:length(read.csv(samplesheet)$SampleID)
 frag_sizes <- list()
-for (b in unique(read.csv(samplesheet)$Condition)){
-  for (r in unique(read.csv(samplesheet)$Replicate)){
-    png(paste(supplementary_dir, 'fragment_length_', b, '-', r, '.png', sep=""))
-    mean_fragment_size <- average_fragment_length(read.csv(samplesheet)$bamReads[[which(read.csv(samplesheet)$Condition == b)[1]]], plot=TRUE)
-    for (i in which(read.csv(samplesheet)$Condition == b & read.csv(samplesheet)$Replicate == r)){
-      fragment_size[i] <- mean_fragment_size
-      frag_sizes[[b]] <- mean_fragment_size
-    }
-    invisible(capture.output(dev.off())) 
-  }
+
+sample_reps <- unique(paste0(sample_table$Condition, '-', sample_table$Replicate))
+sample_reps_split <- str_split(sample_reps, pattern = '-')
+
+pdf(paste(supplementary_dir, 'fragment_lengths.pdf', sep=""), title='SupplementaryQC')
+for (s in 1:length(sample_reps)){
+  mean_fragment_size <- average_fragment_length(unique(sample_table[sample_table$Condition == sample_reps_split[[s]][1] 
+                                                             & sample_table$Replicate == sample_reps_split[[s]][2], ]$bamReads)
+                                                )
+  title(main = sample_reps[s])
+  frag_sizes[[sample_reps[s]]] = mean_fragment_size
+  fragment_size[as.integer(rownames(sample_table[sample_table$Condition == sample_reps_split[[s]][1] 
+                                                 & sample_table$Replicate == sample_reps_split[[s]][2], ]))] <- mean_fragment_size
 }
+invisible(capture.output(dev.off())) 
 invisible(capture.output(gc())) 
+
+#for (b in unique(read.csv(samplesheet)$Condition)){
+#  for (r in unique(read.csv(samplesheet)$Replicate)){
+#    png(paste(supplementary_dir, 'fragment_length_', b, '-', r, '.png', sep=""))
+#    mean_fragment_size <- average_fragment_length(read.csv(samplesheet)$bamReads[[which(read.csv(samplesheet)$Condition == b)[1]]], plot=TRUE)
+#    for (i in which(read.csv(samplesheet)$Condition == b & read.csv(samplesheet)$Replicate == r)){
+#      fragment_size[i] <- mean_fragment_size
+#      frag_sizes[[b]] <- mean_fragment_size
+#    }
+#    invisible(capture.output(dev.off())) 
+#  }
+#}
+#invisible(capture.output(gc())) 
 #fragment_size <- 125 # default
 
 dbObj <- dba(sampleSheet=samplesheet, minOverlap=1,
