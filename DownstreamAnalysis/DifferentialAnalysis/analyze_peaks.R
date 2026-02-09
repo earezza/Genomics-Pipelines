@@ -20,51 +20,13 @@ suppressWarnings(suppressPackageStartupMessages({
   library(eulerr)
   require(gridExtra)
   library(RColorBrewer)
+  library(paletteer)
   library(pheatmap)
   library(grid)
   library(reticulate)
   library(qvalue)
   library(optparse)
 }))
-
-# ======= Get command-line optional arguments =======
-option_list = list(
-  make_option(c("-f", "--file"), type="character", default=NULL, help="DiffBind-formatted sample sheet", metavar="character"),
-  make_option(c("-a", "--assembly"), type="character", default="mm10", help="Assembly to annotate genes/peaks (e.g. hg19, hg38, mm9, mm10, rn6)", metavar="character"),
-  make_option(c("-r", "--result_dir"), type="character", default="Peaks_Analysis/", help="Directory name for saving output results", metavar="character"),
-  make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
-  make_option(c("-l", "--annotation_level"), type="character", default="transcript", help="Level parameter for annotatePeak, 'gene' or 'transcript'", metavar="character"),
-  make_option(c("--combine_callers"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from callers instead of taking consensus peaks", metavar="logical"),
-  make_option(c("--combine_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from replicates instead of taking consensus peaks", metavar="logical"),
-  make_option(c("-b", "--blacklisted_keep"), type="logical", action="store_true", default=FALSE, help="Flag to keep blacklisted regions in raw peaks files", metavar="logical"),
-  make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="double"),
-  make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="double"),
-  make_option(c("--occupancy_only"), type="logical", action="store_true", default=FALSE, help="Flag to only perform peaks occupancy analysis", metavar="logical"),
-  make_option(c("--david_user"), type="character", default="earezza@ohri.ca", help="User email for DAVID web tools (must be registered, https://david.ncifcrf.gov/content.jsp?file=DAVID_WebService.html)", metavar="character"),
-  make_option(c("--minGSSize"), type="integer", default=10, help="minimal size of genes annotated for testing", metavar="integer"),
-  make_option(c("--maxGSSize"), type="integer", default=500, help="maximal size of genes annotated for testing", metavar="integer")
-);
-opt_parser = OptionParser(option_list=option_list);
-opt = parse_args(opt_parser);
-
-cat("Command-line options:\n")
-for (i in which(names(opt) != "help")) {
-  cat(names(opt)[i], '=', paste(opt)[i], "\n")
-}
-cat("log2FC of", opt$lfc, "equates to FC of", round(2^0.585, 2), '\n')
-
-if (str_sub(opt$result_dir, -1) != "/"){
-  opt$result_dir = cat(opt$result_dir, '/', sep='')
-}
-if (!file.exists(opt$file)){
-  cat(opt$file, "does not exist...check path and current working directory.")
-  q()
-}
-if (!(opt$assembly %in% c('mm10', 'mm9', 'hg38', 'hg19', 'rn6'))){
-  cat(opt$assembly, "not a valid choice. Only supports mm9, mm10, hg19, hg38, rn6 assemblies.")
-  q()
-}
-
 
 # Define Functions
 load_annotation <- function(assembly, database){
@@ -131,6 +93,210 @@ load_annotation <- function(assembly, database){
   anno_ref <- list("txdb"=txdb, "annoDb"=annoDb, "keggOrg"=keggOrg)
   
   return(anno_ref)
+}
+
+make_anno_dotplot <- function(df, title="", ylabel="Description", colour="#4393C3", n=15){
+  # Expects df input from clusterProfiler output as dataframe
+  
+  # Example usage:
+  # plt <- make_anno_dotplot(compGO@compareClusterResult, title="YourTitle", ylabel="GO Term", n=15)
+  # ggsave(filename='YourFigure.png', plot=plt, dpi=400, units='mm', width=200, height=200)
+  
+  
+  df <- head(df[order(df$p.adjust, df$Description), ], n=n)
+  df$ycolour <- "black"
+  if ("ONTOLOGY" %in% colnames(df)){
+    df$Description <- paste(df$ONTOLOGY, df$Description, sep=' - ')
+    df$ycolour <- ifelse(grepl("BP -", df$Description), "#4393C3", df$ycolour)
+    df$ycolour <- ifelse(grepl("CC -", df$Description), "#D6604D", df$ycolour)
+    df$ycolour <- ifelse(grepl("MF -", df$Description), "#639863FF", df$ycolour)
+  }
+  #df <- df[order(df$p.adjust, decreasing=FALSE),]
+  
+  # Re-format y-axis labels to not squish graph
+  for (d in 1:length(df$Description)){
+    i <- 1
+    s <- df$Description[d]
+    s <- str_remove(s, " - Mus musculus \\(house mouse\\)")
+    df$Description[d] <- ""
+    while (i < length(strsplit(s, ' ')[[1]]) + 1){
+      df$Description[d] <- paste(df$Description[d], paste(strsplit(s, ' ')[[1]][i:(i+4)], collapse = ' '), sep='\n')
+      i <- (i+5)
+    }
+    df$Description[d] <- gsub(" NA", "", df$Description[d])
+    df$Description[d] <- substring(df$Description[d], 2, nchar(df$Description[d]))
+  }
+  # Plot
+  plt <- ggplot() +
+    geom_point(data=head(df, n=n),
+               aes(x = -log(p.adjust), 
+                   y = reorder(Description, -p.adjust), 
+                   colour = Count, 
+                   size = unname(unlist(sapply(GeneRatio, function(x) eval(parse(text=x)))))*100,
+               ),
+    ) + 
+    theme_classic() +
+    theme(axis.text.y = element_text(colour=rev(df$ycolour), face = "bold", size = 10),
+          axis.title.x = element_text(size = 14),
+          axis.text.x = element_text(size = 10, colour='black'),
+          axis.title.y = element_text(size = 14)
+    ) +
+    scale_color_gradient(low = "black", high = colour) +
+    ggtitle(title)
+  plt$labels$x <- "-log(p.adjust)"
+  plt$labels$y <- ylabel
+  plt$labels$size <- "GenePercentage"
+  plt$labels$colour <- "GeneCount"
+  return(plt)
+}
+
+make_anno_piebar <- function(df, type='pie', title="Distribution of Sites", specific=TRUE, colours=paletteer_d("khroma::muted")){
+  # Expects df input from annotatePeak anno@anno as dataframe ( or list of dataframes for stacked bar )
+  
+  # Example usage:
+  # plt <- make_anno_piebar(as.data.frame(anno@anno), type='pie', specific=TRUE, title="YourTitle")
+  # ggsave(filename="YourFigure.png", plot=plt, dpi=400, units='mm', width=170, height=130)
+  if (specific){
+    df$Group <- ifelse(grepl("Promoter \\(<=1kb\\)", df$annotation), 'Promoter\n(<=1kb)', 'Non-promoter')
+    df$Group <- ifelse(grepl("Promoter \\(1-2kb\\)", df$annotation), 'Promoter\n(1-2kb)', df$Group)
+    df$Group <- ifelse(grepl("Promoter \\(2-3kb\\)", df$annotation), 'Promoter\n(2-3kb)', df$Group)
+  } else {
+    df$Group <- ifelse(grepl("Promoter", df$annotation), 'Promoter', 'Non-promoter')
+  }
+  
+  df$Group <- ifelse(grepl("Exon", df$annotation), 'Exon', df$Group)
+  df$Group <- ifelse(grepl("Intron", df$annotation), 'Intron', df$Group)
+  df$Group <- ifelse(grepl("5' UTR", df$annotation), "5' UTR", df$Group)
+  df$Group <- ifelse(grepl("3' UTR", df$annotation), "3' UTR", df$Group)
+  df$Group <- ifelse(grepl("Downstream", df$annotation), "Downstream\n(<=300bp)", df$Group)
+  df$Group <- ifelse(grepl("Distal Intergenic", df$annotation), "Distal\nIntergenic", df$Group)
+  # Note: "Enhancer" typically not output from annotatePeak...
+  df$Group <- ifelse(grepl("Enhancer", df$annotation), 'Enhancer', df$Group)
+  
+  # Data to plot
+  df_plot <- df %>% count(Group)
+  df_plot$Frequency <- round( 100 * (df_plot$n / sum(df_plot$n)), 2)
+  df_plot <- df_plot[order(df_plot$Frequency, decreasing=TRUE), ]
+  rownames(df_plot) <- 1:nrow(df_plot)
+  colnames(df_plot) <- c('Region', 'Count', 'Frequency')
+  df_plot$Region <- as.factor(df_plot$Region)
+  
+  # Colours
+  myColors <- colours[1:length(unique(df_plot$Region))]
+  names(myColors) <- levels(df_plot$Region)
+  custom_colors_fill <- scale_fill_manual(values = myColors, 
+                                          name = "Region",
+                                          labels = str_c(df_plot$Region, ' (', df_plot$Frequency, '%)', sep=''))
+  
+  # Plot Bar Chart
+  if (type == 'bar'){
+    plt <- ggplot(df_plot, aes(x=reorder(Region, -Count), y=Count, fill=Region)) + 
+      geom_bar(stat='identity') +
+      custom_colors_fill +
+      geom_text(stat='identity', aes(label=Count), vjust=-1) +
+      theme_classic() +
+      theme(axis.text.x = element_text(size = 10, color = "black")) +
+      theme(axis.text.y = element_text(size = 10, color = "black")) +
+      theme(axis.title = element_text(size = 14, color = "black")) +
+      guides(fill="none") +
+      ggtitle(title) + 
+      theme(plot.title = element_text(size = 14))
+    plt$labels$x <- "Region"
+    plt$labels$y <- "Counts"
+  }
+  else if (type == 'pie'){
+    plt <- ggplot(df_plot, aes(x='', y=Frequency, fill=reorder(Region, -Frequency))) +
+      geom_bar(stat = "identity", position = "stack") +
+      coord_polar(theta = "y", start=0) +
+      custom_colors_fill +
+      theme_void() +
+      guides(fill='legend') +
+      ggtitle(title) + 
+      theme(plot.title = element_text(size = 18)) +
+      theme(plot.background = element_rect(color = 'white', fill = "white")) + 
+      theme(plot.margin = margin(0,1,0,0, "cm")) +
+      theme(plot.title = element_text(hjust = 0.5)) + 
+      theme(
+        legend.key.size = unit(1, 'cm'),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12)
+      )
+  }
+  return(plt)
+}
+
+make_anno_stackedbar <- function(df_list, title="Distribution of Sites", specific=TRUE, colours=paletteer_d("khroma::muted"), xlabel="Percentage", ylabel="Group"){
+  # Expects list of named dataframes where each is an output from annotatePeak (anno@anno as dataframe)
+  
+  # plt <- make_anno_stackedbar(anno_list, specific=TRUE, title="YourTitle", ylabel="SampleGroup")
+  # ggsave(filename="YourFigure.png", plot=plt, dpi=400, units='mm', width=180, height=120)
+  
+  
+  for (n in names(df_list)){
+    df <- df_list[[n]]
+    if (specific){
+      df$Group <- ifelse(grepl("Promoter \\(<=1kb\\)", df$annotation), 'Promoter\n(<=1kb)', 'Non-promoter')
+      df$Group <- ifelse(grepl("Promoter \\(1-2kb\\)", df$annotation), 'Promoter\n(1-2kb)', df$Group)
+      df$Group <- ifelse(grepl("Promoter \\(2-3kb\\)", df$annotation), 'Promoter\n(2-3kb)', df$Group)
+    } else {
+      df$Group <- ifelse(grepl("Promoter", df$annotation), 'Promoter', 'Non-promoter')
+    }
+    
+    df$Group <- ifelse(grepl("Exon", df$annotation), 'Exon', df$Group)
+    df$Group <- ifelse(grepl("Intron", df$annotation), 'Intron', df$Group)
+    df$Group <- ifelse(grepl("5' UTR", df$annotation), "5' UTR", df$Group)
+    df$Group <- ifelse(grepl("3' UTR", df$annotation), "3' UTR", df$Group)
+    df$Group <- ifelse(grepl("Downstream", df$annotation), "Downstream\n(<=300bp)", df$Group)
+    df$Group <- ifelse(grepl("Distal Intergenic", df$annotation), "Distal\nIntergenic", df$Group)
+    # Note: "Enhancer" typically not output from annotatePeak...
+    df$Group <- ifelse(grepl("Enhancer", df$annotation), 'Enhancer', df$Group)
+    
+    # Data to plot
+    df_plot <- df %>% count(Group)
+    df_plot$Frequency <- round( 100 * (df_plot$n / sum(df_plot$n)), 2)
+    df_plot <- df_plot[order(df_plot$Frequency, decreasing=TRUE), ]
+    rownames(df_plot) <- 1:nrow(df_plot)
+    colnames(df_plot) <- c('Region', 'Count', 'Frequency')
+    df_plot$Region <- as.factor(df_plot$Region)
+    df_list[[n]] <- df_plot
+  }
+  
+  my_plots <- df_list
+  combined_df <- bind_rows(my_plots, .id = "group")
+  # Order from highest to lowest
+  total_freqs <- combined_df %>% 
+    group_by(Region) %>% 
+    summarise(across(c("Frequency"), sum, na.rm = TRUE))
+  total_freqs <- total_freqs[order(total_freqs$Frequency, decreasing=FALSE), ]
+  
+  # Colours
+  myColors <- colours[1:length(total_freqs$Region)]
+  #names(myColors) <- fct_infreq(levels(combined_df$Region))
+  custom_colors_fill <- scale_fill_manual(values = myColors, 
+                                          name = "Region",
+                                          labels = total_freqs$Region
+  )
+  # Plot
+  plt <- ggplot(combined_df, aes(x = fct_rev(group), y = Frequency, fill = factor(Region, levels = total_freqs$Region) )) +
+    geom_bar(stat = "identity", position="stack") +
+    custom_colors_fill +
+    theme_classic() +
+    theme(axis.text.x = element_text(size = 12, color = "black")) +
+    theme(axis.text.y = element_text(size = 12, color = "black")) +
+    theme(axis.title = element_text(size = 14, color = "black")) +
+    ggtitle(title) + 
+    theme(plot.title = element_text(size = 16, color = "black")) + 
+    coord_flip() +
+    labs(x = ylabel, y = xlabel, fill = "Region") +
+    theme(plot.title = element_text(hjust = 0.5)) + 
+    theme(
+      legend.key.size = unit(0.75, 'cm'),
+      legend.title = element_text(size = 12),
+      legend.text = element_text(size = 10)
+    ) + 
+    guides(fill = guide_legend(reverse = TRUE))
+  
+  return(plt)
 }
 
 make_dotplot <- function(df, title="", ylabel="Description", colour="#56B1F7", n=15){
@@ -264,6 +430,68 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", assembly='mm10', heat_c
   return(plt)
 }
 
+# ======= Get command-line optional arguments =======
+option_list = list(
+  make_option(c("-f", "--file"), type="character", default=NULL, help="DiffBind-formatted sample sheet", metavar="character"),
+  make_option(c("-a", "--assembly"), type="character", default="mm10", help="Assembly to annotate genes/peaks (e.g. hg19, hg38, mm9, mm10, rn6)", metavar="character"),
+  make_option(c("-r", "--result_dir"), type="character", default="Peaks_Analysis/", help="Directory name for saving output results", metavar="character"),
+  make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
+  make_option(c("-l", "--annotation_level"), type="character", default="transcript", help="Level parameter for annotatePeak, 'gene' or 'transcript'", metavar="character"),
+  make_option(c("--combine_callers"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from callers instead of taking consensus peaks", metavar="logical"),
+  make_option(c("--combine_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from replicates instead of taking consensus peaks", metavar="logical"),
+  make_option(c("-b", "--blacklisted_keep"), type="logical", action="store_true", default=FALSE, help="Flag to keep blacklisted regions in raw peaks files", metavar="logical"),
+  make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="double"),
+  make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="double"),
+  make_option(c("--occupancy_only"), type="logical", action="store_true", default=FALSE, help="Flag to only perform peaks occupancy analysis", metavar="logical"),
+  make_option(c("--david_user"), type="character", default="earezza@ohri.ca", help="User email for DAVID web tools (must be registered, https://david.ncifcrf.gov/content.jsp?file=DAVID_WebService.html)", metavar="character"),
+  make_option(c("--minGSSize"), type="integer", default=10, help="minimal size of genes annotated for testing", metavar="integer"),
+  make_option(c("--maxGSSize"), type="integer", default=500, help="maximal size of genes annotated for testing", metavar="integer")
+);
+opt_parser = OptionParser(option_list=option_list);
+opt = parse_args(opt_parser);
+
+# Setup directories
+if (file.exists(opt$file)) {
+  setwd(dirname(opt$file))
+} else {
+  cat('\nCannot find DiffBind samplesheet --file', opt$file, "\n")
+  quit()
+}
+if (str_sub(opt$result_dir, -1) != "/"){
+  opt$result_dir = cat(opt$result_dir, '/', sep='')
+}
+if (!file.exists(opt$result_dir)) {
+  dir.create(opt$result_dir)
+}
+result_dir <- paste(opt$result_dir, "Occupancy_Analysis/", sep='')
+if (!file.exists(result_dir)) {
+  dir.create(result_dir)
+}
+
+supplementary_dir <- paste(result_dir, "Supplementary/", sep='')
+if (!file.exists(supplementary_dir)) {
+  dir.create(supplementary_dir)
+}
+
+
+# Output log to file
+con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt") , sep=''), open = "wt")
+sink(con, split = FALSE)                 # normal output
+#sink(con, type = "message", split = TRUE)  # messages
+
+cat("Run options:\n")
+for (i in which(names(opt) != "help")) {
+  cat(names(opt)[i], '=', paste(opt)[i], "\n")
+}
+cat("log2FC of", opt$lfc, "equates to FC of", round(2^0.585, 2), '\n')
+
+if (!(opt$assembly %in% c('mm10', 'mm9', 'hg38', 'hg19', 'rn6'))){
+  cat(opt$assembly, "not a valid choice. Only supports mm9, mm10, hg19, hg38, rn6 assemblies.")
+  sink()                  # stop normal output
+  close(con)
+  quit()
+}
+
 # # ========= START OCCUPANCY ANALYSIS =========
 # Here, peaks declared by peak caller(s) are used to identify
 # differential expression between conditions. Overlapping peaks 
@@ -277,26 +505,8 @@ make_pheatmapplot <- function(anno, res, anno_type="GO", assembly='mm10', heat_c
 
 # ========= SETUP RUN AND VARIABLES =========
 # ========= Load peaksets =========
-setwd(dirname(opt$file))
 samplesheet <- basename(opt$file)
 sample_table <- read.csv(samplesheet)
-          
-# Set directories
-if (!file.exists(opt$result_dir)) {
-  dir.create(opt$result_dir)
-}
-cat("Output files will be in", opt$result_dir, "\n")
-
-result_dir <- paste(opt$result_dir, "Occupancy_Analysis/", sep='')
-if (!file.exists(result_dir)) {
-  dir.create(result_dir)
-}
-
-supplementary_dir <- paste(result_dir, "Supplementary/", sep='')
-if (!file.exists(supplementary_dir)) {
-  dir.create(supplementary_dir)
-}
-
 #output_prefix <- gsub('.csv', '_', paste(result_dir, samplesheet, sep=""))
 #output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
 
@@ -304,545 +514,673 @@ if (!file.exists(supplementary_dir)) {
 anno_ref <- load_annotation(opt$assembly, opt$database)
 promoters <- getPromoters(TxDb=anno_ref$txdb, upstream=3000, downstream=3000)
 
-# Average for each sample
+# Variables to get average fragment size for each sample, used later for counts
 fragment_size <- 1:length(read.csv(samplesheet)$SampleID)
 frag_sizes <- list()
+sample_reps <- unique(paste0(sample_table$Condition, ':', sample_table$Replicate))
+sample_reps_split <- str_split(sample_reps, pattern = ':')
 
-sample_reps <- unique(paste0(sample_table$Condition, '-', sample_table$Replicate))
-sample_reps_split <- str_split(sample_reps, pattern = '-')
 
-pdf(paste(supplementary_dir, 'fragment_lengths.pdf', sep=""), title='SupplementaryQC')
-for (s in 1:length(sample_reps)){
-  mean_fragment_size <- average_fragment_length(unique(sample_table[sample_table$Condition == sample_reps_split[[s]][1] 
-                                                             & sample_table$Replicate == sample_reps_split[[s]][2], ]$bamReads)
-                                                )
-  title(main = sample_reps[s])
-  frag_sizes[[sample_reps[s]]] = mean_fragment_size
-  fragment_size[as.integer(rownames(sample_table[sample_table$Condition == sample_reps_split[[s]][1] 
-                                                 & sample_table$Replicate == sample_reps_split[[s]][2], ]))] <- mean_fragment_size
-}
-invisible(capture.output(dev.off())) 
-invisible(capture.output(gc())) 
-
-#for (b in unique(read.csv(samplesheet)$Condition)){
-#  for (r in unique(read.csv(samplesheet)$Replicate)){
-#    png(paste(supplementary_dir, 'fragment_length_', b, '-', r, '.png', sep=""))
-#    mean_fragment_size <- average_fragment_length(read.csv(samplesheet)$bamReads[[which(read.csv(samplesheet)$Condition == b)[1]]], plot=TRUE)
-#    for (i in which(read.csv(samplesheet)$Condition == b & read.csv(samplesheet)$Replicate == r)){
-#      fragment_size[i] <- mean_fragment_size
-#      frag_sizes[[b]] <- mean_fragment_size
-#    }
-#    invisible(capture.output(dev.off())) 
-#  }
-#}
-#invisible(capture.output(gc())) 
-#fragment_size <- 125 # default
-
-dbObj <- dba(sampleSheet=samplesheet, minOverlap=1,
-             config=data.frame(th=opt$fdr,
-                               #DataType=DBA_DATA_GRANGES, 
-                               RunParallel=TRUE,
-                               minQCth=15, 
-                               fragmentSize=fragment_size,
-                               reportInit="DBA",
-                               bUsePval=FALSE
-             )
-)
-cat("Raw peaksets:\n")
-dbObj
-
-# Colour codes for consistency in plots (add more colours if needed)
-colours <- c("#00BFC4", "#F8766D", "#7CAE00", "#C77CFF", "#e69e02", "#00A9FF", "#C77CFF", "#FF61CC", 
-             "#FF0000", "#FF4D00", "#80FF00", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2" , "#D55E00" , "#CC79A7"
-)
-conditions_colour_code <- list()
-for (i in 1:length(unique(dbObj$samples$Condition))) {
-  conditions_colour_code[[unique(dbObj$samples$Condition)[i]]] <- colours[i]
-}
-conditions_colour_code[['Shared']] <- "grey"
-
-png(filename=paste(supplementary_dir, 'raw_heatmap.png', sep=''))
-dba.plotHeatmap(dbObj)
-invisible(capture.output(dev.off()))
-invisible(capture.output(gc()))
-
-# Show overlap rates for each condition
-cat("Peak overlaps in at least (1, 2, ...) replicates/callers for each condition:\n")
-png(paste(supplementary_dir, "raw_overlap_rates.png", sep=""))
-par(mfrow=c(length(unique(dbObj$samples$Condition)), 1), mar = c(2, 4, 4, 2))
-for (c in unique(dbObj$samples$Condition)) {
-  cat('\n', c, '\n')
-  olap.rate <- dba.overlap(dbObj, dba.mask(dbObj, attribute=DBA_CONDITION, value=c, combine='or'), mode=DBA_OLAP_RATE)
-  cat(olap.rate)
-  cat('\n')
-  plot(olap.rate, type='l', xlim=c(0.75, length(olap.rate)), ylab='# overlapping peaks', xlab='# peaksets (replicates and peak callers)', col=conditions_colour_code[[c]])
-  text(x=1:length(olap.rate), y=olap.rate, olap.rate, cex=0.75)
-  axis(side=1, at=1:length(olap.rate))
-  title(main=c("Overlap Rate", c))
-}
-invisible(capture.output(dev.off()))
-invisible(capture.output(gc()))
-
-# ========= Remove Blacklisted Regions =========
-# Remove blacklisted regions to ignore irrelevant peaks (blacklisted regions from ENCODE, genome selected is based on prediction from bam files)
-tryCatch (
+# Load peaks, filter blacklisted regions, setup variables, plot some QC
+tryCatch(
   {
-    if (!opt$blacklisted_keep){
-      dbObj.noblacklist <- dba.blacklist(dbObj, blacklist=TRUE, greylist=FALSE)
-      blacklisted_peaks <- dba.blacklist(dbObj.noblacklist, Retrieve=DBA_BLACKLISTED_PEAKS)
-      cat("After blacklisted regions removed:\n")
-      dbObj.noblacklist
-    }else{
+    pdf(paste(supplementary_dir, 'SupplementaryQC.pdf', sep=""),
+        width  = 8.3/2.54,
+        height = 8/2.54,
+        pointsize = 8)  # or 9–10)
+    
+    for (s in 1:length(sample_reps)){
+      mean_fragment_size <- average_fragment_length(unique(sample_table[sample_table$Condition == sample_reps_split[[s]][1] 
+                                                                        & sample_table$Replicate == sample_reps_split[[s]][2], ]$bamReads)
+      )
+      title(main = sample_reps[s])
+      frag_sizes[[sample_reps[s]]] = mean_fragment_size
+      fragment_size[as.integer(rownames(sample_table[sample_table$Condition == sample_reps_split[[s]][1] 
+                                                     & sample_table$Replicate == sample_reps_split[[s]][2], ]))] <- mean_fragment_size
+    }
+    #invisible(capture.output(dev.off())) 
+    #invisible(capture.output(gc())) 
+    
+    #for (b in unique(read.csv(samplesheet)$Condition)){
+    #  for (r in unique(read.csv(samplesheet)$Replicate)){
+    #    png(paste(supplementary_dir, 'fragment_length_', b, '-', r, '.png', sep=""))
+    #    mean_fragment_size <- average_fragment_length(read.csv(samplesheet)$bamReads[[which(read.csv(samplesheet)$Condition == b)[1]]], plot=TRUE)
+    #    for (i in which(read.csv(samplesheet)$Condition == b & read.csv(samplesheet)$Replicate == r)){
+    #      fragment_size[i] <- mean_fragment_size
+    #      frag_sizes[[b]] <- mean_fragment_size
+    #    }
+    #    invisible(capture.output(dev.off())) 
+    #  }
+    #}
+    #invisible(capture.output(gc())) 
+    #fragment_size <- 125 # default
+    
+    dbObj <- dba(sampleSheet=samplesheet, minOverlap=1,
+                 config=data.frame(th=opt$fdr,
+                                   #DataType=DBA_DATA_GRANGES, 
+                                   RunParallel=TRUE,
+                                   minQCth=15, 
+                                   fragmentSize=fragment_size,
+                                   reportInit="DBA",
+                                   bUsePval=FALSE
+                 )
+    )
+    cat("\nRaw peaksets:\n")
+    print(dbObj)
+    
+    # Colour codes for consistency in plots (add more colours if needed)
+    colours <- c("#00BFC4", "#F8766D", "#7CAE00", "#C77CFF", "#e69e02", "#00A9FF", "#C77CFF", "#FF61CC", 
+                 "#FF0000", "#FF4D00", "#80FF00", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2" , "#D55E00" , "#CC79A7"
+    )
+    conditions_colour_code <- list()
+    for (i in 1:length(unique(dbObj$samples$Condition))) {
+      conditions_colour_code[[unique(dbObj$samples$Condition)[i]]] <- colours[i]
+    }
+    conditions_colour_code[['Shared']] <- "grey"
+    
+    #png(filename=paste(supplementary_dir, 'raw_heatmap.png', sep=''))
+    dba.plotHeatmap(dbObj, margin=15, cexRow = 0.8, cexCol = 0.8)
+    #title(main=c("Correlation Heatmap - Raw Peaks"))
+    mtext(c("Correlation Heatmap - Raw Peaks"), side = 1, line = 2)
+    #invisible(capture.output(dev.off()))
+    #invisible(capture.output(gc()))
+    
+    # Show overlap rates for each condition
+    cat("\nTotal peaks overlapped when found in at least (1, 2, ...) replicates/callers for each condition:\n")
+    #png(paste(supplementary_dir, "raw_overlap_rates.png", sep=""))
+    par(mar = c(5, 5, 4, 2))  # bottom, left, top, right
+    #par(mfrow=c(length(unique(dbObj$samples$Condition)), 1), mar = c(5, 5, 4, 4))
+    for (c in unique(dbObj$samples$Condition)) {
+      cat('\n', c, '\n')
+      olap.rate <- dba.overlap(dbObj, dba.mask(dbObj, attribute=DBA_CONDITION, value=c, combine='or'), mode=DBA_OLAP_RATE)
+      cat(olap.rate)
+      cat('\n')
+      plot(olap.rate, type='l', xlim=c(0.75, length(olap.rate)), ylab='# overlapping peaks', xlab='# peaksets (replicates and peak callers)', col=conditions_colour_code[[c]])
+      text(x=1:length(olap.rate), y=olap.rate, olap.rate, cex=0.75)
+      axis(side=1, at=1:length(olap.rate))
+      title(main=c("Overlap Rate - Raw Peaks", c))
+    }
+    #invisible(capture.output(dev.off()))
+    #invisible(capture.output(gc()))
+    
+    # ========= Remove Blacklisted Regions =========
+    # Remove blacklisted regions to ignore irrelevant peaks (blacklisted regions from ENCODE, genome selected is based on prediction from bam files)
+    tryCatch (
+      {
+        if (!opt$blacklisted_keep){
+          dbObj.noblacklist <- dba.blacklist(dbObj, blacklist=TRUE, greylist=FALSE)
+          blacklisted_peaks <- dba.blacklist(dbObj.noblacklist, Retrieve=DBA_BLACKLISTED_PEAKS)
+          cat("\nAfter blacklisted regions removed:\n")
+          print(dbObj.noblacklist)
+        }else{
+          cat("\nBlacklisted regions not removed, proceeding with raw peaksets...\n")
+          dbObj.noblacklist <- dbObj
+        }
+      },error = function(e)
+      {
+        message(e)
+      }
+    )
+    if (!exists("dbObj.noblacklist")) {
       cat("\nBlacklisted regions not removed, proceeding with raw peaksets...\n")
       dbObj.noblacklist <- dbObj
+      print(dbObj.noblacklist)
     }
-  },error = function(e)
-  {
-    message(e)
-  }
-)
-if (!exists("dbObj.noblacklist")) {
-  cat("\nBlacklisted regions not removed, proceeding with raw peaksets...\n")
-  dbObj.noblacklist <- dbObj
-  dbObj.noblacklist
-}
-
-png(paste(supplementary_dir, 'raw_noblacklist_heatmap.png', sep=''))
-dba.plotHeatmap(dbObj.noblacklist)
-invisible(capture.output( dev.off() ))
-invisible(capture.output(gc()))
-
-# Show overlap rates for each condition
-cat("Peak overlaps in at least (1, 2, ...) replicates/callers for each condition:\n")
-png(paste(supplementary_dir, "raw_noblacklist_overlap_rates.png", sep=""))
-par(mfrow=c(length(unique(dbObj$samples$Condition)), 1), mar = c(2, 4, 4, 2))
-for (c in unique(dbObj$samples$Condition)) {
-  cat('\n', c, '\n')
-  olap.rate <- dba.overlap(dbObj, dba.mask(dbObj.noblacklist, attribute=DBA_CONDITION, value=c, combine='or'), mode=DBA_OLAP_RATE)
-  cat(olap.rate)
-  cat('\n')
-  plot(olap.rate, type='l', xlim=c(0.75, length(olap.rate)), ylab='# overlapping peaks', xlab='# peaksets (replicates and peak callers)', col=conditions_colour_code[[c]])
-  text(x=1:length(olap.rate), y=olap.rate, olap.rate, cex=0.75)
-  axis(side=1, at=1:length(olap.rate))
-  title(main=c("Overlap Rate", c))
-}
-invisible(capture.output(dev.off()))
-invisible(capture.output(gc()))
-
-# ========= Get Consensus Peaks =========
-if (opt$combine_replicates == TRUE){
-  rep_overlaps <- 1 # add all peaks from replicates
-}else{
-  rep_overlaps <- 2 # add only consensus peaks (peaks must be in at least 2 replicates)
-}
-
-# If using peaks from multiple peak callers (defined in Factor column of samplesheet)
-if (length(unique(dbObj$samples$Factor)) > 1){
-  # Get consensus overlaps in peaksets for each condition (peaks must be overlapping in majority (2/3rds) of peak callers) or add all callers' peaks
-  if (opt$combine_callers == TRUE){
-    dbObj.total <- dba.peakset(dbObj.noblacklist, consensus=c(DBA_CONDITION, DBA_REPLICATE), minOverlap=1)
-  }else{
-    dbObj.total <- dba.peakset(dbObj.noblacklist, consensus=c(DBA_CONDITION, DBA_REPLICATE), minOverlap=0.66)
-  }
-  # resulting consensus between callers
-  dbObj.caller_consensus <- dba(dbObj.total, mask=dbObj.total$masks$Consensus, minOverlap=1)
-  if (length(unique(dbObj$samples$Replicate)) > 1){
-    # Get consensus between replicates for each condition (peaks must be overlapping in at least 2 replicates)
-    dbObj.final <- dba.peakset(dbObj.caller_consensus, consensus=c(DBA_CONDITION), minOverlap=rep_overlaps)
-    maskname <- names(dbObj.final$masks)[grepl('Replicate.1-2', names(dbObj.final$masks))]
-    # resulting consensus between replicates
-    if (length(maskname) == 1){
-      dbObj.consensus <- dba(dbObj.final, mask=dbObj.final$masks[[maskname]], minOverlap=1)
-    }else if (length(maskname) == 2){
-      dbObj.consensus <- dba(dbObj.final, mask=(dbObj.final$masks[[maskname[1]]] | dbObj.final$masks[[maskname[2]]]), minOverlap=1)
-    }
-  }else{
-    dbObj.consensus <- dbObj.caller_consensus
-  }
-}else{
-  if (length(unique(dbObj$samples$Replicate)) > 1){
-    # consensus between replicates
-    dbObj.total <- dba.peakset(dbObj.noblacklist, consensus=c(DBA_CONDITION), minOverlap=rep_overlaps)
-    maskname <- names(dbObj.total$masks)[grepl('Replicate.1-2', names(dbObj.total$masks))]
-    if (length(maskname) == 1){
-      dbObj.consensus <- dba(dbObj.total, mask=dbObj.total$masks[[maskname]], minOverlap=1)
-      dbObj.caller_consensus <- dbObj.consensus
-    }else if (length(maskname) == 2){
-      dbObj.consensus <- dba(dbObj.total, mask=(dbObj.total$masks[[maskname[1]]] | dbObj.total$masks[[maskname[2]]]), minOverlap=1)
-      dbObj.caller_consensus <- dbObj.consensus
-    }
-  } else {
-    # When only 1 peak caller and 1 replicate available
-    dbObj.total <- dbObj.noblacklist
-    dbObj.consensus <- dbObj.noblacklist
-    dbObj.caller_consensus <- dbObj.noblacklist
     
-  }
-}
-dbObj.caller_consensus
-dbObj.consensus
-
-
-# Add fragment sizes to new objects (helps to later run affinity analysis)
-for (c in unique(dbObj$samples$Condition)){
-  for (i in 1:length(dbObj.caller_consensus$mask[[c]])){
-    if (dbObj.caller_consensus$mask[[c]][[i]]){
-      dbObj.caller_consensus$config$fragmentSize[i] <- frag_sizes[[c]]
-    }
-  }
-}
-for (c in unique(dbObj$samples$Condition)){
-  for (i in 1:length(dbObj.consensus$mask[[c]])){
-    if (dbObj.consensus$mask[[c]][[i]]){
-      dbObj.consensus$config$fragmentSize[i] <- frag_sizes[[c]]
-    }
-  }
-}
-
-# Re-sort colours if condition orders changed after consensus (occurs when one condition has only 1 replicate, consensus must be added manually...)
-# dbObj.consensus <- dba(dbObj.final, mask=(dbObj.final$masks$`Replicate.1-2` | dbObj.final$masks$CONDITION_WITH_ONE_REPLICATE), minOverlap=1)
-temp <- list()
-for (i in 1:length(conditions_colour_code)){
-  temp[names(conditions_colour_code[which(names(conditions_colour_code) == dba.show(dbObj.consensus)$Condition[i])])] <- conditions_colour_code[which(names(conditions_colour_code) == dba.show(dbObj.consensus)$Condition[i])]
-}
-conditions_colour_code <- temp
-
-# Consensus peaks from all conditions (all relevant peaks)
-consensus_peaks <- dba.peakset(dbObj.consensus, bRetrieve=TRUE)
-
-result_dirs <- list()
-for (p in unique(dba.show(dbObj.consensus)$Condition)){
-  result_dirs[[p]] <- paste(result_dir, p, "/", sep='')
-  if (!file.exists(result_dirs[[p]])) {
-    dir.create(result_dirs[[p]])
-  }
-}
-
-# Output consensus peaksets
-raw_peaks <- list()
-for (c in unique(dba.show(dbObj.consensus)$Condition)){
-  p <- dba.peakset(dbObj.consensus, dbObj.consensus$masks[[c]], bRetrieve=TRUE)
-  write.table(as.data.frame(p), file=paste(result_dirs[[c]], c, '_consensus.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-  raw_peaks[[c]] <- p
-}
-
-# ========= Get Annotations =========
-peakAnnoList <- list()
-for (p in names(raw_peaks)){
-  cat("\nAnnotating", p, ' consensus\n')
-  anno <- annotatePeak(raw_peaks[[p]], 
-                       TxDb=anno_ref$txdb,
-                       annoDb=anno_ref$annoDb,
-                       level=opt$annotation_level,
-                       tssRegion=c(-3000, 3000)
-  )
-  peakAnnoList[[p]] <- anno
-  write.table(anno@anno, file=paste(result_dirs[[p]], p, '_consensus_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-}
-
-# Plot UpSet
-upsetlist <- list()
-for (p in names(peakAnnoList)) {
-  upsetlist[[p]] <- peakAnnoList[[p]]@anno$SYMBOL
-}
-upset_colors <- list()
-for (n in names(peakAnnoList)){
-  upset_colors[[ conditions_colour_code[[n]] ]] <- length(unique(peakAnnoList[[n]]@anno$SYMBOL))
-}
-upset_colors <- sort(unlist(upset_colors), decreasing=TRUE)
-png(paste(result_dir, 'consensus_annotated-genes_upsetplot.png', sep=''),
-    width = 1920,
-    height = 1080,
-    res=300
-)
-upset(fromList(upsetlist), 
-      order.by = "freq", 
-      nsets = length(names(peakAnnoList)),
-      sets.bar.color = names(upset_colors),
-      empty.intersections = "on",
-      set_size.show = TRUE,
-      set_size.angles = 0,
-      set_size.scale_max = dim(fromList(upsetlist))[[1]]*1.25,
-      sets.x.label = "Gene Set Size",
-      mainbar.y.label = "Intersection Size of Gene Sets",
-      mb.ratio = c(0.7, 0.3)
-) 
-grid.text("Consensus Peaksets Annotated Genes",x = 0.65, y=0.95, gp=gpar(fontsize=10))
-dev.off()
-invisible(capture.output(gc()))
-
-
-# Differentially bound peaks between conditions (peaks unique to each condition)
-differential_peaks <- dba.overlap(dbObj.consensus, dbObj.consensus$masks$All, DataType=DBA_DATA_GRANGES)
-unique_peaks <- list()
-for (c in unique(dba.show(dbObj.consensus)$Condition)){
-  unique_peaks[[c]] <- differential_peaks[[which(unique(dba.show(dbObj.consensus)$Condition) == c)]]
-  cat("\n", c, "has", length(unique_peaks[[c]]), "unique peaks.\n")
-}
-# Peaks shared between all conditions
-shared_peaks <- list()
-shared_peaks[["Shared"]] <- differential_peaks$inAll
-cat("\n", length(shared_peaks[["Shared"]]), "all shared peaks.\n")
-write.table(as.data.frame(p), file=paste(result_dirs[[c]], '../Shared_consensus.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-anno <- annotatePeak(shared_peaks[["Shared"]], 
-                     TxDb=anno_ref$txdb,
-                     annoDb=anno_ref$annoDb,
-                     level=opt$annotation_level,
-                     tssRegion=c(-3000, 3000)
-)
-write.table(anno@anno, file=paste(result_dirs[[c]], '../Shared_consensus_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-
-
-if (length(unique(dbObj$samples$Condition)) == 3){
-  for (c in unique(dba.show(dbObj.consensus)$Condition)){
-    i <- which(unique(dba.show(dbObj.consensus)$Condition) == c) + 3
-    pair <- unique(dba.show(dbObj.consensus)$Condition)[which(unique(dba.show(dbObj.consensus)$Condition) != c)]
-    unique_peaks[[paste(pair, collapse='_and_')]] <- differential_peaks[[which(unique(dba.show(dbObj.consensus)$Condition) == c) + 3]]
-    conditions_colour_code[[paste(pair, collapse='_and_')]] <- colours[i]
-    cat("\n", paste(pair, collapse='_and_'), "have", length(unique_peaks[[paste(pair, collapse='_and_')]]), "shared peaks.\n")
-  }
-}
-
-if (length(unique(dbObj$samples$Condition)) == 4){
-  e = c(
-    "A"=length(unique_peaks[[names(unique_peaks)[1]]]), 
-    "B"=length(unique_peaks[[names(unique_peaks)[2]]]),
-    "C"=length(unique_peaks[[names(unique_peaks)[3]]]),
-    "D"=length(unique_peaks[[names(unique_peaks)[4]]]),
-    "A&B"=length(differential_peaks$AandB),
-    "A&C"=length(differential_peaks$AandC),
-    "A&D"=length(differential_peaks$AandD),
-    "B&C"=length(differential_peaks$BandC),
-    "B&D"=length(differential_peaks$BandD),
-    "C&D"=length(differential_peaks$CandD),
-    "A&B&C"=length(differential_peaks$notD),
-    "A&B&D"=length(differential_peaks$notC),
-    "A&C&D"=length(differential_peaks$notB),
-    "B&C&D"=length(differential_peaks$notA),
-    "A&B&C&D"=length(shared_peaks[[names(shared_peaks)[1]]])
-  )
-  names(e) = c(names(unique_peaks)[1], names(unique_peaks)[2], names(unique_peaks)[3], names(unique_peaks)[4],
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2], sep=''),
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[3], sep=''),
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[4], sep=''),
-               paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[3], sep=''),
-               paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[4], sep=''),
-               paste(names(unique_peaks)[3] , '&' , names(unique_peaks)[4], sep=''),
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[3], sep=''),
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[4], sep=''),
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep=''),
-               paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep=''),
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep='')
-  )
-  for (c in (length(unique(dbObj$samples$Condition))+1):(length(names(e))-1) ){
-    combo <- str_replace_all(names(e)[c], "&", "_and_")
-    unique_peaks[[combo]] <- differential_peaks[[c, ]]
-    conditions_colour_code[[combo]] <- colours[i]
-    cat("\n", combo, "have", length(unique_peaks[[combo]]), "shared peaks.\n")
-  }
-}
-conditions_colour_code[['Shared']] <- "grey"
-
-
-
-# Plots
-if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
-  grid.newpage()
-  g = draw.pairwise.venn(area1=length(unique_peaks[[names(unique_peaks)[1]]])+length(shared_peaks[[names(shared_peaks)[1]]]), 
-                         area2=length(unique_peaks[[names(unique_peaks)[2]]])+length(shared_peaks[[names(shared_peaks)[1]]]),
-                         cross.area=length(shared_peaks[[names(shared_peaks)[1]]]),
-                         category=names(unique_peaks),
-                         fill=unname(unlist(conditions_colour_code))[1:2],
-                         col=NA,
-                         #cat.pos=c(0,0),
-                         cat.dist = c(0,0))
-  plt <- grid.arrange(gTree(children=g), top="Binding Site Overlaps", bottom=gsub('/', '', opt$result_dir))
-  invisible(capture.output(ggsave(filename=paste(result_dir, 'consensus_peaks_venn.png', sep=''), plot=plt)))
-  rm(g)
-}else if (length(unique(dba.show(dbObj.consensus)$Condition)) == 3){
-  e = c(
-    "A"=length(unique_peaks[[names(unique_peaks)[1]]]), 
-    "B"=length(unique_peaks[[names(unique_peaks)[2]]]),
-    "C"=length(unique_peaks[[names(unique_peaks)[3]]]),
-    "A&B"=length(differential_peaks$notC),
-    "B&C"=length(differential_peaks$notA),
-    "A&C"=length(differential_peaks$notB),
-    "A&B&C"=length(shared_peaks[[names(shared_peaks)[1]]])
-  )
-  names(e) = c(names(unique_peaks)[1], names(unique_peaks)[2], names(unique_peaks)[3],
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2], sep=''),
-               paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[3], sep=''),
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[3], sep=''),
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&' , names(unique_peaks)[3], sep='')
-  )
-  
-  #png(paste(output_prefix, 'raw_consensus_peaks.png', sep=""))
-  plt <- plot(euler(e), main=gsub('/', '', opt$result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
-  invisible(capture.output(ggsave(filename=paste(result_dir, 'consensus_peaks_venn.png', sep=''), plot=plt)))
-  #invisible(capture.output(dev.off()))
-  rm(e)
-}else if (length(unique(dba.show(dbObj.consensus)$Condition)) == 4){
-  e = c(
-    "A"=length(unique_peaks[[names(unique_peaks)[1]]]), 
-    "B"=length(unique_peaks[[names(unique_peaks)[2]]]),
-    "C"=length(unique_peaks[[names(unique_peaks)[3]]]),
-    "D"=length(unique_peaks[[names(unique_peaks)[4]]]),
-    "A&B"=length(differential_peaks$AandB),
-    "A&C"=length(differential_peaks$AandC),
-    "A&D"=length(differential_peaks$AandD),
-    "B&C"=length(differential_peaks$BandC),
-    "B&D"=length(differential_peaks$BandD),
-    "C&D"=length(differential_peaks$CandD),
-    "A&B&C"=length(differential_peaks$notD),
-    "A&B&D"=length(differential_peaks$notC),
-    "A&C&D"=length(differential_peaks$notB),
-    "B&C&D"=length(differential_peaks$notA),
-    "A&B&C&D"=length(shared_peaks[[names(shared_peaks)[1]]])
-  )
-  names(e) = c(names(unique_peaks)[1], names(unique_peaks)[2], names(unique_peaks)[3], names(unique_peaks)[4],
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2], sep=''),
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[3], sep=''),
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[4], sep=''),
-               paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[3], sep=''),
-               paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[4], sep=''),
-               paste(names(unique_peaks)[3] , '&' , names(unique_peaks)[4], sep=''),
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[3], sep=''),
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[4], sep=''),
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep=''),
-               paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep=''),
-               paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep='')
-  )
-  
-  #png(paste(output_prefix, 'raw_consensus_peaks.png', sep=""))
-  plt <- plot(euler(e), main=gsub('/', '', opt$result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
-  invisible(capture.output(ggsave(filename=paste(result_dir, 'consensus_peaks_venn.png', sep=''), plot=plt)))
-  #invisible(capture.output(dev.off()))
-  rm(e)
-}
-
-invisible(capture.output(gc()))
-
-png(paste(supplementary_dir, 'consensus_heatmap.png', sep=''))
-dba.plotHeatmap(dbObj.consensus)
-invisible(capture.output( dev.off() ))
-invisible(capture.output(gc()))
-
-
-tryCatch(
-  {
-    plt <- dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours))
-    #plt$main <- "PCA"
-    invisible(capture.output(ggsave(filename=paste(supplementary_dir, 'pca_condition.png', sep=''), plot=grid.arrange(plt))))
+    #png(paste(supplementary_dir, 'raw_noblacklist_heatmap.png', sep=''))
+    dba.plotHeatmap(dbObj.noblacklist, margin=15, cexRow = 0.8, cexCol = 0.8)
+    #title(main=c("Correlation Heatmap - Blacklist Regions Removed"))
+    mtext(c("Correlation Heatmap - Blacklist Regions Removed"), side = 1, line = 2)
+    #invisible(capture.output( dev.off() ))
+    #invisible(capture.output(gc()))
     
-    if(length(unique(dbObj$samples$Factor)) > 1){
-      plt <- dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_FACTOR, label=DBA_ID)
-      invisible(capture.output( ggsave(filename=paste(supplementary_dir, 'pca_factor.png', sep=''), plot=grid.arrange(plt)) ))
-      #invisible(capture.output(dev.off()))
+    # Show overlap rates for each condition
+    cat("\nTotal peaks overlapped when found in at least (1, 2, ...) replicates/callers for each condition:\n")
+    #png(paste(supplementary_dir, "raw_noblacklist_overlap_rates.png", sep=""))
+    #par(mfrow=c(length(unique(dbObj$samples$Condition)), 1), mar = c(5, 5, 4, 4))
+    par(mar = c(5, 5, 4, 2)) 
+    for (c in unique(dbObj$samples$Condition)) {
+      cat('\n', c, '\n')
+      olap.rate <- dba.overlap(dbObj, dba.mask(dbObj.noblacklist, attribute=DBA_CONDITION, value=c, combine='or'), mode=DBA_OLAP_RATE)
+      cat(olap.rate)
+      cat('\n')
+      plot(olap.rate, type='l', xlim=c(0.75, length(olap.rate)), ylab='# overlapping peaks', xlab='# peaksets (replicates and peak callers)', col=conditions_colour_code[[c]])
+      text(x=1:length(olap.rate), y=olap.rate, olap.rate, cex=0.75)
+      axis(side=1, at=1:length(olap.rate))
+      title(main=c("Overlap Rate - Blacklist Regions Removed", c))
     }
-  },error = function(e)
-  {
-    message(e)
-  }
-)
-invisible(capture.output(gc()))
 
-# Plot peaks over genome
+    
+  },
+  error = function(e) {
+    message("Error occurred: ", conditionMessage(e))
+  }, 
+  finally = {
+    if (!is.null(dev.list())) dev.off()
+    invisible(capture.output(gc()))
+    
+    #sink()                  # stop messages
+    sink()                  # stop normal output
+    close(con)
+  }
+  
+)
+
+
+con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt"), sep=''), open = "at")
+sink(con, split = FALSE) 
+
+# Building consensus peaksets
 tryCatch(
   {
-    plt <- covplot(c(unique_peaks[1:length(unique(dbObj$samples$Condition))], shared_peaks), title="Peaks over Genome") + 
-      scale_color_manual(values=rev(c(unlist(unname(conditions_colour_code[1:length(unique(dbObj$samples$Condition))])), 'grey'))) + 
-      scale_fill_manual(values=rev(c(unlist(unname(conditions_colour_code[1:length(unique(dbObj$samples$Condition))])), 'grey')))
-    invisible(capture.output(ggsave(filename=paste(result_dir, 'genome_peaks.png', sep=''), plot=plt, dpi=320)))
-    plt <- plt + facet_grid(chr ~ .id)
-    invisible(capture.output(ggsave(filename=paste(result_dir, 'genome_peaks_split.png', sep=''), plot=plt, dpi=320)))
-    rm(plt)
-  },error = function(e)
-  {
-    message(e)
-  }
-)
-invisible(capture.output(gc()))
 
-peaks <- c(unique_peaks, shared_peaks)
-
-for (p in names(peaks)){
-  result_dirs[[p]] <- paste(result_dir, p, "/", sep='')
-  if (!file.exists(result_dirs[[p]])) {
-    dir.create(result_dirs[[p]])
-  }
-}
-
-# Output peaks to bed files
-for (p in names(peaks)){
-  write.table(as.data.frame(peaks[[p]]), file=paste(result_dirs[[p]], p, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-}
-
-# Plot peaks related to TSS sites
-tryCatch(
-  {
-    tagMatrices <- list()
-    for (p in names(peaks)){
-      tagMatrix <- getTagMatrix(peaks[[p]], windows=promoters)
-      if (length(tagMatrix) == 0){
-        cat("No peaks at promoter sites for", p, "\n")
-        rm(tagMatrix)
-        #break
+    # ========= Get Consensus Peaks =========
+    if (opt$combine_replicates == TRUE){
+      rep_overlaps <- 1 # add all peaks from replicates
+    }else{
+      rep_overlaps <- 2 # add only consensus peaks (peaks must be in at least 2 replicates)
+    }
+    
+    # If using peaks from multiple peak callers (defined in Factor column of samplesheet)
+    if (length(unique(dbObj$samples$Factor)) > 1){
+      # Get consensus overlaps in peaksets for each condition (peaks must be overlapping in majority (2/3rds) of peak callers) or add all callers' peaks
+      if (opt$combine_callers == TRUE){
+        dbObj.total <- dba.peakset(dbObj.noblacklist, consensus=c(DBA_CONDITION, DBA_REPLICATE), minOverlap=1)
       }else{
-        tagMatrices[[p]] <- tagMatrix
-        cat(dim(tagMatrix)[[1]], "peaks at promoter sites for", p, "\n")
-        plt <- tagHeatmap(tagMatrix, 
-                          xlab="bp at TSS", 
-                          ylab="Peaks", 
-                          title=paste(dim(tagMatrix)[[1]],'Peaks at Promoters', p, sep=" - "),
-                          palette=if_else(conditions_colour_code[[p]] == "#00BFC4", 'Greens', 'Reds'), 
-        )
-        invisible(capture.output(ggsave(paste(result_dirs[[p]], 'TSS_heatmap_', p, '_peaks.png', sep=''), plot=plt, dpi=320)))
-        rm(tagMatrix)
-        invisible(capture.output(gc()))
+        dbObj.total <- dba.peakset(dbObj.noblacklist, consensus=c(DBA_CONDITION, DBA_REPLICATE), minOverlap=0.66)
+      }
+      # resulting consensus between callers
+      dbObj.caller_consensus <- dba(dbObj.total, mask=dbObj.total$masks$Consensus, minOverlap=1)
+      if (length(unique(dbObj$samples$Replicate)) > 1){
+        # Get consensus between replicates for each condition (peaks must be overlapping in at least 2 replicates)
+        dbObj.final <- dba.peakset(dbObj.caller_consensus, consensus=c(DBA_CONDITION), minOverlap=rep_overlaps)
+        maskname <- names(dbObj.final$masks)[grepl('Replicate.1-2', names(dbObj.final$masks))]
+        # resulting consensus between replicates
+        if (length(maskname) == 1){
+          dbObj.consensus <- dba(dbObj.final, mask=dbObj.final$masks[[maskname]], minOverlap=1)
+        }else if (length(maskname) == 2){
+          dbObj.consensus <- dba(dbObj.final, mask=(dbObj.final$masks[[maskname[1]]] | dbObj.final$masks[[maskname[2]]]), minOverlap=1)
+        }
+      }else{
+        dbObj.consensus <- dbObj.caller_consensus
+      }
+    }else{
+      if (length(unique(dbObj$samples$Replicate)) > 1){
+        # consensus between replicates
+        dbObj.total <- dba.peakset(dbObj.noblacklist, consensus=c(DBA_CONDITION), minOverlap=rep_overlaps)
+        maskname <- names(dbObj.total$masks)[grepl('Replicate.1-2', names(dbObj.total$masks))]
+        if (length(maskname) == 1){
+          dbObj.consensus <- dba(dbObj.total, mask=dbObj.total$masks[[maskname]], minOverlap=1)
+          dbObj.caller_consensus <- dbObj.consensus
+        }else if (length(maskname) == 2){
+          dbObj.consensus <- dba(dbObj.total, mask=(dbObj.total$masks[[maskname[1]]] | dbObj.total$masks[[maskname[2]]]), minOverlap=1)
+          dbObj.caller_consensus <- dbObj.consensus
+        }
+      } else {
+        # When only 1 peak caller and 1 replicate available
+        dbObj.total <- dbObj.noblacklist
+        dbObj.consensus <- dbObj.noblacklist
+        dbObj.caller_consensus <- dbObj.noblacklist
+        
       }
     }
-  },error = function(e)
-  {
-    message(e)
+    cat("\nConsensus of peak callers:\n")
+    print(dbObj.caller_consensus)
+    cat("\nFinal consensus from replicates:\n")
+    print(dbObj.consensus)
+  
+    # # Add fragment sizes to new objects (helps to later run affinity analysis)
+    # for (c in unique(dbObj$samples$Condition)){
+    #   for (i in 1:length(dbObj.caller_consensus$mask[[c]])){
+    #     if (dbObj.caller_consensus$mask[[c]][[i]]){
+    #       dbObj.caller_consensus$config$fragmentSize[i] <- frag_sizes[[paste0(c, ':', i)]]
+    #     }
+    #   }
+    # }
+    dbObj.caller_consensus$config$fragmentSize <- unlist(unname(frag_sizes))
+    
+    for (c in unique(dbObj$samples$Condition)){
+      for (i in 1:length(dbObj.consensus$mask[[c]])){
+        if (dbObj.consensus$mask[[c]][[i]]){
+          dbObj.consensus$config$fragmentSize[i] <- floor(mean(as.integer(frag_sizes[str_detect(names(frag_sizes), pattern=c)])))
+        }
+      }
+    }
+    
+    # Re-sort colours if condition orders changed after consensus (occurs when one condition has only 1 replicate, consensus must be added manually...)
+    # dbObj.consensus <- dba(dbObj.final, mask=(dbObj.final$masks$`Replicate.1-2` | dbObj.final$masks$CONDITION_WITH_ONE_REPLICATE), minOverlap=1)
+    temp <- list()
+    for (i in 1:length(conditions_colour_code)){
+      temp[names(conditions_colour_code[which(names(conditions_colour_code) == dba.show(dbObj.consensus)$Condition[i])])] <- conditions_colour_code[which(names(conditions_colour_code) == dba.show(dbObj.consensus)$Condition[i])]
+    }
+    conditions_colour_code <- temp
+  
+  },
+  error = function(e) {
+    message("Error occurred: ", conditionMessage(e))
+  }, 
+  finally = {
+    if (!is.null(dev.list())) dev.off()
+    invisible(capture.output(gc()))
+    
+    #sink()                  # stop messages
+    sink()                  # stop normal output
+    close(con)
   }
+  
 )
-invisible(capture.output(gc()))
 
-# Plot TSS profile of peaks
+con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt"), sep=''), open = "at")
+sink(con, split = FALSE) 
+
+# Annotating differential/similar peaks
 tryCatch(
   {
-    if (length(unique(dba.show(dbObj.consensus)$Condition)) == 3){
-      plt <- plotAvgProf(tagMatrices[1:3], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
-        scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[1:3]) +
-        scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[1:3])
-      invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_unique-peaks.png', sep=''), plot=plt, dpi=320)))
-      invisible(capture.output(gc()))
-      plt <- plotAvgProf(tagMatrices[4:6], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
-        scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[4:6]) +
-        scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[4:6])
-      invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_pairs-peaks.png', sep=''), plot=plt, dpi=320)))
-      invisible(capture.output(gc()))
+
+    # Consensus peaks from all conditions (all relevant peaks)
+    consensus_peaks <- dba.peakset(dbObj.consensus, bRetrieve=TRUE)
+    
+    result_dirs <- list()
+    for (p in unique(dba.show(dbObj.consensus)$Condition)){
+      result_dirs[[p]] <- paste(result_dir, p, "/", sep='')
+      if (!file.exists(result_dirs[[p]])) {
+        dir.create(result_dirs[[p]])
+      }
     }
-    else{
-      plt <- plotAvgProf(tagMatrices, xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
-        scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
-        scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
-      invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_peaks.png', sep=''), plot=plt, dpi=320)))
-      invisible(capture.output(gc()))
+    
+    # Output consensus peaksets
+    raw_peaks <- list()
+    for (c in unique(dba.show(dbObj.consensus)$Condition)){
+      p <- dba.peakset(dbObj.consensus, dbObj.consensus$masks[[c]], bRetrieve=TRUE)
+      write.table(as.data.frame(p), file=paste(result_dirs[[c]], c, '_consensus.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+      raw_peaks[[c]] <- p
     }
-    plt <- plotAvgProf(tagMatrices[['Shared']], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
-      scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[length(conditions_colour_code)]) +
-      scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[length(conditions_colour_code)])
-    invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_shared-peaks.png', sep=''), plot=plt, dpi=320)))
+    
+    # ========= Get Annotations =========
+    peakAnnoList <- list()
+    for (p in names(raw_peaks)){
+      cat("\nAnnotating", p, ' consensus\n')
+      anno <- annotatePeak(raw_peaks[[p]], 
+                           TxDb=anno_ref$txdb,
+                           annoDb=anno_ref$annoDb,
+                           level=opt$annotation_level,
+                           tssRegion=c(-3000, 3000)
+      )
+      peakAnnoList[[p]] <- anno
+      cat("\n",length(anno@anno), "annotated out of", length(raw_peaks[[p]]), p, "peaks\n")
+      write.table(anno@anno, file=paste(result_dirs[[p]], p, '_consensus_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+    }
+    
+    if (length(dbObj.consensus$masks$All) > 1){
+      # Differentially bound peaks between conditions (peaks unique to each condition)
+      differential_peaks <- dba.overlap(dbObj.consensus, dbObj.consensus$masks$All, DataType=DBA_DATA_GRANGES)
+      unique_peaks <- list()
+      for (c in unique(dba.show(dbObj.consensus)$Condition)){
+        unique_peaks[[c]] <- differential_peaks[[which(unique(dba.show(dbObj.consensus)$Condition) == c)]]
+        cat("\n", c, "has", length(unique_peaks[[c]]), "unique peaks.\n")
+      }
+      # Peaks shared between all conditions
+      shared_peaks <- list()
+      shared_peaks[["Shared"]] <- differential_peaks$inAll
+      cat("\n", length(shared_peaks[["Shared"]]), "all shared peaks.\n")
+      write.table(as.data.frame(p), file=paste(result_dirs[[c]], '../Shared_consensus.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+      anno <- annotatePeak(shared_peaks[["Shared"]], 
+                           TxDb=anno_ref$txdb,
+                           annoDb=anno_ref$annoDb,
+                           level=opt$annotation_level,
+                           tssRegion=c(-3000, 3000)
+      )
+      cat("\n", length(anno@anno), "annotated out of", length(shared_peaks[['Shared']]), "shared peaks\n")
+      write.table(anno@anno, file=paste(result_dirs[[c]], '../Shared_consensus_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+      
+      
+      if (length(unique(dbObj$samples$Condition)) == 3){
+        for (c in unique(dba.show(dbObj.consensus)$Condition)){
+          i <- which(unique(dba.show(dbObj.consensus)$Condition) == c) + 3
+          pair <- unique(dba.show(dbObj.consensus)$Condition)[which(unique(dba.show(dbObj.consensus)$Condition) != c)]
+          unique_peaks[[paste(pair, collapse='_and_')]] <- differential_peaks[[which(unique(dba.show(dbObj.consensus)$Condition) == c) + 3]]
+          conditions_colour_code[[paste(pair, collapse='_and_')]] <- colours[i]
+          cat("\n", paste(pair, collapse='_and_'), "have", length(unique_peaks[[paste(pair, collapse='_and_')]]), "shared peaks.\n")
+        }
+      }
+    } else {
+      cat("\nnOnly 1 condition, cannot perform a differential analysis...\n")
+      for (c in unique(dba.show(dbObj.consensus)$Condition)){
+        unique_peaks[[c]] <- dbObj.consensus$peaks[[1]]
+        cat("\n", c, "has", dim(unique_peaks[[c]])[[1]], "unique peaks.\n")
+      }
+      differential_peaks <- list()
+      shared_peaks <- list()
+      sink()                  # stop normal output
+      close(con)
+      quit()
+    }
+
+  },
+  error = function(e) {
+    message("Error occurred: ", conditionMessage(e))
+  }, 
+  finally = {
+    if (!is.null(dev.list())) dev.off()
     invisible(capture.output(gc()))
-    rm(tagMatrices)
-    rm(plt)
-  },error = function(e)
-  {
-    message(e)
+    
+    #sink()                  # stop messages
+    sink()                  # stop normal output
+    close(con)
   }
+  
 )
-invisible(capture.output(gc()))
+
+# Plot UpSet
+tryCatch(
+  {
+  upsetlist <- list()
+  for (p in names(peakAnnoList)) {
+    upsetlist[[p]] <- peakAnnoList[[p]]@anno$SYMBOL
+  }
+  upset_colors <- list()
+  for (n in names(peakAnnoList)){
+    upset_colors[[ conditions_colour_code[[n]] ]] <- length(unique(peakAnnoList[[n]]@anno$SYMBOL))
+  }
+  upset_colors <- sort(unlist(upset_colors), decreasing=TRUE)
+  
+  ## OUTPUTTING UPSETPLOT TO PDF IS A KNOWN PAIN POINT, USE HIGH RES PNG FOR THIS FIGURE...
+  # pdf(paste(result_dir, 'overlaps.pdf', sep=''),
+  #   width  = 8.3/2.54,
+  #   height = 8/2.54,
+  #   pointsize = 8
+  # )
+  png(paste(result_dir, 'consensus_annotated-genes_upsetplot.png', sep=''),
+     width = 1920,
+     height = 1080,
+     res=300
+  )
+  
+  #if (length(upsetlist) > 1){
+    
+    upset(fromList(upsetlist), 
+          order.by = "freq", 
+          nsets = length(names(peakAnnoList)),
+          sets.bar.color = names(upset_colors),
+          empty.intersections = "on",
+          set_size.show = TRUE,
+          set_size.angles = 0,
+          set_size.scale_max = dim(fromList(upsetlist))[[1]]*1.25,
+          sets.x.label = "Gene Set Size",
+          mainbar.y.label = "Intersection Size of Gene Sets",
+          mb.ratio = c(0.7, 0.3)
+    )
+    grid.text("Consensus Peaksets Annotated Genes",x = 0.65, y=0.95, gp=gpar(fontsize=10))
+    dev.off()
+    #invisible(capture.output(gc()))
+  #}
+  
+  },
+  error = function(e) {
+    message("Error occurred: ", conditionMessage(e))
+  }, 
+  finally = {
+    if (!is.null(dev.list())) dev.off()
+    invisible(capture.output(gc()))
+  }
+  
+)
+
+
+  
+  if (length(unique(dbObj$samples$Condition)) == 4){
+    e = c(
+      "A"=length(unique_peaks[[names(unique_peaks)[1]]]), 
+      "B"=length(unique_peaks[[names(unique_peaks)[2]]]),
+      "C"=length(unique_peaks[[names(unique_peaks)[3]]]),
+      "D"=length(unique_peaks[[names(unique_peaks)[4]]]),
+      "A&B"=length(differential_peaks$AandB),
+      "A&C"=length(differential_peaks$AandC),
+      "A&D"=length(differential_peaks$AandD),
+      "B&C"=length(differential_peaks$BandC),
+      "B&D"=length(differential_peaks$BandD),
+      "C&D"=length(differential_peaks$CandD),
+      "A&B&C"=length(differential_peaks$notD),
+      "A&B&D"=length(differential_peaks$notC),
+      "A&C&D"=length(differential_peaks$notB),
+      "B&C&D"=length(differential_peaks$notA),
+      "A&B&C&D"=length(shared_peaks[[names(shared_peaks)[1]]])
+    )
+    names(e) = c(names(unique_peaks)[1], names(unique_peaks)[2], names(unique_peaks)[3], names(unique_peaks)[4],
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2], sep=''),
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[3], sep=''),
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[4], sep=''),
+                 paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[3], sep=''),
+                 paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[4], sep=''),
+                 paste(names(unique_peaks)[3] , '&' , names(unique_peaks)[4], sep=''),
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[3], sep=''),
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[4], sep=''),
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep=''),
+                 paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep=''),
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep='')
+    )
+    for (c in (length(unique(dbObj$samples$Condition))+1):(length(names(e))-1) ){
+      combo <- str_replace_all(names(e)[c], "&", "_and_")
+      unique_peaks[[combo]] <- differential_peaks[[c, ]]
+      conditions_colour_code[[combo]] <- colours[i]
+      cat("\n", combo, "have", length(unique_peaks[[combo]]), "shared peaks.\n")
+    }
+  }
+  conditions_colour_code[['Shared']] <- "grey"
+  
+  
+  
+  # Plots
+  if (length(unique(dba.show(dbObj.consensus)$Condition)) == 2){
+    grid.newpage()
+    g = draw.pairwise.venn(area1=length(unique_peaks[[names(unique_peaks)[1]]])+length(shared_peaks[[names(shared_peaks)[1]]]), 
+                           area2=length(unique_peaks[[names(unique_peaks)[2]]])+length(shared_peaks[[names(shared_peaks)[1]]]),
+                           cross.area=length(shared_peaks[[names(shared_peaks)[1]]]),
+                           category=names(unique_peaks),
+                           fill=unname(unlist(conditions_colour_code))[1:2],
+                           col=NA,
+                           #cat.pos=c(0,0),
+                           cat.dist = c(0,0))
+    plt <- grid.arrange(gTree(children=g), top="Binding Site Overlaps", bottom=gsub('/', '', opt$result_dir))
+    #invisible(capture.output(ggsave(filename=paste(result_dir, 'consensus_peaks_venn.png', sep=''), plot=plt)))
+    rm(g)
+  }else if (length(unique(dba.show(dbObj.consensus)$Condition)) == 3){
+    e = c(
+      "A"=length(unique_peaks[[names(unique_peaks)[1]]]), 
+      "B"=length(unique_peaks[[names(unique_peaks)[2]]]),
+      "C"=length(unique_peaks[[names(unique_peaks)[3]]]),
+      "A&B"=length(differential_peaks$notC),
+      "B&C"=length(differential_peaks$notA),
+      "A&C"=length(differential_peaks$notB),
+      "A&B&C"=length(shared_peaks[[names(shared_peaks)[1]]])
+    )
+    names(e) = c(names(unique_peaks)[1], names(unique_peaks)[2], names(unique_peaks)[3],
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2], sep=''),
+                 paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[3], sep=''),
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[3], sep=''),
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&' , names(unique_peaks)[3], sep='')
+    )
+    
+    #png(paste(output_prefix, 'raw_consensus_peaks.png', sep=""))
+    plt <- plot(euler(e), main=gsub('/', '', opt$result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
+    #invisible(capture.output(ggsave(filename=paste(result_dir, 'consensus_peaks_venn.png', sep=''), plot=plt)))
+    #invisible(capture.output(dev.off()))
+    rm(e)
+  }else if (length(unique(dba.show(dbObj.consensus)$Condition)) == 4){
+    e = c(
+      "A"=length(unique_peaks[[names(unique_peaks)[1]]]), 
+      "B"=length(unique_peaks[[names(unique_peaks)[2]]]),
+      "C"=length(unique_peaks[[names(unique_peaks)[3]]]),
+      "D"=length(unique_peaks[[names(unique_peaks)[4]]]),
+      "A&B"=length(differential_peaks$AandB),
+      "A&C"=length(differential_peaks$AandC),
+      "A&D"=length(differential_peaks$AandD),
+      "B&C"=length(differential_peaks$BandC),
+      "B&D"=length(differential_peaks$BandD),
+      "C&D"=length(differential_peaks$CandD),
+      "A&B&C"=length(differential_peaks$notD),
+      "A&B&D"=length(differential_peaks$notC),
+      "A&C&D"=length(differential_peaks$notB),
+      "B&C&D"=length(differential_peaks$notA),
+      "A&B&C&D"=length(shared_peaks[[names(shared_peaks)[1]]])
+    )
+    names(e) = c(names(unique_peaks)[1], names(unique_peaks)[2], names(unique_peaks)[3], names(unique_peaks)[4],
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2], sep=''),
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[3], sep=''),
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[4], sep=''),
+                 paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[3], sep=''),
+                 paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[4], sep=''),
+                 paste(names(unique_peaks)[3] , '&' , names(unique_peaks)[4], sep=''),
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[3], sep=''),
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[4], sep=''),
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep=''),
+                 paste(names(unique_peaks)[2] , '&' , names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep=''),
+                 paste(names(unique_peaks)[1] , '&' , names(unique_peaks)[2] , '&', names(unique_peaks)[3] , '&', names(unique_peaks)[4], sep='')
+    )
+    
+    #png(paste(output_prefix, 'raw_consensus_peaks.png', sep=""))
+    plt <- plot(euler(e), main=gsub('/', '', opt$result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
+    #invisible(capture.output(ggsave(filename=paste(result_dir, 'consensus_peaks_venn.png', sep=''), plot=plt)))
+    #invisible(capture.output(dev.off()))
+    rm(e)
+  }
+  
+  
+  invisible(capture.output(gc()))
+  
+  png(paste(supplementary_dir, 'consensus_heatmap.png', sep=''))
+  dba.plotHeatmap(dbObj.consensus)
+  #invisible(capture.output( dev.off() ))
+  invisible(capture.output(gc()))
+  
+  
+  tryCatch(
+    {
+      plt <- dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours))
+      #plt$main <- "PCA"
+      invisible(capture.output(ggsave(filename=paste(supplementary_dir, 'pca_condition.png', sep=''), plot=grid.arrange(plt))))
+      
+      if(length(unique(dbObj$samples$Factor)) > 1){
+        plt <- dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_FACTOR, label=DBA_ID)
+        invisible(capture.output( ggsave(filename=paste(supplementary_dir, 'pca_factor.png', sep=''), plot=grid.arrange(plt)) ))
+        #invisible(capture.output(dev.off()))
+      }
+    },error = function(e)
+    {
+      message(e)
+    }
+  )
+  invisible(capture.output(gc()))
+  
+  # Plot peaks over genome
+  tryCatch(
+    {
+      plt <- covplot(c(unique_peaks[1:length(unique(dbObj$samples$Condition))], shared_peaks), title="Peaks over Genome") + 
+        scale_color_manual(values=rev(c(unlist(unname(conditions_colour_code[1:length(unique(dbObj$samples$Condition))])), 'grey'))) + 
+        scale_fill_manual(values=rev(c(unlist(unname(conditions_colour_code[1:length(unique(dbObj$samples$Condition))])), 'grey')))
+      invisible(capture.output(ggsave(filename=paste(result_dir, 'genome_peaks.png', sep=''), plot=plt, dpi=320)))
+      plt <- plt + facet_grid(chr ~ .id)
+      invisible(capture.output(ggsave(filename=paste(result_dir, 'genome_peaks_split.png', sep=''), plot=plt, dpi=320)))
+      rm(plt)
+    },error = function(e)
+    {
+      message(e)
+    }
+  )
+  invisible(capture.output(gc()))
+  
+  peaks <- c(unique_peaks, shared_peaks)
+  
+  for (p in names(peaks)){
+    result_dirs[[p]] <- paste(result_dir, p, "/", sep='')
+    if (!file.exists(result_dirs[[p]])) {
+      dir.create(result_dirs[[p]])
+    }
+  }
+  
+  # Output peaks to bed files
+  for (p in names(peaks)){
+    write.table(as.data.frame(peaks[[p]]), file=paste(result_dirs[[p]], p, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+  }
+  
+  # Plot peaks related to TSS sites
+  tryCatch(
+    {
+      tagMatrices <- list()
+      for (p in names(peaks)){
+        tagMatrix <- getTagMatrix(peaks[[p]], windows=promoters)
+        if (length(tagMatrix) == 0){
+          cat("No peaks at promoter sites for", p, "\n")
+          rm(tagMatrix)
+          #break
+        }else{
+          tagMatrices[[p]] <- tagMatrix
+          cat(dim(tagMatrix)[[1]], "peaks at promoter sites for", p, "\n")
+          plt <- tagHeatmap(tagMatrix, 
+                            xlab="bp at TSS", 
+                            ylab="Peaks", 
+                            title=paste(dim(tagMatrix)[[1]],'Peaks at Promoters', p, sep=" - "),
+                            palette=if_else(conditions_colour_code[[p]] == "#00BFC4", 'Greens', 'Reds'), 
+          )
+          invisible(capture.output(ggsave(paste(result_dirs[[p]], 'TSS_heatmap_', p, '_peaks.png', sep=''), plot=plt, dpi=320)))
+          rm(tagMatrix)
+          invisible(capture.output(gc()))
+        }
+      }
+    },error = function(e)
+    {
+      message(e)
+    }
+  )
+  invisible(capture.output(gc()))
+  
+  # Plot TSS profile of peaks
+  tryCatch(
+    {
+      if (length(unique(dba.show(dbObj.consensus)$Condition)) == 3){
+        plt <- plotAvgProf(tagMatrices[1:3], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
+          scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[1:3]) +
+          scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[1:3])
+        invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_unique-peaks.png', sep=''), plot=plt, dpi=320)))
+        invisible(capture.output(gc()))
+        plt <- plotAvgProf(tagMatrices[4:6], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
+          scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[4:6]) +
+          scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[4:6])
+        invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_pairs-peaks.png', sep=''), plot=plt, dpi=320)))
+        invisible(capture.output(gc()))
+      }
+      else{
+        plt <- plotAvgProf(tagMatrices, xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
+          scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))) +
+          scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)])))
+        invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_peaks.png', sep=''), plot=plt, dpi=320)))
+        invisible(capture.output(gc()))
+      }
+      plt <- plotAvgProf(tagMatrices[['Shared']], xlim=c(-3000, 3000), conf=0.95, resample=1000, ncpus = parallel::detectCores()/2) +
+        scale_color_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[length(conditions_colour_code)]) +
+        scale_fill_manual(values=unname(unlist(conditions_colour_code[names(tagMatrices)]))[length(conditions_colour_code)])
+      invisible(capture.output(ggsave(paste(result_dir, 'TSS_profile_shared-peaks.png', sep=''), plot=plt, dpi=320)))
+      invisible(capture.output(gc()))
+      rm(tagMatrices)
+      rm(plt)
+    },error = function(e)
+    {
+      message(e)
+    }
+  )
+  invisible(capture.output(gc()))
+  
+  },
+  error = function(e) {
+    message("Error occurred: ", conditionMessage(e))
+  }, 
+  finally = {
+    if (!is.null(dev.list())) dev.off()
+    invisible(capture.output(gc()))
+  }
+  
+)
+  
 
 # ========= Get Annotations =========
 peakAnnoList <- list()
