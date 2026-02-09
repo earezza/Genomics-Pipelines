@@ -193,14 +193,15 @@ make_anno_piebar <- function(df, type='pie', title="Distribution of Sites", spec
     plt <- ggplot(df_plot, aes(x=reorder(Region, -Count), y=Count, fill=Region)) + 
       geom_bar(stat='identity') +
       custom_colors_fill +
-      geom_text(stat='identity', aes(label=Count), vjust=-1) +
+      geom_text(stat='identity', aes(label=Count), vjust=-1, size = 1.8) +
       theme_classic() +
-      theme(axis.text.x = element_text(size = 10, color = "black")) +
-      theme(axis.text.y = element_text(size = 10, color = "black")) +
-      theme(axis.title = element_text(size = 14, color = "black")) +
+      theme(axis.text.x = element_text(size = 5, color = "black")) +
+      theme(axis.text.y = element_text(size = 5, color = "black")) +
+      theme(axis.title = element_text(size = 8, color = "black")) +
+      scale_y_continuous(limits = c(0, max(df_plot$Count) * 1.1)) +
       guides(fill="none") +
       ggtitle(title) + 
-      theme(plot.title = element_text(size = 14))
+      theme(plot.title = element_text(size = 10))
     plt$labels$x <- "Region"
     plt$labels$y <- "Counts"
   }
@@ -212,14 +213,14 @@ make_anno_piebar <- function(df, type='pie', title="Distribution of Sites", spec
       theme_void() +
       guides(fill='legend') +
       ggtitle(title) + 
-      theme(plot.title = element_text(size = 18)) +
+      theme(plot.title = element_text(size = 10)) +
       theme(plot.background = element_rect(color = 'white', fill = "white")) + 
       theme(plot.margin = margin(0,1,0,0, "cm")) +
       theme(plot.title = element_text(hjust = 0.5)) + 
       theme(
-        legend.key.size = unit(1, 'cm'),
-        legend.title = element_text(size = 14),
-        legend.text = element_text(size = 12)
+        legend.key.size = unit(0.66, 'cm'),
+        legend.title = element_text(size = 8),
+        legend.text = element_text(size = 6)
       )
   }
   return(plt)
@@ -473,52 +474,70 @@ if (!file.exists(supplementary_dir)) {
   dir.create(supplementary_dir)
 }
 
-
-# Output log to file
-con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt") , sep=''), open = "wt")
-sink(con, split = FALSE)                 # normal output
-#sink(con, type = "message", split = TRUE)  # messages
-
-cat("Run options:\n")
-for (i in which(names(opt) != "help")) {
-  cat(names(opt)[i], '=', paste(opt)[i], "\n")
-}
-cat("log2FC of", opt$lfc, "equates to FC of", round(2^0.585, 2), '\n')
-
-if (!(opt$assembly %in% c('mm10', 'mm9', 'hg38', 'hg19', 'rn6'))){
-  cat(opt$assembly, "not a valid choice. Only supports mm9, mm10, hg19, hg38, rn6 assemblies.")
-  sink()                  # stop normal output
-  close(con)
-  quit()
-}
-
-# # ========= START OCCUPANCY ANALYSIS =========
-# Here, peaks declared by peak caller(s) are used to identify
-# differential expression between conditions. Overlapping peaks 
-# between replicates/conditions are determined by the range of the peaks. 
-# In this case, using occupancy alone for DE provides a less conservative
-# analysis for DE by simply considering where peaks exist.
-#
-# Following this, affinity analysis below can provide a more conservative
-# result for DE since the read counts are accounted for (peak shapes).
-
-
-# ========= SETUP RUN AND VARIABLES =========
-# ========= Load peaksets =========
-samplesheet <- basename(opt$file)
-sample_table <- read.csv(samplesheet)
-#output_prefix <- gsub('.csv', '_', paste(result_dir, samplesheet, sep=""))
-#output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
-
-# Get annotations reference and respective promoter regions
-anno_ref <- load_annotation(opt$assembly, opt$database)
-promoters <- getPromoters(TxDb=anno_ref$txdb, upstream=3000, downstream=3000)
-
-# Variables to get average fragment size for each sample, used later for counts
-fragment_size <- 1:length(read.csv(samplesheet)$SampleID)
-frag_sizes <- list()
-sample_reps <- unique(paste0(sample_table$Condition, ':', sample_table$Replicate))
-sample_reps_split <- str_split(sample_reps, pattern = ':')
+tryCatch(
+  {
+    # Output log to file
+    con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt") , sep=''), open = "wt")
+    sink(con, split = FALSE)                 # normal output
+    #sink(con, type = "message", split = TRUE)  # messages
+    
+    cat("Run options:\n")
+    for (i in which(names(opt) != "help")) {
+      cat(names(opt)[i], '=', paste(opt)[i], "\n")
+    }
+    cat("log2FC of", opt$lfc, "equates to FC of", round(2^0.585, 2), '\n')
+    
+    if (!(opt$assembly %in% c('mm10', 'mm9', 'hg38', 'hg19', 'rn6'))){
+      cat(opt$assembly, "not a valid choice. Only supports mm9, mm10, hg19, hg38, rn6 assemblies.")
+      sink()                  # stop normal output
+      close(con)
+      quit()
+    }
+    
+    cat(
+    "\n\n================== START OCCUPANCY ANALYSIS ==================
+    Here, peaks declared by peak caller(s) are used to identify
+    differential binding (DB) between conditions. Overlapping peaks
+    between replicates/conditions are determined by the range of the peaks.
+    In this case, using occupancy alone for DE provides a less conservative
+    analysis for DB by simply considering where peaks exist.
+    
+    Following this (if run), affinity analysis can provide more conservative and
+    statistically validated results for DB since the enrichment of read counts
+    are accounted for (peak shapes and signal strength) among the identified peaks
+    from the occupancy analysis.\n\n"
+    )
+    
+    
+    # ========= SETUP RUN AND VARIABLES =========
+    # ========= Load peaksets =========
+    samplesheet <- basename(opt$file)
+    sample_table <- read.csv(samplesheet)
+    #output_prefix <- gsub('.csv', '_', paste(result_dir, samplesheet, sep=""))
+    #output_prefix <- gsub("diffbind_samplesheet_", "", output_prefix)
+    
+    # Get annotations reference and respective promoter regions
+    anno_ref <- load_annotation(opt$assembly, opt$database)
+    promoters <- getPromoters(TxDb=anno_ref$txdb, upstream=3000, downstream=3000)
+    
+    # Variables to get average fragment size for each sample, used later for counts
+    fragment_size <- 1:length(read.csv(samplesheet)$SampleID)
+    frag_sizes <- list()
+    sample_reps <- unique(paste0(sample_table$Condition, ':', sample_table$Replicate))
+    sample_reps_split <- str_split(sample_reps, pattern = ':')
+    
+  },
+  error = function(e) {
+    message("Error occurred: ", conditionMessage(e))
+    if (!is.null(dev.list())) dev.off()
+    invisible(capture.output(gc()))
+    
+    #sink()                  # stop messages
+    sink()                  # stop normal output
+    close(con)
+    q()
+  }
+)
 
 
 # Load peaks, filter blacklisted regions, setup variables, plot some QC
@@ -565,7 +584,7 @@ tryCatch(
                                    bUsePval=FALSE
                  )
     )
-    cat("\nRaw peaksets:\n")
+    cat("\n\n---------- Raw peaksets ----------\n\n")
     print(dbObj)
     
     # Colour codes for consistency in plots (add more colours if needed)
@@ -610,10 +629,10 @@ tryCatch(
         if (!opt$blacklisted_keep){
           dbObj.noblacklist <- dba.blacklist(dbObj, blacklist=TRUE, greylist=FALSE)
           blacklisted_peaks <- dba.blacklist(dbObj.noblacklist, Retrieve=DBA_BLACKLISTED_PEAKS)
-          cat("\nAfter blacklisted regions removed:\n")
+          cat("\n\n---------- After blacklisted regions removed ----------\n\n")
           print(dbObj.noblacklist)
         }else{
-          cat("\nBlacklisted regions not removed, proceeding with raw peaksets...\n")
+          cat("\n\n---------- Blacklisted regions not removed, proceeding with raw peaksets...----------\n\n")
           dbObj.noblacklist <- dbObj
         }
       },error = function(e)
@@ -621,11 +640,11 @@ tryCatch(
         message(e)
       }
     )
-    if (!exists("dbObj.noblacklist")) {
-      cat("\nBlacklisted regions not removed, proceeding with raw peaksets...\n")
-      dbObj.noblacklist <- dbObj
-      print(dbObj.noblacklist)
-    }
+    # if (!exists("dbObj.noblacklist")) {
+    #   cat("\nBlacklisted regions not removed, proceeding with raw peaksets...\n")
+    #   dbObj.noblacklist <- dbObj
+    #   print(dbObj.noblacklist)
+    # }
     
     #png(paste(supplementary_dir, 'raw_noblacklist_heatmap.png', sep=''))
     dba.plotHeatmap(dbObj.noblacklist, margin=15, cexRow = 0.8, cexCol = 0.8)
@@ -724,9 +743,9 @@ tryCatch(
         
       }
     }
-    cat("\nConsensus of peak callers:\n")
+    cat("\n\n---------- Consensus of peak callers ----------\n\n")
     print(dbObj.caller_consensus)
-    cat("\nFinal consensus from replicates:\n")
+    cat("\n\n---------- Final consensus from replicates ----------\n\n")
     print(dbObj.consensus)
   
     # # Add fragment sizes to new objects (helps to later run affinity analysis)
@@ -774,8 +793,13 @@ con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt"), 
 sink(con, split = FALSE) 
 
 # Annotating differential/similar peaks
+cat("\n\n---------- Annotating Peaks ----------\n")
 tryCatch(
   {
+    pdf(paste(result_dir, 'annotated-sites-distributions.pdf', sep=""),
+        width  = 8.3/2.54,
+        height = 8/2.54,
+        pointsize = 8)  # or 9–10)
 
     # Consensus peaks from all conditions (all relevant peaks)
     consensus_peaks <- dba.peakset(dbObj.consensus, bRetrieve=TRUE)
@@ -808,6 +832,10 @@ tryCatch(
       )
       peakAnnoList[[p]] <- anno
       cat("\n",length(anno@anno), "annotated out of", length(raw_peaks[[p]]), p, "peaks\n")
+      plt <- make_anno_piebar(as.data.frame(anno@anno), type='pie', title=paste0(p, "\n", "Distribution of Sites"), specific=TRUE, colours=paletteer_d("khroma::muted"))
+      print(plt)
+      plt <- make_anno_piebar(as.data.frame(anno@anno), type='bar', title=paste0(p, "\n", "Distribution of Sites"), specific=TRUE, colours=paletteer_d("khroma::muted"))
+      print(plt)
       write.table(anno@anno, file=paste(result_dirs[[p]], p, '_consensus_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
     }
     
@@ -830,7 +858,11 @@ tryCatch(
                            level=opt$annotation_level,
                            tssRegion=c(-3000, 3000)
       )
-      cat("\n", length(anno@anno), "annotated out of", length(shared_peaks[['Shared']]), "shared peaks\n")
+      cat("\n", length(anno@anno), "annotated out of", length(shared_peaks[['Shared']]), "shared peaks\n\n")
+      plt <- make_anno_piebar(as.data.frame(anno@anno), type='pie', title=paste0("Shared\n", "Distribution of Sites"), specific=TRUE, colours=paletteer_d("khroma::muted"))
+      print(plt)
+      plt <-make_anno_piebar(as.data.frame(anno@anno), type='bar', title=paste0("Shared\n", "Distribution of Sites"), specific=TRUE, colours=paletteer_d("khroma::muted"))
+      print(plt)
       write.table(anno@anno, file=paste(result_dirs[[c]], '../Shared_consensus_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
       
       
@@ -872,32 +904,32 @@ tryCatch(
 )
 
 # Plot UpSet
+## OUTPUTTING UPSETPLOT TO PDF IS A KNOWN PAIN POINT, USE HIGH RES PNG FOR THIS FIGURE...
 tryCatch(
   {
-  upsetlist <- list()
-  for (p in names(peakAnnoList)) {
-    upsetlist[[p]] <- peakAnnoList[[p]]@anno$SYMBOL
-  }
-  upset_colors <- list()
-  for (n in names(peakAnnoList)){
-    upset_colors[[ conditions_colour_code[[n]] ]] <- length(unique(peakAnnoList[[n]]@anno$SYMBOL))
-  }
-  upset_colors <- sort(unlist(upset_colors), decreasing=TRUE)
-  
-  ## OUTPUTTING UPSETPLOT TO PDF IS A KNOWN PAIN POINT, USE HIGH RES PNG FOR THIS FIGURE...
-  # pdf(paste(result_dir, 'overlaps.pdf', sep=''),
-  #   width  = 8.3/2.54,
-  #   height = 8/2.54,
-  #   pointsize = 8
-  # )
-  png(paste(result_dir, 'consensus_annotated-genes_upsetplot.png', sep=''),
-     width = 1920,
-     height = 1080,
-     res=300
-  )
-  
-  #if (length(upsetlist) > 1){
+    upsetlist <- list()
+    for (p in names(peakAnnoList)) {
+      upsetlist[[p]] <- peakAnnoList[[p]]@anno$SYMBOL
+    }
+    upset_colors <- list()
+    for (n in names(peakAnnoList)){
+      upset_colors[[ conditions_colour_code[[n]] ]] <- length(unique(peakAnnoList[[n]]@anno$SYMBOL))
+    }
+    upset_colors <- sort(unlist(upset_colors), decreasing=TRUE)
     
+    # pdf(paste(result_dir, 'overlaps.pdf', sep=''),
+    #   width  = 8.3/2.54,
+    #   height = 8/2.54,
+    #   pointsize = 8
+    # )
+    png(paste(result_dir, 'consensus_annotated-genes_upsetplot.png', sep=''),
+       width = 1920,
+       height = 1080,
+       res=300
+    )
+    
+    #if (length(upsetlist) > 1){
+      
     upset(fromList(upsetlist), 
           order.by = "freq", 
           nsets = length(names(peakAnnoList)),
@@ -914,7 +946,7 @@ tryCatch(
     dev.off()
     #invisible(capture.output(gc()))
   #}
-  
+    
   },
   error = function(e) {
     message("Error occurred: ", conditionMessage(e))
@@ -925,7 +957,6 @@ tryCatch(
   }
   
 )
-
 
   
   if (length(unique(dbObj$samples$Condition)) == 4){
@@ -1500,10 +1531,11 @@ if (opt$occupancy_only){
 }
 
 # ========= START OF AFFINITY ANALYSIS =========
-# The consensus peaks determined above are used here
-# to focus on relevant peak regions only. This way, read
-# counts for consensus peaks are analyzed for significance 
-# in DE.
+# The consensus peaks determined in occupancy analysis are used here to focus
+# on relevant peak regions only. This way, read counts for peaks are analyzed 
+#for statistical significance in DB. 
+# DESeq2, edgeR, and combined results are produced.
+
 cat("\n=====  Affinity Analysis =====\n")
 result_dir <- paste(opt$result_dir, 'Affinity_Analysis/', sep='')
 # Make new directory for analysis
