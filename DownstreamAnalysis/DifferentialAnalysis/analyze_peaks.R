@@ -95,7 +95,15 @@ load_annotation <- function(assembly, database){
   return(anno_ref)
 }
 
-make_anno_dotplot <- function(df, title="", ylabel="Description", colour="#4393C3", n=15){
+make_anno_dotplot <- function(df, title="", ylabel="Description", colour="#4393C3", n=15,
+                              title_size=16,
+                              text_size=2,
+                              axis_title_size=8,
+                              axis_x_size=10,
+                              axis_y_size=10,
+                              #legend_key_size=1.6,
+                              legend_title_size=14,
+                              legend_text_size=12){
   # Expects df input from clusterProfiler output as dataframe
   
   # Example usage:
@@ -120,8 +128,8 @@ make_anno_dotplot <- function(df, title="", ylabel="Description", colour="#4393C
     s <- str_remove(s, " - Mus musculus \\(house mouse\\)")
     df$Description[d] <- ""
     while (i < length(strsplit(s, ' ')[[1]]) + 1){
-      df$Description[d] <- paste(df$Description[d], paste(strsplit(s, ' ')[[1]][i:(i+4)], collapse = ' '), sep='\n')
-      i <- (i+5)
+      df$Description[d] <- paste(df$Description[d], paste(strsplit(s, ' ')[[1]][i:(i+3)], collapse = ' '), sep='\n')
+      i <- (i+4)
     }
     df$Description[d] <- gsub(" NA", "", df$Description[d])
     df$Description[d] <- substring(df$Description[d], 2, nchar(df$Description[d]))
@@ -136,10 +144,13 @@ make_anno_dotplot <- function(df, title="", ylabel="Description", colour="#4393C
                ),
     ) + 
     theme_classic() +
-    theme(axis.text.y = element_text(colour=rev(df$ycolour), face = "bold", size = 10),
-          axis.title.x = element_text(size = 14),
-          axis.text.x = element_text(size = 10, colour='black'),
-          axis.title.y = element_text(size = 14)
+    theme(axis.text.y = element_text(colour=rev(df$ycolour), face = "bold", size = axis_y_size),
+          axis.title.x = element_text(size = axis_x_size*1.4),
+          axis.text.x = element_text(size = axis_x_size, colour='black'),
+          axis.title.y = element_text(size = axis_y_size*1.4),
+          plot.title = element_text(size = title_size, face = "bold", hjust = 0.5),
+          legend.title = element_text(size = legend_title_size, face = "bold"),
+          legend.text = element_text(size = legend_text_size)
     ) +
     scale_color_gradient(low = "black", high = colour) +
     ggtitle(title)
@@ -313,59 +324,59 @@ make_anno_stackedbar <- function(df_list, title="Distribution of Sites", specifi
   return(plt)
 }
 
-make_dotplot <- function(df, 
-                         title="", 
-                         ylabel="Description", 
-                         colour="#56B1F7", 
-                         n=15,
-                         title_size,
-                         axis_title_size,
-                         axis_x_size,
-                         axis_y_size,
-                         legend_title_size,
-                         legend_text_size){
-  df$ycolour <- "black"
-  if ("ONTOLOGY" %in% colnames(df)){
-    df$Description <- paste(df$ONTOLOGY, df$Description, sep=' - ')
-    df$ycolour <- ifelse(grepl("BP -", df$Description), 'blue', df$ycolour)
-    df$ycolour <- ifelse(grepl("CC -", df$Description), 'red', df$ycolour)
-    df$ycolour <- ifelse(grepl("MF -", df$Description), 'darkgreen', df$ycolour)
-  }
-  df <- df[order(df$p.adjust, decreasing=FALSE),]
-  
-  # Re-format y-axis labels to not squish graph
-  for (d in 1:length(df$Description)){
-    i <- 1
-    s <- df$Description[d]
-    s <- str_remove(s, " - Mus musculus \\(house mouse\\)")
-    df$Description[d] <- ""
-    while (i < length(strsplit(s, ' ')[[1]]) + 1){
-      df$Description[d] <- paste(df$Description[d], paste(strsplit(s, ' ')[[1]][i:(i+5)], collapse = ' '), sep='\n')
-      i <- (i+6)
-    }
-    df$Description[d] <- gsub(" NA", "", df$Description[d])
-    df$Description[d] <- substring(df$Description[d], 2, nchar(df$Description[d]))
-  }
-  
-  # Plot
-  plt <- ggplot() +
-    geom_point(data=head(df, n=n),
-               aes(x = -log(p.adjust), 
-                   y = reorder(Description, -p.adjust), 
-                   colour = Count, 
-                   size = unname(unlist(sapply(GeneRatio, function(x) eval(parse(text=x)))))*100,
-               ),
-    ) + 
-    theme_classic() +
-    theme(axis.text.y = element_text(colour=rev(head(df$ycolour, n=n)))) +
-    scale_color_gradient(low = "black", high = colour) +
-    ggtitle(title) 
-  plt$labels$x <- "-log(p.adjust)"
-  plt$labels$y <- ylabel
-  plt$labels$size <- "GenePercentage"
-  plt$labels$colour <- "GeneCount"
-  return(plt)
-}
+# make_dotplot <- function(df, 
+#                          title="", 
+#                          ylabel="Description", 
+#                          colour="#56B1F7", 
+#                          n=15,
+#                          title_size,
+#                          axis_title_size,
+#                          axis_x_size,
+#                          axis_y_size,
+#                          legend_title_size,
+#                          legend_text_size){
+#   df$ycolour <- "black"
+#   if ("ONTOLOGY" %in% colnames(df)){
+#     df$Description <- paste(df$ONTOLOGY, df$Description, sep=' - ')
+#     df$ycolour <- ifelse(grepl("BP -", df$Description), 'blue', df$ycolour)
+#     df$ycolour <- ifelse(grepl("CC -", df$Description), 'red', df$ycolour)
+#     df$ycolour <- ifelse(grepl("MF -", df$Description), 'darkgreen', df$ycolour)
+#   }
+#   df <- df[order(df$p.adjust, decreasing=FALSE),]
+#   
+#   # Re-format y-axis labels to not squish graph
+#   for (d in 1:length(df$Description)){
+#     i <- 1
+#     s <- df$Description[d]
+#     s <- str_remove(s, " - Mus musculus \\(house mouse\\)")
+#     df$Description[d] <- ""
+#     while (i < length(strsplit(s, ' ')[[1]]) + 1){
+#       df$Description[d] <- paste(df$Description[d], paste(strsplit(s, ' ')[[1]][i:(i+5)], collapse = ' '), sep='\n')
+#       i <- (i+6)
+#     }
+#     df$Description[d] <- gsub(" NA", "", df$Description[d])
+#     df$Description[d] <- substring(df$Description[d], 2, nchar(df$Description[d]))
+#   }
+#   
+#   # Plot
+#   plt <- ggplot() +
+#     geom_point(data=head(df, n=n),
+#                aes(x = -log(p.adjust), 
+#                    y = reorder(Description, -p.adjust), 
+#                    colour = Count, 
+#                    size = unname(unlist(sapply(GeneRatio, function(x) eval(parse(text=x)))))*100,
+#                ),
+#     ) + 
+#     theme_classic() +
+#     theme(axis.text.y = element_text(colour=rev(head(df$ycolour, n=n)))) +
+#     scale_color_gradient(low = "black", high = colour) +
+#     ggtitle(title) 
+#   plt$labels$x <- "-log(p.adjust)"
+#   plt$labels$y <- ylabel
+#   plt$labels$size <- "GenePercentage"
+#   plt$labels$colour <- "GeneCount"
+#   return(plt)
+# }
 
 make_pheatmapplot <- function(anno, res, anno_type="GO", assembly='mm10', heat_colour="PiYG", num_terms=25, num_genes=50, lfc=0.6, dendro=TRUE, sort_genes=TRUE, title="", xlabel="Gene", ylabel="Term"){
   
@@ -475,7 +486,7 @@ option_list = list(
   make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
   make_option(c("-l", "--annotation_level"), type="character", default="transcript", help="Level parameter for annotatePeak, 'gene' or 'transcript'", metavar="character"),
   make_option(c("--combine_callers"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from callers instead of taking consensus peaks", metavar="logical"),
-  make_option(c("--combine_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from replicates instead of taking consensus peaks", metavar="logical"),
+  make_option(c("--combine_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from all replicates instead of taking consensus peaks", metavar="logical"),
   make_option(c("-b", "--blacklisted_keep"), type="logical", action="store_true", default=FALSE, help="Flag to keep blacklisted regions in raw peaks files", metavar="logical"),
   make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="double"),
   make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="double"),
@@ -508,10 +519,6 @@ if (!file.exists(result_dir)) {
   dir.create(result_dir)
 }
 
-supplementary_dir <- paste(result_dir, "Supplementary/", sep='')
-if (!file.exists(supplementary_dir)) {
-  dir.create(supplementary_dir)
-}
 
 tryCatch(
   {
@@ -524,7 +531,7 @@ tryCatch(
     for (i in which(names(opt) != "help")) {
       cat(names(opt)[i], '=', paste(opt)[i], "\n")
     }
-    cat("log2FC of", opt$lfc, "equates to FC of", round(2^0.585, 2), '\n')
+    cat("\nlog2FC of", opt$lfc, "equates to FC of", round(2^0.585, 2), '\n')
     
     if (!(opt$assembly %in% c('mm10', 'mm9', 'hg38', 'hg19', 'rn6'))){
       cat(opt$assembly, "not a valid choice. Only supports mm9, mm10, hg19, hg38, rn6 assemblies.")
@@ -534,16 +541,24 @@ tryCatch(
     }
     
     cat(
-    "\n\n================== START OCCUPANCY ANALYSIS ==================
-    Here, peaks declared by peak caller(s) are used to identify
-    differential binding (DB) between conditions. Overlapping peaks
-    between replicates/conditions are determined by the range of the peaks.
-    In this case, using occupancy alone for DB provides a less conservative
-    analysis for DB by simply considering where peaks exist.
+    "\n\n=============================== START OF OCCUPANCY ANALYSIS ===============================
+    Here, peaks declared by peak caller(s) are used to identify differential binding (DB) 
+    between conditions. Overlapping peaks between peak sets (.bed files) are determined by 
+    the range of the peaks where 1bp overlaps are merged into a consensus peak range. 
+    Blacklisted regions (due to known genomic regions and sequencing artifacts) are by
+    default removed from the peaks, but can be kept using the --blacklisted_keep flag.
     
-    Following this (if run), affinity analysis can provide more conservative and
-    statistically validated results for DB since the enrichment of read counts
-    are accounted for (peak shapes and signal strength) among the identified peaks
+    By default, a final consensus peak set is formed whereby consensus peaks found in at 
+    least 2 replicates and 2/3 peak callers form the condition's final consensus peak set.
+    Including all replicate and caller peaks can be done with the --combine_replicates and 
+    --combine_callers flags.
+    
+    Occupancy analysis alone provides a general analysis for DB by simply considering and 
+    comparing where peaks exist. 
+    
+    Following this (if chosen to execute), affinity analysis can provide more conservative 
+    and statistically validated results for DB since the enrichment of read counts are 
+    accounted for (peak shapes and signal strength) among the identified consensus regions
     from the occupancy analysis.\n\n"
     )
     
@@ -568,13 +583,13 @@ tryCatch(
   },
   error = function(e) {
     message("Error occurred: ", conditionMessage(e))
+  }, 
+  finally = {
     if (!is.null(dev.list())) dev.off()
     invisible(capture.output(gc()))
-    
     #sink()                  # stop messages
     sink()                  # stop normal output
     close(con)
-    q()
   }
 )
 
@@ -582,7 +597,12 @@ tryCatch(
 # Load peaks, filter blacklisted regions, setup variables, plot some QC
 tryCatch(
   {
-    pdf(paste(supplementary_dir, 'SupplementaryQC.pdf', sep=""),
+    # Output log to file
+    con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt") , sep=''), open = "at")
+    sink(con, split = FALSE)                 # normal output
+    #sink(con, type = "message", split = TRUE)  # messages
+    
+    pdf(paste(result_dir, 'SupplementaryQC.pdf', sep=""),
         width  = figs$width,
         height = figs$height,
         pointsize = figs$pointsize)  # or 9–10)
@@ -601,7 +621,7 @@ tryCatch(
     
     #for (b in unique(read.csv(samplesheet)$Condition)){
     #  for (r in unique(read.csv(samplesheet)$Replicate)){
-    #    png(paste(supplementary_dir, 'fragment_length_', b, '-', r, '.png', sep=""))
+    #    png(paste(result_dir, 'fragment_length_', b, '-', r, '.png', sep=""))
     #    mean_fragment_size <- average_fragment_length(read.csv(samplesheet)$bamReads[[which(read.csv(samplesheet)$Condition == b)[1]]], plot=TRUE)
     #    for (i in which(read.csv(samplesheet)$Condition == b & read.csv(samplesheet)$Replicate == r)){
     #      fragment_size[i] <- mean_fragment_size
@@ -636,7 +656,7 @@ tryCatch(
     }
     conditions_colour_code[['Shared']] <- "grey"
     
-    #png(filename=paste(supplementary_dir, 'raw_heatmap.png', sep=''))
+    #png(filename=paste(result_dir, 'raw_heatmap.png', sep=''))
     dba.plotHeatmap(dbObj, margin=15, cexRow = 0.8, cexCol = 0.8)
     #title(main=c("Correlation Heatmap - Raw Peaks"))
     mtext(c("Correlation Heatmap - Raw Peaks"), side = 1, line = 2)
@@ -645,7 +665,7 @@ tryCatch(
     
     # Show overlap rates for each condition
     cat("\nTotal peaks overlapped when found in at least (1, 2, ...) replicates/callers for each condition:\n")
-    #png(paste(supplementary_dir, "raw_overlap_rates.png", sep=""))
+    #png(paste(result_dir, "raw_overlap_rates.png", sep=""))
     par(mar = c(5, 5, 4, 2))  # bottom, left, top, right
     #par(mfrow=c(length(unique(dbObj$samples$Condition)), 1), mar = c(5, 5, 4, 4))
     for (c in unique(dbObj$samples$Condition)) {
@@ -666,8 +686,12 @@ tryCatch(
     tryCatch (
       {
         if (!opt$blacklisted_keep){
+          cat("\n\n---------- Removing blacklisted regions ----------\n\n")
+          sink(con, append = TRUE, type = "message")
           dbObj.noblacklist <- dba.blacklist(dbObj, blacklist=TRUE, greylist=FALSE)
-          blacklisted_peaks <- dba.blacklist(dbObj.noblacklist, Retrieve=DBA_BLACKLISTED_PEAKS)
+          sink(type = "message")
+          
+          #blacklisted_peaks <- dba.blacklist(dbObj.noblacklist, Retrieve=DBA_BLACKLISTED_PEAKS)
           cat("\n\n---------- After blacklisted regions removed ----------\n\n")
           print(dbObj.noblacklist)
         }else{
@@ -685,7 +709,7 @@ tryCatch(
     #   print(dbObj.noblacklist)
     # }
     
-    #png(paste(supplementary_dir, 'raw_noblacklist_heatmap.png', sep=''))
+    #png(paste(result_dir, 'raw_noblacklist_heatmap.png', sep=''))
     dba.plotHeatmap(dbObj.noblacklist, margin=15, cexRow = 0.8, cexCol = 0.8)
     #title(main=c("Correlation Heatmap - Blacklist Regions Removed"))
     mtext(c("Correlation Heatmap - Blacklist Regions Removed"), side = 1, line = 2)
@@ -694,7 +718,7 @@ tryCatch(
     
     # Show overlap rates for each condition
     cat("\nTotal peaks overlapped when found in at least (1, 2, ...) replicates/callers for each condition:\n")
-    #png(paste(supplementary_dir, "raw_noblacklist_overlap_rates.png", sep=""))
+    #png(paste(result_dir, "raw_noblacklist_overlap_rates.png", sep=""))
     #par(mfrow=c(length(unique(dbObj$samples$Condition)), 1), mar = c(5, 5, 4, 4))
     par(mar = c(5, 5, 4, 2)) 
     for (c in unique(dbObj$samples$Condition)) {
@@ -716,7 +740,6 @@ tryCatch(
   finally = {
     if (!is.null(dev.list())) dev.off()
     invisible(capture.output(gc()))
-    
     #sink()                  # stop messages
     sink()                  # stop normal output
     close(con)
@@ -724,13 +747,14 @@ tryCatch(
   
 )
 
-
-con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt"), sep=''), open = "at")
-sink(con, split = FALSE) 
-
 # Building consensus peaksets
 tryCatch(
   {
+    
+    # Output log to file
+    con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt") , sep=''), open = "at")
+    sink(con, split = FALSE)                 # normal output
+    #sink(con, type = "message", split = TRUE)  # messages
 
     # ========= Get Consensus Peaks =========
     if (opt$combine_replicates == TRUE){
@@ -820,7 +844,6 @@ tryCatch(
   finally = {
     if (!is.null(dev.list())) dev.off()
     invisible(capture.output(gc()))
-    
     #sink()                  # stop messages
     sink()                  # stop normal output
     close(con)
@@ -829,13 +852,15 @@ tryCatch(
 )
 
 
-con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt"), sep=''), open = "at")
-sink(con, split = FALSE) 
-
 # Comparing differential/similar peaks
-cat("\n\n---------- Analyzing Peaks ----------\n")
 tryCatch(
   {
+    # Output log to file
+    con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt") , sep=''), open = "at")
+    sink(con, split = FALSE)                 # normal output
+    #sink(con, type = "message", split = TRUE)  # messages
+    cat("\n\n---------- Analyzing Peaks ----------\n")
+    
     pdf(paste(result_dir, 'binding-sites.pdf', sep=""),
         width  = figs$width,
         height = figs$height,
@@ -990,8 +1015,17 @@ tryCatch(
                              col=NA,
                              #cat.pos=c(0,0),
                              cat.dist = c(0,0),
-                             ind=FALSE)
-      plt <- grid.arrange(gTree(children=g), top="Binding Site Overlaps", bottom=gsub('/', '', opt$result_dir))
+                             ind=FALSE,
+                             # text inside circles
+                             cex = figs$pointsize/5,          # increase numbers inside areas
+                             # category labels
+                             cat.cex = figs$pointsize/5      # increase set names
+                             #fontface = "bold" # make them bold if desired
+                             )
+      plt <- grid.arrange(gTree(children=g), 
+                          top = textGrob("Binding Site Overlaps", gp = gpar(cex = figs$pointsize/5)),    # bigger title
+                          bottom = textGrob(gsub('/', '', opt$result_dir), gp = gpar(cex = figs$pointsize/5))  # bigger bottom text
+                          )
       #plot(plt)
       #invisible(capture.output(ggsave(filename=paste(result_dir, 'consensus_peaks_venn.png', sep=''), plot=plt)))
       rm(g)
@@ -1013,7 +1047,7 @@ tryCatch(
       )
       
       #png(paste(output_prefix, 'raw_consensus_peaks.png', sep=""))
-      plt <- plot(euler(e), main=gsub('/', '', opt$result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
+      plt <- plot(euler(e), main=gsub('/', '', result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
       plot(plt)
       #invisible(capture.output(ggsave(filename=paste(result_dir, 'consensus_peaks_venn.png', sep=''), plot=plt)))
       #invisible(capture.output(dev.off()))
@@ -1051,7 +1085,7 @@ tryCatch(
       )
       
       #png(paste(output_prefix, 'raw_consensus_peaks.png', sep=""))
-      plt <- plot(euler(e), main=gsub('/', '', opt$result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
+      plt <- plot(euler(e), main=gsub('/', '', result_dir), quantities=TRUE, fills=unname(unlist(conditions_colour_code)))
       plot(plt)
       #invisible(capture.output(ggsave(filename=paste(result_dir, 'consensus_peaks_venn.png', sep=''), plot=plt)))
       #invisible(capture.output(dev.off()))
@@ -1066,7 +1100,7 @@ tryCatch(
         )
         #print(plt)
         #plt$main <- "PCA"
-        #invisible(capture.output(ggsave(filename=paste(supplementary_dir, 'pca_condition.png', sep=''), plot=grid.arrange(plt))))
+        #invisible(capture.output(ggsave(filename=paste(result_dir, 'pca_condition.png', sep=''), plot=grid.arrange(plt))))
         
         if(length(unique(dbObj$samples$Factor)) > 1){
           dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_FACTOR, label=DBA_ID,
@@ -1074,7 +1108,7 @@ tryCatch(
                       dotSize    = 1.2    # shrink or grow points
           )
           #print(plt)
-          #invisible(capture.output( ggsave(filename=paste(supplementary_dir, 'pca_factor.png', sep=''), plot=grid.arrange(plt)) ))
+          #invisible(capture.output( ggsave(filename=paste(result_dir, 'pca_factor.png', sep=''), plot=grid.arrange(plt)) ))
           #invisible(capture.output(dev.off()))
         }
       },error = function(e)
@@ -1161,7 +1195,6 @@ tryCatch(
   finally = {
     if (!is.null(dev.list())) dev.off()
     invisible(capture.output(gc()))
-    
     #sink()                  # stop messages
     sink()                  # stop normal output
     close(con)
@@ -1170,13 +1203,15 @@ tryCatch(
 )
 
 
-con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt"), sep=''), open = "at")
-sink(con, split = FALSE) 
-
 # Annotating consensus peaks
-cat("\n\n---------- Annotating Consensus Peaks ----------\n")
 tryCatch(
   {
+    # Output log to file
+    con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt") , sep=''), open = "at")
+    sink(con, split = FALSE)                 # normal output
+    #sink(con, type = "message", split = TRUE)  # messages
+    cat("\n\n---------- Annotating Consensus Peaks ----------\n")
+    
     pdf(paste(result_dir, 'annotated-raw-consensus-sites.pdf', sep=""),
         width  = figs$width,
         height = figs$height,
@@ -1255,7 +1290,20 @@ tryCatch(
             # Write annotations to csv
             write.table(as.data.frame(compKEGG), file=paste(result_dirs[[p]], p, '_consensus_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
             
-            plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p,  ' Consensus', sep=""), ylabel="KEGG Category", colour=colour, n=15)
+            plt <- make_anno_dotplot(compKEGG@compareClusterResult, 
+                                     title=paste('KEGG - ', p,  ' Consensus', sep=""), 
+                                     ylabel="KEGG Category", 
+                                     colour=colour, 
+                                     n=15,
+                                     title_size=figs$pointsize*1.6,
+                                     text_size=figs$pointsize/3,
+                                     axis_title_size=figs$pointsize*0.8,
+                                     axis_x_size=figs$pointsize*1.2,
+                                     axis_y_size=figs$pointsize*1.2,
+                                     #legend_key_size=figs$pointsize/5,
+                                     legend_title_size=figs$pointsize*1.4,
+                                     legend_text_size=figs$pointsize*1.2
+                                     )
             print(plt)
             #invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_consensus_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
 
@@ -1354,13 +1402,13 @@ tryCatch(
           sets.x.label = "Gene Set Size",
           mainbar.y.label = "Intersection Size of Gene Sets",
           mb.ratio = c(0.65, 0.35),
-          text.scale = c(1.5, 1.5, 1.4, 1.4, 1.5, 1.5)
+          text.scale = c(figs$pointsize/6, figs$pointsize/6, figs$pointsize/7, figs$pointsize/7, figs$pointsize/6, figs$pointsize/6)
           # order: intersection size title, set size title,
           # intersection tick labels, set tick labels,
           # intersection bar labels, set size labels
     )
     print(plt)
-    grid.text("Annotated Genes in Consensus Peaksets",x = 0.65, y=0.95, gp=gpar(fontsize=5))
+    grid.text("Annotated Genes in Consensus Peaksets",x = 0.65, y=0.95, gp=gpar(fontsize=figs$pointsize*1.2))
     
 
   },
@@ -1378,13 +1426,15 @@ tryCatch(
 )
 
 
-con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt"), sep=''), open = "at")
-sink(con, split = FALSE) 
-
 # Annotating differential/similar peaks
-cat("\n\n---------- Annotating Differential Peaks ----------\n")
 tryCatch(
   {
+    # Output log to file
+    con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt") , sep=''), open = "at")
+    sink(con, split = FALSE)                 # normal output
+    #sink(con, type = "message", split = TRUE)  # messages
+    cat("\n\n---------- Annotating Differential Peaks ----------\n")
+    
     pdf(paste(result_dir, 'gene-annotated-sites.pdf', sep=""),
         width  = 15/2.54,
         height = 13/2.54,
@@ -1471,7 +1521,7 @@ tryCatch(
             # Write annotations to csv
             write.table(as.data.frame(compKEGG), file=paste(result_dirs[[p]], p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
             
-            plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
+            plt <- make_anno_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
             invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
             remove(plt)
             remove(compKEGG)
@@ -1520,7 +1570,7 @@ tryCatch(
               # Write annotations to csv
               write.table(as.data.frame(compGO), file=paste(result_dirs[[p]], p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
               
-              plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=colour, n=15)
+              plt <- make_anno_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=colour, n=15)
               invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
               remove(plt)
               remove(compGO)
@@ -1651,7 +1701,7 @@ tryCatch(
                 # Write annotations to csv
                 write.table(as.data.frame(compDAVID), file=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
                 
-                plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', p, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
+                plt <- make_anno_dotplot(compDAVID@result, title=paste('DAVID - ', p, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
                 invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '_dotplot.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 remove(compDAVID)
@@ -1700,7 +1750,6 @@ tryCatch(
   finally = {
     if (!is.null(dev.list())) dev.off()
     invisible(capture.output(gc()))
-    
     #sink()                  # stop messages
     sink()                  # stop normal output
     close(con)
@@ -1765,7 +1814,7 @@ tryCatch(
 
   # invisible(capture.output(gc()))
   # 
-  # png(paste(supplementary_dir, 'consensus_heatmap.png', sep=''))
+  # png(paste(result_dir, 'consensus_heatmap.png', sep=''))
   # dba.plotHeatmap(dbObj.consensus)
   # #invisible(capture.output( dev.off() ))
   # invisible(capture.output(gc()))
@@ -1849,7 +1898,7 @@ for (p in names(peaks)){
         # Write annotations to csv
         write.table(as.data.frame(compKEGG), file=paste(result_dirs[[p]], p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
         
-        plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
+        plt <- make_anno_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
         invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
         remove(plt)
         remove(compKEGG)
@@ -1898,7 +1947,7 @@ for (p in names(peaks)){
           # Write annotations to csv
           write.table(as.data.frame(compGO), file=paste(result_dirs[[p]], p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
           
-          plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=colour, n=15)
+          plt <- make_anno_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=colour, n=15)
           invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
           remove(plt)
           remove(compGO)
@@ -2029,7 +2078,7 @@ for (p in names(peaks)){
             # Write annotations to csv
             write.table(as.data.frame(compDAVID), file=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
             
-            plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', p, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
+            plt <- make_anno_dotplot(compDAVID@result, title=paste('DAVID - ', p, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
             invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '_dotplot.png', sep=''), plot=plt, dpi=320)))
             remove(plt)
             remove(compDAVID)
@@ -2099,11 +2148,6 @@ result_dir <- paste(opt$result_dir, 'Affinity_Analysis/', sep='')
 # Make new directory for analysis
 if (!file.exists(result_dir)) {
   dir.create(result_dir)
-}
-
-supplementary_dir <- paste(result_dir, "Supplementary/", sep='')
-if (!file.exists(supplementary_dir)) {
-  dir.create(supplementary_dir)
 }
 
 if (!file.exists(paste(result_dir, 'DESeq2/', sep=''))) {
@@ -2219,11 +2263,11 @@ cat("After normalizing:\n")
 dbObj.norm
 
 # Plots
-png(paste(supplementary_dir, 'consensus_peaks_counted_normalized_heatmap.png', sep=''))
+png(paste(result_dir, 'consensus_peaks_counted_normalized_heatmap.png', sep=''))
 dba.plotHeatmap(dbObj.norm)
 invisible(capture.output( dev.off() ))
 
-png(paste(supplementary_dir, 'consensus_peaks_counted_normalized_pca.png', sep=''))
+png(paste(result_dir, 'consensus_peaks_counted_normalized_pca.png', sep=''))
 dba.plotPCA(dbObj.norm, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours))
 invisible(capture.output( dev.off() ))
 invisible(capture.output(gc()))
@@ -2633,7 +2677,7 @@ for (report in names(reports)){
               compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
             }
             
-            plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
+            plt <- make_anno_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
             
             # Write annotations to csv
@@ -2685,7 +2729,7 @@ for (report in names(reports)){
             if (!is.null(compGO)){
               compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
               #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
-              plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=colour, n=15)
+              plt <- make_anno_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=colour, n=15)
               invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
               
               # Write annotations to csv
@@ -2823,7 +2867,7 @@ for (report in names(reports)){
                   compDAVID@result$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
                 }
                 
-                plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', p, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
+                plt <- make_anno_dotplot(compDAVID@result, title=paste('DAVID - ', p, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
                 invisible(capture.output(ggsave(filename=paste(output_prefix, report, 'DAVID_annotation_', annotation_type, '_', p, '_dotplot.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 # Write annotations to csv
@@ -3074,7 +3118,7 @@ for (report in names(reports)){
               compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
             }
             
-            plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
+            plt <- make_anno_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', p, sep=""), ylabel="KEGG Category", colour=colour, n=15)
             invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
             
             # Write annotations to csv
@@ -3125,7 +3169,7 @@ for (report in names(reports)){
             if ((!is.null(compGO)) & (dim(compGO@compareClusterResult)[1] > 0)){
               compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology
               #plt <- dotplot(compGO, showCategory = 10, title = "GO Pathway Enrichment Analysis")
-              plt <- make_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=colour, n=15)
+              plt <- make_anno_dotplot(compGO@compareClusterResult, title=paste("GO (", ont, ") - ", p, sep=""), ylabel="GO Term", colour=colour, n=15)
               invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
               
               # Write annotations to csv
@@ -3264,7 +3308,7 @@ for (report in names(reports)){
                   compDAVID@result$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
                 }
                 
-                plt <- make_dotplot(compDAVID@result, title=paste('DAVID - ', p, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
+                plt <- make_anno_dotplot(compDAVID@result, title=paste('DAVID - ', p, sep=""), ylabel=paste(annotation_type,"Category", sep=' '), colour=colour, n=15)
                 invisible(capture.output(ggsave(filename=paste(output_prefix, report, 'DAVID_annotation_', annotation_type, '_', p, '_dotplot.png', sep=''), plot=plt, dpi=320)))
                 remove(plt)
                 # Write annotations to csv
