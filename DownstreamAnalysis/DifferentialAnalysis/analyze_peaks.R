@@ -171,7 +171,7 @@ make_anno_piebar <- function(df,
                              type='pie', 
                              title="Distribution of Sites", 
                              specific=TRUE, 
-                             colours=paletteer_d("khroma::muted" ),
+                             colours=c(paletteer_d("khroma::muted" ), "#7C7C8CFF", "#B48A76FF"),
                              title_size=10,
                              text_size=1.8,
                              axis_title_size=8,
@@ -256,79 +256,79 @@ make_anno_piebar <- function(df,
   return(plt)
 }
 
-make_anno_stackedbar <- function(df_list, title="Distribution of Sites", specific=TRUE, colours=paletteer_d("khroma::muted"), xlabel="Percentage", ylabel="Group"){
-  # Expects list of named dataframes where each is an output from annotatePeak (anno@anno as dataframe)
-  
-  # plt <- make_anno_stackedbar(anno_list, specific=TRUE, title="YourTitle", ylabel="SampleGroup")
-  # ggsave(filename="YourFigure.png", plot=plt, dpi=400, units='mm', width=180, height=120)
-  
-  
-  for (n in names(df_list)){
-    df <- df_list[[n]]
-    if (specific){
-      df$Group <- ifelse(grepl("Promoter \\(<=1kb\\)", df$annotation), 'Promoter\n(<=1kb)', 'Non-promoter')
-      df$Group <- ifelse(grepl("Promoter \\(1-2kb\\)", df$annotation), 'Promoter\n(1-2kb)', df$Group)
-      df$Group <- ifelse(grepl("Promoter \\(2-3kb\\)", df$annotation), 'Promoter\n(2-3kb)', df$Group)
-    } else {
-      df$Group <- ifelse(grepl("Promoter", df$annotation), 'Promoter', 'Non-promoter')
-    }
-    
-    df$Group <- ifelse(grepl("Exon", df$annotation), 'Exon', df$Group)
-    df$Group <- ifelse(grepl("Intron", df$annotation), 'Intron', df$Group)
-    df$Group <- ifelse(grepl("5' UTR", df$annotation), "5' UTR", df$Group)
-    df$Group <- ifelse(grepl("3' UTR", df$annotation), "3' UTR", df$Group)
-    df$Group <- ifelse(grepl("Downstream", df$annotation), "Downstream\n(<=300bp)", df$Group)
-    df$Group <- ifelse(grepl("Distal Intergenic", df$annotation), "Distal\nIntergenic", df$Group)
-    # Note: "Enhancer" typically not output from annotatePeak...
-    df$Group <- ifelse(grepl("Enhancer", df$annotation), 'Enhancer', df$Group)
-    
-    # Data to plot
-    df_plot <- df %>% count(Group)
-    df_plot$Frequency <- round( 100 * (df_plot$n / sum(df_plot$n)), 2)
-    df_plot <- df_plot[order(df_plot$Frequency, decreasing=TRUE), ]
-    rownames(df_plot) <- 1:nrow(df_plot)
-    colnames(df_plot) <- c('Region', 'Count', 'Frequency')
-    df_plot$Region <- as.factor(df_plot$Region)
-    df_list[[n]] <- df_plot
-  }
-  
-  my_plots <- df_list
-  combined_df <- bind_rows(my_plots, .id = "group")
-  # Order from highest to lowest
-  total_freqs <- combined_df %>% 
-    group_by(Region) %>% 
-    summarise(across(c("Frequency"), sum, na.rm = TRUE))
-  total_freqs <- total_freqs[order(total_freqs$Frequency, decreasing=FALSE), ]
-  
-  # Colours
-  myColors <- colours[1:length(total_freqs$Region)]
-  #names(myColors) <- fct_infreq(levels(combined_df$Region))
-  custom_colors_fill <- scale_fill_manual(values = myColors, 
-                                          name = "Region",
-                                          labels = total_freqs$Region
-  )
-  # Plot
-  plt <- ggplot(combined_df, aes(x = fct_rev(group), y = Frequency, fill = factor(Region, levels = total_freqs$Region) )) +
-    geom_bar(stat = "identity", position="stack") +
-    custom_colors_fill +
-    theme_classic() +
-    theme(axis.text.x = element_text(size = 12, color = "black")) +
-    theme(axis.text.y = element_text(size = 12, color = "black")) +
-    theme(axis.title = element_text(size = 14, color = "black")) +
-    ggtitle(title) + 
-    theme(plot.title = element_text(size = 16, color = "black")) + 
-    coord_flip() +
-    labs(x = ylabel, y = xlabel, fill = "Region") +
-    theme(plot.title = element_text(hjust = 0.5)) + 
-    theme(
-      legend.key.size = unit(0.75, 'cm'),
-      legend.title = element_text(size = 12),
-      legend.text = element_text(size = 10)
-    ) + 
-    guides(fill = guide_legend(reverse = TRUE))
-  
-  return(plt)
-}
+# make_anno_stackedbar <- function(df_list, title="Distribution of Sites", specific=TRUE, colours=paletteer_d("khroma::muted"), xlabel="Percentage", ylabel="Group"){
+#   # Expects list of named dataframes where each is an output from annotatePeak (anno@anno as dataframe)
+#   
+#   # plt <- make_anno_stackedbar(anno_list, specific=TRUE, title="YourTitle", ylabel="SampleGroup")
+#   # ggsave(filename="YourFigure.png", plot=plt, dpi=400, units='mm', width=180, height=120)
+#   
+#   
+#   for (n in names(df_list)){
+#     df <- df_list[[n]]
+#     if (specific){
+#       df$Group <- ifelse(grepl("Promoter \\(<=1kb\\)", df$annotation), 'Promoter\n(<=1kb)', 'Non-promoter')
+#       df$Group <- ifelse(grepl("Promoter \\(1-2kb\\)", df$annotation), 'Promoter\n(1-2kb)', df$Group)
+#       df$Group <- ifelse(grepl("Promoter \\(2-3kb\\)", df$annotation), 'Promoter\n(2-3kb)', df$Group)
+#     } else {
+#       df$Group <- ifelse(grepl("Promoter", df$annotation), 'Promoter', 'Non-promoter')
+#     }
+#     
+#     df$Group <- ifelse(grepl("Exon", df$annotation), 'Exon', df$Group)
+#     df$Group <- ifelse(grepl("Intron", df$annotation), 'Intron', df$Group)
+#     df$Group <- ifelse(grepl("5' UTR", df$annotation), "5' UTR", df$Group)
+#     df$Group <- ifelse(grepl("3' UTR", df$annotation), "3' UTR", df$Group)
+#     df$Group <- ifelse(grepl("Downstream", df$annotation), "Downstream\n(<=300bp)", df$Group)
+#     df$Group <- ifelse(grepl("Distal Intergenic", df$annotation), "Distal\nIntergenic", df$Group)
+#     # Note: "Enhancer" typically not output from annotatePeak...
+#     df$Group <- ifelse(grepl("Enhancer", df$annotation), 'Enhancer', df$Group)
+#     
+#     # Data to plot
+#     df_plot <- df %>% count(Group)
+#     df_plot$Frequency <- round( 100 * (df_plot$n / sum(df_plot$n)), 2)
+#     df_plot <- df_plot[order(df_plot$Frequency, decreasing=TRUE), ]
+#     rownames(df_plot) <- 1:nrow(df_plot)
+#     colnames(df_plot) <- c('Region', 'Count', 'Frequency')
+#     df_plot$Region <- as.factor(df_plot$Region)
+#     df_list[[n]] <- df_plot
+#   }
+#   
+#   my_plots <- df_list
+#   combined_df <- bind_rows(my_plots, .id = "group")
+#   # Order from highest to lowest
+#   total_freqs <- combined_df %>% 
+#     group_by(Region) %>% 
+#     summarise(across(c("Frequency"), sum, na.rm = TRUE))
+#   total_freqs <- total_freqs[order(total_freqs$Frequency, decreasing=FALSE), ]
+#   
+#   # Colours
+#   myColors <- colours[1:length(total_freqs$Region)]
+#   #names(myColors) <- fct_infreq(levels(combined_df$Region))
+#   custom_colors_fill <- scale_fill_manual(values = myColors, 
+#                                           name = "Region",
+#                                           labels = total_freqs$Region
+#   )
+#   # Plot
+#   plt <- ggplot(combined_df, aes(x = fct_rev(group), y = Frequency, fill = factor(Region, levels = total_freqs$Region) )) +
+#     geom_bar(stat = "identity", position="stack") +
+#     custom_colors_fill +
+#     theme_classic() +
+#     theme(axis.text.x = element_text(size = 12, color = "black")) +
+#     theme(axis.text.y = element_text(size = 12, color = "black")) +
+#     theme(axis.title = element_text(size = 14, color = "black")) +
+#     ggtitle(title) + 
+#     theme(plot.title = element_text(size = 16, color = "black")) + 
+#     coord_flip() +
+#     labs(x = ylabel, y = xlabel, fill = "Region") +
+#     theme(plot.title = element_text(hjust = 0.5)) + 
+#     theme(
+#       legend.key.size = unit(0.75, 'cm'),
+#       legend.title = element_text(size = 12),
+#       legend.text = element_text(size = 10)
+#     ) + 
+#     guides(fill = guide_legend(reverse = TRUE))
+#   
+#   return(plt)
+# }
 
 # make_dotplot <- function(df, 
 #                          title="", 
@@ -494,15 +494,17 @@ option_list = list(
   make_option(c("--combine_callers"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from callers instead of taking consensus peaks", metavar="logical"),
   make_option(c("--combine_replicates"), type="logical", action="store_true", default=FALSE, help="Flag to add peaks from all replicates instead of taking consensus peaks", metavar="logical"),
   make_option(c("-b", "--blacklisted_keep"), type="logical", action="store_true", default=FALSE, help="Flag to keep blacklisted regions in raw peaks files", metavar="logical"),
-  make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down regulation of genes", metavar="double"),
-  make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value) for DEGs", metavar="double"),
+  make_option(c("--lfc"), type="double", default=0.585, help="Magnitude of log2foldchange to define significant up/down enrichment of binding sites", metavar="double"),
+  make_option(c("--fdr"), type="double", default=0.05, help="Significance threshold (false discovery rate, a.k.a. p.adjust value)", metavar="double"),
   make_option(c("--occupancy_only"), type="logical", action="store_true", default=FALSE, help="Flag to only perform peaks occupancy analysis", metavar="logical"),
   make_option(c("--david_user"), type="character", default="earezza@ohri.ca", help="User email for DAVID web tools (must be registered, https://david.ncifcrf.gov/content.jsp?file=DAVID_WebService.html)", metavar="character"),
   make_option(c("--minGSSize"), type="integer", default=10, help="minimal size of genes annotated for testing", metavar="integer"),
   make_option(c("--maxGSSize"), type="integer", default=500, help="maximal size of genes annotated for testing", metavar="integer"),
   make_option(c("--figsize"), type="character", default="full", help="Sizing for figures, options are 'full' for full-page width, 'single' for single-column width, 'onehalf' for 1.5 column width, 'double' for double-column width", metavar="character"),
   make_option(c("--colours_discrete"), type="character", default="khroma::muted", help="Palette from paletteer for discrete colours, see https://pmassicotte.github.io/paletteer_gallery/#discrete-palettes", metavar="character"),
-  make_option(c("--colours_continuous"), type="character", default="ggthemes::Orange-Blue Diverging", help="Palette from paletteer for continuous colours, see https://pmassicotte.github.io/paletteer_gallery/#continuous-palettes", metavar="character")
+  make_option(c("--reverse_d_palette"), type="logical", action="store_true", default=FALSE, help="Reverse the discrete palette colours", metavar="logical"),
+  make_option(c("--colours_continuous"), type="character", default="ggthemes::Classic Blue", help="Palette from paletteer for continuous colours, see https://pmassicotte.github.io/paletteer_gallery/#continuous-palettes", metavar="character"),
+  make_option(c("--reverse_c_palette"), type="logical", action="store_true", default=FALSE, help="Reverse the continuous palette colours", metavar="logical")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -513,7 +515,7 @@ figs <- fig_size(opt$figsize, aspect = 0.85, pointsize = 10)
 colours_discrete <- tryCatch(
   {
     # Try user‑specified palette
-    paletteer::paletteer_d(opt$colours_discrete)
+    paletteer::paletteer_d(opt$colours_discrete, direction=ifelse(opt$reverse_d_palette, -1, 1))
   },
   error = function(e) {
     message(
@@ -521,22 +523,39 @@ colours_discrete <- tryCatch(
       "\nDefaulting to 'khroma::muted' discrete colour palette\n"
     )
     # Fallback palette
-    paletteer::paletteer_d("khroma::muted")
+    paletteer::paletteer_d("khroma::muted", direction=ifelse(opt$reverse_d_palette, -1, 1))
   }
 )
+# Add colours to palette if not enough
+if (length(colours_discrete) < 11){
+  muted_plus_9 <- c(
+    "#7C7C8C",  # muted blue‑grey
+    "#B48A76",  # muted warm tan
+    "#5F6A3A",  # dark moss green
+    "#6C8A9C",  # muted steel blue
+    "#A27D9C",  # dusty mauve
+    "#8C5E4A",  # muted umber
+    "#6A7F5C",  # sage‑olive
+    "#A3A0B3",  # soft lilac‑grey
+    "#C3A39A"   # pale clay
+  )
+  class(muted_plus_9) <- class(colours_discrete)
+  colours_discrete <- c(colours_discrete, muted_plus_9[1:(11-length(colours_discrete))])
+  class(colours_discrete) <- class(muted_plus_9)
+}
 
 colours_continuous <- tryCatch(
   {
     # Try user‑specified palette
-    paletteer::paletteer_c(opt$colours_continuous)
+    paletteer::paletteer_c(opt$colours_continuous, n=100, direction=ifelse(opt$reverse_c_palette, -1, 1))
   },
   error = function(e) {
     message(
       "Error occurred: ", conditionMessage(e),
-      "\nDefaulting to 'ggthemes::Orange-Blue Diverging' continuous colour palette\n"
+      "\nDefaulting to 'ggthemes::Classic Blue' continuous colour palette\n"
     )
     # Fallback palette
-    paletteer::paletteer_c("ggthemes::Orange-Blue Diverging")
+    paletteer::paletteer_c("ggthemes::Classic Blue", n=100, direction=ifelse(opt$reverse_c_palette, -1, 1))
   }
 )
 
@@ -686,12 +705,13 @@ tryCatch(
     print(dbObj)
     
     # Colour codes for consistency in plots (add more colours if needed)
-    colours <- c("#00BFC4", "#F8766D", "#7CAE00", "#C77CFF", "#e69e02", "#00A9FF", "#C77CFF", "#FF61CC", 
-                 "#FF0000", "#FF4D00", "#80FF00", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2" , "#D55E00" , "#CC79A7"
-    )
+    # colours <- c("#00BFC4", "#F8766D", "#7CAE00", "#C77CFF", "#e69e02", "#00A9FF", "#C77CFF", "#FF61CC", 
+    #              "#FF0000", "#FF4D00", "#80FF00", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2" , "#D55E00" , "#CC79A7"
+    # )
+    
     conditions_colour_code <- list()
     for (i in 1:length(unique(dbObj$samples$Condition))) {
-      conditions_colour_code[[unique(dbObj$samples$Condition)[i]]] <- colours[i]
+      conditions_colour_code[[unique(dbObj$samples$Condition)[i]]] <- colours_discrete[i]
     }
     conditions_colour_code[['Shared']] <- "grey"
     
@@ -1133,7 +1153,7 @@ tryCatch(
     
     tryCatch(
       {
-        dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours),
+        dba.plotPCA(dbObj, masks=!dbObj.total$masks$Consensus, attributes=DBA_CONDITION, label=DBA_ID, vColors=(colours_discrete),
                     labelSize  = 0.8,   # shrink or grow point labels
                     dotSize    = 1.2    # shrink or grow points
         )
@@ -1275,14 +1295,14 @@ tryCatch(
       peakAnnoList[[p]] <- anno
       
       cat("\n",length(anno@anno), "annotated out of", length(raw_peaks[[p]]), p, "peaks\n")
-      plt <- make_anno_piebar(as.data.frame(anno@anno), type='pie', title=paste0(p, " - Consensus\n", "Distribution of Sites"), specific=TRUE, colours=paletteer_d("khroma::muted"), 
+      plt <- make_anno_piebar(as.data.frame(anno@anno), type='pie', title=paste0(p, " (Consensus)\n", "Distribution of Sites"), specific=TRUE, colours=colours_discrete, 
                               title_size=figs$width*2.8,
                               text_size=figs$pointsize/3,
                               legend_key_size=figs$width/20,
                               legend_title_size=figs$width*1.8,
                               legend_text_size=figs$width*1.5)
       print(plt)
-      plt <- make_anno_piebar(as.data.frame(anno@anno), type='bar', title=paste0(p, " - Consensus\n", "Distribution of Sites"), specific=TRUE, colours=paletteer_d("khroma::muted"),
+      plt <- make_anno_piebar(as.data.frame(anno@anno), type='bar', title=paste0(p, " (Consensus)\n", "Distribution of Sites"), specific=TRUE, colours=colours_discrete,
                               title_size=figs$width*2,
                               text_size=figs$pointsize/2.8,
                               axis_title_size=figs$width*1.6,
@@ -1332,9 +1352,9 @@ tryCatch(
             write.table(df, file=paste(result_dirs[[p]], p, '_consensus_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
             
             plt <- make_anno_dotplot(compKEGG@compareClusterResult, 
-                                     title=paste('KEGG - ', p,  ' Consensus', sep=""), 
+                                     title=paste('KEGG - ', p,  ' (Consensus)', sep=""), 
                                      ylabel="KEGG Category", 
-                                     #colour=colour, 
+                                     colour=colours_continuous, 
                                      n=15,
                                      title_size=figs$pointsize*1.6,
                                      text_size=figs$pointsize/3,
@@ -1396,9 +1416,9 @@ tryCatch(
               write.table(df, file=paste(result_dirs[[p]], p, '_consensus_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
               
               plt <- make_anno_dotplot(compGO@compareClusterResult, 
-                                       title=paste("GO (", ont, ") - ", p, " Consensus", sep=""), 
+                                       title=paste("GO (", ont, ") - ", p, " (Consensus)", sep=""), 
                                        ylabel="GO Term", 
-                                       #colour=colour, 
+                                       colour=colours_continuous, 
                                        n=15,
                                        title_size=figs$pointsize*1.6,
                                        text_size=figs$pointsize/3,
@@ -1580,9 +1600,9 @@ tryCatch(
                 write.table(df, file=paste(result_dirs[[p]], p, '_consensus_annotated_DAVID_', annotation_type, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
                 
                 plt <- make_anno_dotplot(compDAVID@result, 
-                                         title=paste('DAVID - ', p, " Consensus", sep=""), 
+                                         title=paste('DAVID - ', p, " (Consensus)", sep=""), 
                                          ylabel=paste(annotation_type,"Category", sep=' '), 
-                                         #colour=colour, 
+                                         colour=colours_continuous, 
                                          n=15,
                                          title_size=figs$pointsize*1.6,
                                          text_size=figs$pointsize/3,
@@ -1620,6 +1640,7 @@ tryCatch(
     tryCatch(
       {
         plt <- plotAnnoBar(peakAnnoList, title = 'Feature Distribution of Consensus Peaks')
+        plt + scale_fill_manual(values = colours_discrete)
         print(plt)
         #invisible(capture.output(ggsave(filename=paste(result_dir, 'peaks_annotation_distribution_bar.png', sep=''), plot=plt, dpi=320)))
       },error = function(e)
@@ -1630,6 +1651,7 @@ tryCatch(
     tryCatch(
       {
         plt <- plotDistToTSS(peakAnnoList, title = 'Feature Distribution of Consensus Peaks Relative to TSS')
+        plt + scale_fill_manual(values = colours_discrete)
         print(plt)
         #invisible(capture.output(ggsave(filename=paste(result_dir, 'peaks_annotation_TSS_distribution.png', sep=''), plot=plt, dpi=320)))
       },error = function(e)
@@ -1692,6 +1714,7 @@ tryCatch(
           sets.x.label = "Gene Set Size",
           mainbar.y.label = "Intersection Size of Gene Sets",
           mb.ratio = c(0.65, 0.35),
+          #main.bar.color = unlist(conditions_colour_code),
           text.scale = c(figs$pointsize/6, figs$pointsize/6, figs$pointsize/7, figs$pointsize/7, figs$pointsize/6, figs$pointsize/6)
           # order: intersection size title, set size title,
           # intersection tick labels, set tick labels,
