@@ -500,6 +500,7 @@ option_list = list(
   make_option(c("--david_user"), type="character", default="earezza@ohri.ca", help="User email for DAVID web tools (must be registered, https://david.ncifcrf.gov/content.jsp?file=DAVID_WebService.html)", metavar="character"),
   make_option(c("--minGSSize"), type="integer", default=10, help="minimal size of genes annotated for testing", metavar="integer"),
   make_option(c("--maxGSSize"), type="integer", default=500, help="maximal size of genes annotated for testing", metavar="integer"),
+  make_option(c("--bg_genes"), type="character", default=NULL, help="Custom .txt file of 1 column list all genes to use as background set in pathway analysis", metavar="character"),
   make_option(c("--figsize"), type="character", default="full", help="Sizing for figures, options are 'full' for full-page width, 'single' for single-column width, 'onehalf' for 1.5 column width, 'double' for double-column width", metavar="character"),
   make_option(c("--colours_discrete"), type="character", default="khroma::muted", help="Palette from paletteer for discrete colours, see https://pmassicotte.github.io/paletteer_gallery/#discrete-palettes", metavar="character"),
   make_option(c("--reverse_d_palette"), type="logical", action="store_true", default=FALSE, help="Reverse the discrete palette colours", metavar="logical"),
@@ -558,6 +559,21 @@ colours_continuous <- tryCatch(
     paletteer::paletteer_c("ggthemes::Classic Blue", n=100, direction=ifelse(opt$reverse_c_palette, -1, 1))
   }
 )
+
+if (!is.null(opt$bg_genes)){
+  bg_genes <- read.csv(opt$bg_genes, header=FALSE)$V1
+  
+  if (opt$assembly == "hg19" | opt$assembly == "hg38"){
+    bg_entrez <- mapIds(org.Hs.eg.db, keys = bg_genes, column = "ENTREZID", keytype = "SYMBOL")
+  }else if (opt$assembly == "mm9" | opt$assembly == "mm10"){
+    bg_entrez <- mapIds(org.Mm.eg.db, keys = bg_genes, column = "ENTREZID", keytype = "SYMBOL")
+  }else if (opt$assembly == "rn6"){
+    bg_entrez <- mapIds(org.Rn.eg.db, keys = bg_genes, column = "ENTREZID", keytype = "SYMBOL")
+  }
+} else {
+  bg_genes <- NULL
+  bg_entrez <- NULL
+}
 
 # Setup directories
 if (file.exists(opt$file)) {
@@ -1314,8 +1330,8 @@ tryCatch(
       
       
       # Mapper for EntrezID to gene SYMBOL
-      df <- as.data.frame(anno@anno)
-      mapper <- df[c('geneId', 'SYMBOL')]
+      mapper <- as.data.frame(anno@anno)
+      mapper <- mapper[c('geneId', 'SYMBOL')]
       mapper <- mapper[!duplicated(mapper), ]
       
       tryCatch(
@@ -1331,52 +1347,49 @@ tryCatch(
                                      pAdjustMethod="BH",
                                      minGSSize = opt$minGSSize,
                                      maxGSSize = opt$maxGSSize,
-                                     organism=anno_ref$keggOrg
+                                     organism=anno_ref$keggOrg,
+                                     universe = bg_entrez
           ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-          if (!class(compKEGG) == 'compareClusterResult'){
-            cat("\nNo KEGG results.\n")
-            #next
-          }else{
-            cat('\n', dim(compKEGG@compareClusterResult)[1], 'KEGG results\n')
-          }
-          if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
-            # Map EntrezIDs to gene SYMBOL
-            compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
-            myEntrez <- lapply(compKEGG@compareClusterResult$geneID, strsplit, '/')
-            for (i in 1:length(myEntrez)){
-              compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+          if (class(compKEGG) == 'compareClusterResult'){
+            if (dim(compKEGG@compareClusterResult)[1] > 0) {
+              cat('\n', dim(compKEGG@compareClusterResult)[1], 'KEGG results\n')
+              # Map EntrezIDs to gene SYMBOL
+              compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
+              myEntrez <- lapply(compKEGG@compareClusterResult$geneID, strsplit, '/')
+              for (i in 1:length(myEntrez)){
+                compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+              }
+              # Write annotations to csv
+              df_kegg <- as.data.frame(compKEGG@compareClusterResult)
+              df_kegg <- df_kegg[order(df_kegg$p.adjust, df_kegg$FoldEnrichment, -xtfrm(df_kegg$GeneRatio), -xtfrm(df_kegg$BgRatio), df_kegg$Description), ]
+              write.table(df_kegg, file=paste(result_dirs[[p]], p, '_consensus_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+              
+              plt <- make_anno_dotplot(df_kegg, 
+                                       title=paste('KEGG - ', p,  ' (Consensus)', sep=""), 
+                                       ylabel="KEGG Category", 
+                                       colour=colours_continuous, 
+                                       n=15,
+                                       title_size=figs$pointsize*1.6,
+                                       text_size=figs$pointsize/3,
+                                       axis_title_size=figs$pointsize*0.8,
+                                       axis_x_size=figs$pointsize*1.2,
+                                       axis_y_size=figs$pointsize*1.2,
+                                       #legend_key_size=figs$pointsize/5,
+                                       legend_title_size=figs$pointsize*1.4,
+                                       legend_text_size=figs$pointsize*1.2
+              )
+              print(plt)
+              #invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_consensus_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+              
             }
-            # Write annotations to csv
-            df <- as.data.frame(compKEGG@compareClusterResult)
-            df <- df[order(df$p.adjust, df$FoldEnrichment, -xtfrm(df$GeneRatio), -xtfrm(df$BgRatio), df$Description), ]
-            write.table(df, file=paste(result_dirs[[p]], p, '_consensus_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
             
-            plt <- make_anno_dotplot(compKEGG@compareClusterResult, 
-                                     title=paste('KEGG - ', p,  ' (Consensus)', sep=""), 
-                                     ylabel="KEGG Category", 
-                                     colour=colours_continuous, 
-                                     n=15,
-                                     title_size=figs$pointsize*1.6,
-                                     text_size=figs$pointsize/3,
-                                     axis_title_size=figs$pointsize*0.8,
-                                     axis_x_size=figs$pointsize*1.2,
-                                     axis_y_size=figs$pointsize*1.2,
-                                     #legend_key_size=figs$pointsize/5,
-                                     legend_title_size=figs$pointsize*1.4,
-                                     legend_text_size=figs$pointsize*1.2
-                                     )
-            print(plt)
-            #invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_consensus_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
-
           } else{
-            cat("\nNo annotation results\n")
-            remove(compKEGG)
-            gc()
+            cat('\nNo KEGG results.\n')
           }
+          
         },error = function(e)
         {
           message(e)
-          remove(compKEGG)
           gc()
         }
       )
@@ -1400,7 +1413,8 @@ tryCatch(
                                      pAdjustMethod="BH",
                                      minGSSize = opt$minGSSize,
                                      maxGSSize = opt$maxGSSize,
-                                     readable=TRUE
+                                     readable=TRUE,
+                                     universe = bg_genes
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
             if (!class(compGO) == 'compareClusterResult'){
               cat("\nNo GO results", "for", ont, ".\n")
@@ -1411,11 +1425,11 @@ tryCatch(
             if ((!is.null(compGO)) & (dim(compGO@compareClusterResult)[1] > 0)){
               #compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology # found instances of inaccuracies...
               # Write annotations to csv
-              df <- as.data.frame(compGO@compareClusterResult)
-              df <- df[order(df$p.adjust, df$FoldEnrichment, -xtfrm(df$GeneRatio), -xtfrm(df$BgRatio), df$Description), ]
-              write.table(df, file=paste(result_dirs[[p]], p, '_consensus_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+              df_go <- as.data.frame(compGO@compareClusterResult)
+              df_go <- df_go[order(df_go$p.adjust, df_go$FoldEnrichment, -xtfrm(df_go$GeneRatio), -xtfrm(df_go$BgRatio), df_go$Description), ]
+              write.table(df_go, file=paste(result_dirs[[p]], p, '_consensus_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
               
-              plt <- make_anno_dotplot(compGO@compareClusterResult, 
+              plt <- make_anno_dotplot(df_go, 
                                        title=paste("GO (", ont, ") - ", p, " (Consensus)", sep=""), 
                                        ylabel="GO Term", 
                                        colour=colours_continuous, 
@@ -1431,17 +1445,14 @@ tryCatch(
                                        )
               #invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
               print(plt)
-              remove(compGO)
               gc()
             } else{
               cat("\nNo GO", ont, "annotation results\n")
-              remove(compGO)
               gc()
             }
           },error = function(e)
           {
             message(e)
-            remove(compGO)
             gc()
           }
         )
@@ -1511,7 +1522,7 @@ tryCatch(
               )
               
               for (simpleChartRecord in py$chartReport) {
-                df <- data.frame(
+                df_record <- data.frame(
                   ID            = strsplit(simpleChartRecord$termName, splitter)[[1]][1],
                   Category      = simpleChartRecord$categoryName,
                   Description   = strsplit(simpleChartRecord$termName, splitter)[[1]][2],
@@ -1526,7 +1537,7 @@ tryCatch(
                   id            = simpleChartRecord$id,
                   stringsAsFactors = FALSE
                 )
-                records <- rbind(records, df)
+                records <- rbind(records, df_record)
               }
               # py_run_string("records = pd.DataFrame()")
               # py_run_string("for simpleChartRecord in chartReport:
@@ -1560,13 +1571,13 @@ tryCatch(
               
               compDAVID <- new("enrichResult",
                                result         = compD,
-                               pvalueCutoff   = 1,
+                               pvalueCutoff   = opt$fdr,
                                pAdjustMethod  = "BH",
                                organism       = opt$assembly,
                                ontology       = annotation_type,
                                gene           = entrez,
                                keytype        = "ENTREZ_GENE_ID")
-              rm(compD)
+              #rm(compD)
               
               if (!class(compDAVID) == 'enrichResult'){
                 cat("\nNo DAVID", annotation_type, "results.\n")
@@ -1595,11 +1606,11 @@ tryCatch(
                   compDAVID@result$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
                 }
                 # Write annotations to csv
-                df <- as.data.frame(compDAVID@result)
-                df <- df[order(df$p.adjust, df$FoldEnrichment, -xtfrm(df$GeneRatio), -xtfrm(df$BgRatio), df$Description), ]
-                write.table(df, file=paste(result_dirs[[p]], p, '_consensus_annotated_DAVID_', annotation_type, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+                df_david <- as.data.frame(compDAVID@result)
+                df_david <- df_david[order(df_david$p.adjust, df_david$FoldEnrichment, -xtfrm(df_david$GeneRatio), -xtfrm(df_david$BgRatio), df_david$Description), ]
+                write.table(df_david, file=paste(result_dirs[[p]], p, '_consensus_annotated_DAVID_', annotation_type, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
                 
-                plt <- make_anno_dotplot(compDAVID@result, 
+                plt <- make_anno_dotplot(df_david, 
                                          title=paste('DAVID - ', p, " (Consensus)", sep=""), 
                                          ylabel=paste(annotation_type,"Category", sep=' '), 
                                          colour=colours_continuous, 
@@ -1615,18 +1626,16 @@ tryCatch(
                                          )
                 #invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '_dotplot.png', sep=''), plot=plt, dpi=320)))
                 print(plt)
-                remove(compDAVID)
+                #remove(compDAVID)
                 gc()
               } else{
                 cat("\nNo DAVID", annotation_type, "annotation results\n")
-                remove(compDAVID)
                 gc()
               }
             }
           },error = function(e)
           {
             message(e)
-            remove(compDAVID)
             gc()
           }
         )
@@ -1791,8 +1800,8 @@ tryCatch(
       
       
       # Mapper for EntrezID to gene SYMBOL
-      df <- as.data.frame(anno@anno)
-      mapper <- df[c('geneId', 'SYMBOL')]
+      mapper <- as.data.frame(anno@anno)
+      mapper <- mapper[c('geneId', 'SYMBOL')]
       mapper <- mapper[!duplicated(mapper), ]
       
       tryCatch(
@@ -1808,52 +1817,51 @@ tryCatch(
                                      pAdjustMethod="BH",
                                      minGSSize = opt$minGSSize,
                                      maxGSSize = opt$maxGSSize,
-                                     organism=anno_ref$keggOrg
+                                     organism=anno_ref$keggOrg,
+                                     universe = bg_entrez
           ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
-          if (!class(compKEGG) == 'compareClusterResult'){
-            cat("\nNo KEGG results.\n")
-            #next
-          }else{
-            cat('\n', dim(compKEGG@compareClusterResult)[1], 'KEGG results\n')
-          }
-          if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
-            # Map EntrezIDs to gene SYMBOL
-            compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
-            myEntrez <- lapply(compKEGG@compareClusterResult$geneID, strsplit, '/')
-            for (i in 1:length(myEntrez)){
-              compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
-            }
-            # Write annotations to csv
-            df <- as.data.frame(compKEGG@compareClusterResult)
-            df <- df[order(df$p.adjust, df$FoldEnrichment, -xtfrm(df$GeneRatio), -xtfrm(df$BgRatio), df$Description), ]
-            write.table(df, file=paste(result_dirs[[p]], p, '_unique_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+          if (class(compKEGG) == 'compareClusterResult'){
             
-            plt <- make_anno_dotplot(compKEGG@compareClusterResult, 
-                                     title=paste('KEGG - ', p,  ' Unique', sep=""), 
-                                     ylabel="KEGG Category", 
-                                     #colour=colour, 
-                                     n=15,
-                                     title_size=figs$pointsize*1.6,
-                                     text_size=figs$pointsize/3,
-                                     axis_title_size=figs$pointsize*0.8,
-                                     axis_x_size=figs$pointsize*1.2,
-                                     axis_y_size=figs$pointsize*1.2,
-                                     #legend_key_size=figs$pointsize/5,
-                                     legend_title_size=figs$pointsize*1.4,
-                                     legend_text_size=figs$pointsize*1.2
-            )
-            print(plt)
-            #invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_consensus_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+            if (dim(compKEGG@compareClusterResult)[1] > 0){
+              cat('\n', dim(compKEGG@compareClusterResult)[1], 'KEGG results\n')
+              # Map EntrezIDs to gene SYMBOL
+              compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
+              myEntrez <- lapply(compKEGG@compareClusterResult$geneID, strsplit, '/')
+              for (i in 1:length(myEntrez)){
+                compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+              }
+              # Write annotations to csv
+              df_kegg <- as.data.frame(compKEGG@compareClusterResult)
+              df_kegg <- df_kegg[order(df_kegg$p.adjust, df_kegg$FoldEnrichment, -xtfrm(df_kegg$GeneRatio), -xtfrm(df_kegg$BgRatio), df_kegg$Description), ]
+              write.table(df_kegg, file=paste(result_dirs[[p]], p, '_unique_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+              
+              plt <- make_anno_dotplot(df_kegg, 
+                                       title=paste('KEGG - ', p,  ' Unique', sep=""), 
+                                       ylabel="KEGG Category", 
+                                       #colour=colour, 
+                                       n=15,
+                                       title_size=figs$pointsize*1.6,
+                                       text_size=figs$pointsize/3,
+                                       axis_title_size=figs$pointsize*0.8,
+                                       axis_x_size=figs$pointsize*1.2,
+                                       axis_y_size=figs$pointsize*1.2,
+                                       #legend_key_size=figs$pointsize/5,
+                                       legend_title_size=figs$pointsize*1.4,
+                                       legend_text_size=figs$pointsize*1.2
+              )
+              print(plt)
+              #invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_consensus_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
+              
+            }
             
           } else{
-            cat("\nNo annotation results\n")
-            remove(compKEGG)
-            gc()
+              cat("\nNo KEGG results.\n")
+              #next
           }
+          
         },error = function(e)
         {
           message(e)
-          remove(compKEGG)
           gc()
         }
       )
@@ -1877,7 +1885,8 @@ tryCatch(
                                      pAdjustMethod="BH",
                                      minGSSize = opt$minGSSize,
                                      maxGSSize = opt$maxGSSize,
-                                     readable=TRUE
+                                     readable=TRUE,
+                                     universe = bg_genes
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
             if (!class(compGO) == 'compareClusterResult'){
               cat("\nNo GO results", "for", ont, ".\n")
@@ -1888,11 +1897,11 @@ tryCatch(
             if ((!is.null(compGO)) & (dim(compGO@compareClusterResult)[1] > 0)){
               #compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology # found instances of inaccuracies...
               # Write annotations to csv
-              df <- as.data.frame(compGO@compareClusterResult)
-              df <- df[order(df$p.adjust, df$FoldEnrichment, -xtfrm(df$GeneRatio), -xtfrm(df$BgRatio), df$Description), ]
-              write.table(df, file=paste(result_dirs[[p]], p, '_unique_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+              df_go <- as.data.frame(compGO@compareClusterResult)
+              df_go <- df_go[order(df_go$p.adjust, df_go$FoldEnrichment, -xtfrm(df_go$GeneRatio), -xtfrm(df_go$BgRatio), df_go$Description), ]
+              write.table(df_go, file=paste(result_dirs[[p]], p, '_unique_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
               
-              plt <- make_anno_dotplot(compGO@compareClusterResult, 
+              plt <- make_anno_dotplot(df_go, 
                                        title=paste("GO (", ont, ") - ", p, " Consensus", sep=""), 
                                        ylabel="GO Term", 
                                        #colour=colour, 
@@ -1911,8 +1920,7 @@ tryCatch(
               remove(compGO)
               gc()
             } else{
-              cat("\nNo GO", ont, "annotation results\n")
-              remove(compGO)
+              cat("\nNo GO", ont, " results\n")
               gc()
             }
           },error = function(e)
@@ -1988,7 +1996,7 @@ tryCatch(
               )
               
               for (simpleChartRecord in py$chartReport) {
-                df <- data.frame(
+                df_record <- data.frame(
                   ID            = strsplit(simpleChartRecord$termName, splitter)[[1]][1],
                   Category      = simpleChartRecord$categoryName,
                   Description   = strsplit(simpleChartRecord$termName, splitter)[[1]][2],
@@ -2003,7 +2011,7 @@ tryCatch(
                   id            = simpleChartRecord$id,
                   stringsAsFactors = FALSE
                 )
-                records <- rbind(records, df)
+                records <- rbind(records, df_record)
               }
               # py_run_string("records = pd.DataFrame()")
               # py_run_string("for simpleChartRecord in chartReport:
@@ -2037,13 +2045,13 @@ tryCatch(
               
               compDAVID <- new("enrichResult",
                                result         = compD,
-                               pvalueCutoff   = 1,
+                               pvalueCutoff   = opt$fdr,
                                pAdjustMethod  = "BH",
                                organism       = opt$assembly,
                                ontology       = annotation_type,
                                gene           = entrez,
                                keytype        = "ENTREZ_GENE_ID")
-              rm(compD)
+              #rm(compD)
               
               if (!class(compDAVID) == 'enrichResult'){
                 cat("\nNo DAVID", annotation_type, "results.\n")
@@ -2072,11 +2080,11 @@ tryCatch(
                   compDAVID@result$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
                 }
                 # Write annotations to csv
-                df <- as.data.frame(compDAVID@result)
-                df <- df[order(df$p.adjust, df$FoldEnrichment, -xtfrm(df$GeneRatio), -xtfrm(df$BgRatio), df$Description), ]
-                write.table(df, file=paste(result_dirs[[p]], p, '_unique_annotated_DAVID_', annotation_type, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+                df_david <- as.data.frame(compDAVID@result)
+                df_david <- df_david[order(df_david$p.adjust, df_david$FoldEnrichment, -xtfrm(df_david$GeneRatio), -xtfrm(df_david$BgRatio), df_david$Description), ]
+                write.table(df_david, file=paste(result_dirs[[p]], p, '_unique_annotated_DAVID_', annotation_type, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
                 
-                plt <- make_anno_dotplot(compDAVID@result, 
+                plt <- make_anno_dotplot(df_david, 
                                          title=paste('DAVID - ', p, " Unique", sep=""), 
                                          ylabel=paste(annotation_type,"Category", sep=' '), 
                                          #colour=colour, 
@@ -2096,14 +2104,12 @@ tryCatch(
                 gc()
               } else{
                 cat("\nNo DAVID", annotation_type, "annotation results\n")
-                remove(compDAVID)
                 gc()
               }
             }
           },error = function(e)
           {
             message(e)
-            remove(compDAVID)
             gc()
           }
         )
@@ -2223,6 +2229,8 @@ tryCatch(
     cat("\n\n=============================== END OF OCCUPANCY ANALYSIS ===============================\n")
     if (opt$occupancy_only){
       cat("Skipping affinity analysis...\nDone!\n")
+      sink()                  # stop normal output
+      close(con)
       q()
     }
     # Free up memory
@@ -2773,7 +2781,8 @@ for (report in names(reports)){
                                      pAdjustMethod="BH",
                                      minGSSize = opt$minGSSize,
                                      maxGSSize = opt$maxGSSize,
-                                     organism=anno_ref$keggOrg
+                                     organism=anno_ref$keggOrg,
+                                     universe = bg_entrez
           ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
           if (!class(compKEGG) == 'compareClusterResult'){
             cat("\nNo results.\n")
@@ -2830,7 +2839,8 @@ for (report in names(reports)){
                                      pAdjustMethod="BH",
                                      minGSSize = opt$minGSSize,
                                      maxGSSize = opt$maxGSSize,
-                                     readable=TRUE
+                                     readable=TRUE,
+                                     universe = bg_genes
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
             if (!class(compGO) == 'compareClusterResult'){
               cat("\nNo results.\n")
@@ -2944,7 +2954,7 @@ for (report in names(reports)){
               
               compDAVID <- new("enrichResult",
                                result         = compD,
-                               pvalueCutoff   = 1,
+                               pvalueCutoff   = opt$fdr,
                                pAdjustMethod  = "BH",
                                organism       = opt$assembly,
                                ontology       = annotation_type,
@@ -3214,7 +3224,8 @@ for (report in names(reports)){
                                      pAdjustMethod="BH",
                                      minGSSize = opt$minGSSize,
                                      maxGSSize = opt$maxGSSize,
-                                     organism=anno_ref$keggOrg
+                                     organism=anno_ref$keggOrg,
+                                     universe = bg_entrez
           ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
           if (!class(compKEGG) == 'compareClusterResult'){
             cat("\nNo results.\n")
@@ -3270,7 +3281,8 @@ for (report in names(reports)){
                                      pAdjustMethod="BH",
                                      minGSSize = opt$minGSSize,
                                      maxGSSize = opt$maxGSSize,
-                                     readable=TRUE
+                                     readable=TRUE,
+                                     universe = bg_genes
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
             if (!class(compGO) == 'compareClusterResult'){
               cat("\nNo results.\n")
@@ -3385,7 +3397,7 @@ for (report in names(reports)){
               
               compDAVID <- new("enrichResult",
                                result         = compD,
-                               pvalueCutoff   = 1,
+                               pvalueCutoff   = opt$fdr,
                                pAdjustMethod  = "BH",
                                organism       = opt$assembly,
                                ontology       = annotation_type,
