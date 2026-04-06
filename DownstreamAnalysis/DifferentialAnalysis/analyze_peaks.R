@@ -29,6 +29,26 @@ suppressWarnings(suppressPackageStartupMessages({
 }))
 
 # Define Functions
+change_dirs <- function(res_dir, method, subfolder){
+  if ((method == DBA_DESEQ2) | (method == 'DESeq2')){
+    method_dir <- paste(res_dir, 'DESeq2/', sep='')
+    if (!file.exists(paste(method_dir, subfolder, '/', sep=''))) {
+      dir.create(paste(method_dir, subfolder, '/', sep=''))
+    }
+  }else if ((method == DBA_EDGER) | (method == 'edgeR')){
+    method_dir <- paste(res_dir, 'edgeR/', sep='')
+    if (!file.exists(paste(method_dir, subfolder, '/', sep=''))) {
+      dir.create(paste(method_dir, subfolder, '/', sep=''))
+    }
+  }else{
+    method_dir <- paste(res_dir, method, '/', sep='')
+    if (!file.exists(paste(method_dir, subfolder, '/', sep=''))) {
+      dir.create(paste(method_dir, subfolder, '/', sep=''))
+    }
+  }
+  return(paste(method_dir, subfolder, '/', sep=''))
+}
+
 load_annotation <- function(assembly, database){
   # ========= Get database references for annotations =========
   if (assembly == "mm10" | assembly == "mm9"){
@@ -2258,12 +2278,6 @@ tryCatch(
 )
 
 # ========= START OF AFFINITY ANALYSIS =========
-# The consensus peaks determined in occupancy analysis are used here to focus
-# on relevant peak regions only. This way, read counts for peaks are analyzed 
-#for statistical significance in DB. 
-# DESeq2, edgeR, and combined results are produced.
-
-cat("\n=====  Affinity Analysis =====\n")
 result_dir <- paste(opt$result_dir, 'Affinity_Analysis/', sep='')
 # Make new directory for analysis
 if (!file.exists(result_dir)) {
@@ -2277,110 +2291,119 @@ if (!file.exists(paste(result_dir, 'edgeR/', sep=''))) {
   dir.create(paste(result_dir, 'edgeR/', sep=''))
 }
 
-
-change_dirs <- function(res_dir, method, subfolder){
-  if ((method == DBA_DESEQ2) | (method == 'DESeq2')){
-    method_dir <- paste(res_dir, 'DESeq2/', sep='')
-    if (!file.exists(paste(method_dir, subfolder, '/', sep=''))) {
-      dir.create(paste(method_dir, subfolder, '/', sep=''))
-    }
-  }else if ((method == DBA_EDGER) | (method == 'edgeR')){
-    method_dir <- paste(res_dir, 'edgeR/', sep='')
-    if (!file.exists(paste(method_dir, subfolder, '/', sep=''))) {
-      dir.create(paste(method_dir, subfolder, '/', sep=''))
-    }
-  }else{
-    method_dir <- paste(res_dir, method, '/', sep='')
-    if (!file.exists(paste(method_dir, subfolder, '/', sep=''))) {
-      dir.create(paste(method_dir, subfolder, '/', sep=''))
-    }
-  }
-  return(paste(method_dir, subfolder, '/', sep=''))
-}
-
 output_prefix <- change_dirs(result_dir, '', '')
 
-# Count fragments for peaks from bam files
-#dbObj.counted <- dba.count(dbObj.caller_consensus, bUseSummarizeOverlaps=TRUE, 
-#                           peaks=consensus_peaks, 
-#                           minOverlap=1, 
-#                           score=DBA_SCORE_NORMALIZED,
-#                           fragmentSize=dbObj.caller_consensus$config$fragmentSize,
-#summits=200, filter=1, bRemoveDuplicates=FALSE, bScaleControl=TRUE,
-#bSubControl=is.null(dbObj.noblacklist$greylist),
-#mapQCth=dbObj.noblacklist$config$mapQCth, 
-#filterFun=max, minCount=0,
-#bLog=FALSE,
-#readFormat=DBA_READS_DEFAULT, 
-#bParallel=dbObj.noblacklist$config$RunParallel
-#)
-# ========= Count Reads from bams for All Relevant Consensus Peaks =========
-#(recommend to use ‘summits=100‘ for ATAC-seq).
-if (length(unique(dbObj$samples$Factor)) > 1){
-  for (n in names(dbObj.caller_consensus$config)){
-    if (n != 'fragmentSize'){
-      dbObj.caller_consensus$config[[n]] <- unique(dbObj.caller_consensus$config[[n]])
-    }
-  }
-  dbObj.counted <- dba.count(dbObj.caller_consensus, bUseSummarizeOverlaps=TRUE, 
-                             peaks=consensus_peaks, 
-                             minOverlap=1, 
-                             score=DBA_SCORE_NORMALIZED,
-                             bParallel=TRUE,
-                             #fragmentSize=dbObj.caller_consensus$config$fragmentSize,
-                             #summits=200, filter=1, bRemoveDuplicates=FALSE, bScaleControl=TRUE,
-                             #bSubControl=is.null(dbObj.noblacklist$greylist),
-                             #mapQCth=dbObj.noblacklist$config$mapQCth, 
-                             #filterFun=max, minCount=0,
-                             #bLog=FALSE,
-                             #readFormat=DBA_READS_DEFAULT, 
-                             #bParallel=dbObj.noblacklist$config$RunParallel
-  )
-}else{
-  for (n in names(dbObj.noblacklist$config)){
-    if (n != 'fragmentSize'){
-      dbObj.noblacklist$config[[n]] <- unique(dbObj.noblacklist$config[[n]])
-    }
-  }
-  dbObj.counted <- dba.count(dbObj.noblacklist, bUseSummarizeOverlaps=TRUE, 
-                             peaks=consensus_peaks, 
-                             minOverlap=1, 
-                             score=DBA_SCORE_NORMALIZED,
-                             bParallel=TRUE,
-                             #fragmentSize=dbObj.noblacklist$config$fragmentSize,
-                             #summits=200, filter=1, bRemoveDuplicates=FALSE, bScaleControl=TRUE,
-                             #bSubControl=is.null(dbObj.noblacklist$greylist),
-                             #mapQCth=dbObj.noblacklist$config$mapQCth, 
-                             #filterFun=max, minCount=0,
-                             #bLog=FALSE,
-                             #readFormat=DBA_READS_DEFAULT, 
-                             #bParallel=dbObj.noblacklist$config$RunParallel
-  )
-}
-dbObj.counted
-
-# ========= Normalize Counts =========
 tryCatch(
   {
-    # Normalize ("safest general method")
-    dbObj.norm <- dba.normalize(dbObj.counted, method=DBA_ALL_METHODS, 
-                                normalize=DBA_NORM_NATIVE,
-                                background=TRUE, library=DBA_LIBSIZE_DEFAULT,
-                                spikein=FALSE, offsets=FALSE,
-                                libFun=mean, bRetrieve=FALSE)
-  },error = function(e)
-  { 
-    message(e, "\nUsing approximate normalization...")
-    # Approximate normalization to above without extra reading of bam files
-    dbObj.norm <- dba.normalize(dbObj.counted, method=DBA_ALL_METHODS, 
-                                normalize=DBA_NORM_LIB,
-                                background=FALSE, library=DBA_LIBSIZE_FULL,
-                                spikein=FALSE, offsets=FALSE,
-                                libFun=mean, bRetrieve=FALSE)
+    # Output log to file
+    con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt") , sep=''), open = "wt")
+    sink(con, split = FALSE)                 # normal output
+    #sink(con, type = "message", split = TRUE)  # messages
+    
+    cat(
+      "\n\n=============================== START OF AFFINITY ANALYSIS ===============================
+    The consensus peaks determined in the previous occupancy analysis are used here to focus
+    on relevant peak regions only. Read counts for those peaks are analyzed for statistical 
+    significance in differential binding comparisons. 
+    DESeq2, edgeR, and overlapping results are produced."
+    )
+
+    # Count fragments for peaks from bam files
+    #dbObj.counted <- dba.count(dbObj.caller_consensus, bUseSummarizeOverlaps=TRUE, 
+    #                           peaks=consensus_peaks, 
+    #                           minOverlap=1, 
+    #                           score=DBA_SCORE_NORMALIZED,
+    #                           fragmentSize=dbObj.caller_consensus$config$fragmentSize,
+    #summits=200, filter=1, bRemoveDuplicates=FALSE, bScaleControl=TRUE,
+    #bSubControl=is.null(dbObj.noblacklist$greylist),
+    #mapQCth=dbObj.noblacklist$config$mapQCth, 
+    #filterFun=max, minCount=0,
+    #bLog=FALSE,
+    #readFormat=DBA_READS_DEFAULT, 
+    #bParallel=dbObj.noblacklist$config$RunParallel
+    #)
+    # ========= Count Reads from bams for All Relevant Consensus Peaks =========
+    #(recommend to use ‘summits=100‘ for ATAC-seq).
+    if (length(unique(dbObj$samples$Factor)) > 1){
+      for (n in names(dbObj.caller_consensus$config)){
+        if (n != 'fragmentSize'){
+          dbObj.caller_consensus$config[[n]] <- unique(dbObj.caller_consensus$config[[n]])
+        }
+      }
+      dbObj.counted <- dba.count(dbObj.caller_consensus, bUseSummarizeOverlaps=TRUE, 
+                                 peaks=consensus_peaks, 
+                                 minOverlap=1, 
+                                 score=DBA_SCORE_NORMALIZED,
+                                 bParallel=TRUE,
+                                 #fragmentSize=dbObj.caller_consensus$config$fragmentSize,
+                                 #summits=200, filter=1, bRemoveDuplicates=FALSE, bScaleControl=TRUE,
+                                 #bSubControl=is.null(dbObj.noblacklist$greylist),
+                                 #mapQCth=dbObj.noblacklist$config$mapQCth, 
+                                 #filterFun=max, minCount=0,
+                                 #bLog=FALSE,
+                                 #readFormat=DBA_READS_DEFAULT, 
+                                 #bParallel=dbObj.noblacklist$config$RunParallel
+      )
+    } else{
+      for (n in names(dbObj.noblacklist$config)){
+        if (n != 'fragmentSize'){
+          dbObj.noblacklist$config[[n]] <- unique(dbObj.noblacklist$config[[n]])
+        }
+      }
+      dbObj.counted <- dba.count(dbObj.noblacklist, bUseSummarizeOverlaps=TRUE, 
+                                 peaks=consensus_peaks, 
+                                 minOverlap=1, 
+                                 score=DBA_SCORE_NORMALIZED,
+                                 bParallel=TRUE,
+                                 #fragmentSize=dbObj.noblacklist$config$fragmentSize,
+                                 #summits=200, filter=1, bRemoveDuplicates=FALSE, bScaleControl=TRUE,
+                                 #bSubControl=is.null(dbObj.noblacklist$greylist),
+                                 #mapQCth=dbObj.noblacklist$config$mapQCth, 
+                                 #filterFun=max, minCount=0,
+                                 #bLog=FALSE,
+                                 #readFormat=DBA_READS_DEFAULT, 
+                                 #bParallel=dbObj.noblacklist$config$RunParallel
+      )
+    }
+    cat("\nDiffbind object after counting reads:\n")
+    print(dbObj.counted)
+    
+    # ========= Normalize Counts =========
+    tryCatch(
+      {
+        # Normalize ("safest general method")
+        dbObj.norm <- dba.normalize(dbObj.counted, method=DBA_ALL_METHODS, 
+                                    normalize=DBA_NORM_NATIVE,
+                                    background=TRUE, library=DBA_LIBSIZE_DEFAULT,
+                                    spikein=FALSE, offsets=FALSE,
+                                    libFun=mean, bRetrieve=FALSE)
+      },error = function(e)
+      { 
+        message(e, "\nUsing approximate normalization...")
+        # Approximate normalization to above without extra reading of bam files
+        dbObj.norm <- dba.normalize(dbObj.counted, method=DBA_ALL_METHODS, 
+                                    normalize=DBA_NORM_LIB,
+                                    background=FALSE, library=DBA_LIBSIZE_FULL,
+                                    spikein=FALSE, offsets=FALSE,
+                                    libFun=mean, bRetrieve=FALSE)
+      }
+    )
+    cat("After normalizing:\n")
+    print(dbObj.norm)
+    
+  },
+  error = function(e) {
+    message("Error occurred: ", conditionMessage(e))
+  }, 
+  finally = {
+    if (!is.null(dev.list())) dev.off()
+    invisible(capture.output(gc()))
+    #sink()                  # stop messages
+    sink()                  # stop normal output
+    close(con)
   }
+  
 )
-cat("After normalizing:\n")
-dbObj.norm
 
 # Plots
 png(paste(result_dir, 'consensus_peaks_counted_normalized_heatmap.png', sep=''))
