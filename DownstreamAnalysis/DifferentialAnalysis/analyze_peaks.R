@@ -131,7 +131,7 @@ make_anno_dotplot <- function(df, title="", ylabel="Description", colour="#4393C
   # plt <- make_anno_dotplot(compGO@compareClusterResult, title="YourTitle", ylabel="GO Term", n=15)
   # ggsave(filename='YourFigure.png', plot=plt, dpi=400, units='mm', width=200, height=200)
   
-  df <- head(df[order(df$p.adjust, df$FoldEnrichment, -xtfrm(df$GeneRatio), -xtfrm(df$BgRatio), df$Description), ], n=n)
+  df <- head(df[order(df$p.adjust, -xtfrm(df$GeneRatio), -xtfrm(df$BgRatio), df$Description), ], n=n)
   df$Order <- 1:dim(df)[1]
   df$ycolour <- "black"
   if ("ONTOLOGY" %in% colnames(df)){
@@ -223,6 +223,21 @@ make_anno_piebar <- function(df,
   # Note: "Enhancer" typically not output from annotatePeak...
   df$Group <- ifelse(grepl("Enhancer", df$annotation), 'Enhancer', df$Group)
   
+  colour_map <- c(
+    "3' UTR" = colours[1],
+    "5' UTR" = colours[2],
+    "Distal\nIntergenic" = colours[3],
+    "Downstream\n(<=300bp)" = colours[4],
+    "Exon" = colours[5],
+    "Intron" = colours[6],
+    "Promoter\n(<=1kb)" = colours[7],
+    "Promoter\n(1-2kb)" = colours[8],
+    "Promoter\n(2-3kb)" = colours[9],
+    "Promoter" = colours[7]
+  )
+  colour_map <- colour_map[names(colour_map) %in% unique(df$Group)]
+  #df$Group <- factor(df$Group, levels = names(colour_map))
+  
   # Data to plot
   df_plot <- df %>% count(Group)
   df_plot$Frequency <- round( 100 * (df_plot$n / sum(df_plot$n)), 2)
@@ -232,9 +247,10 @@ make_anno_piebar <- function(df,
   df_plot$Region <- as.factor(df_plot$Region)
   
   # Colours
-  myColors <- colours[1:length(unique(df_plot$Region))]
-  names(myColors) <- levels(df_plot$Region)
-  custom_colors_fill <- scale_fill_manual(values = myColors, 
+  df_plot$Colour <- unname(colour_map[df_plot$Region])
+  #myColors <- colours[1:length(unique(df_plot$Region))]
+  #names(myColors) <- levels(df_plot$Region)
+  custom_colors_fill <- scale_fill_manual(values = colour_map,#myColors, 
                                           name = "Region",
                                           labels = str_c(df_plot$Region, ' (', df_plot$Frequency, '%)', sep=''))
   
@@ -525,10 +541,14 @@ option_list = list(
   make_option(c("--colours_discrete"), type="character", default="khroma::muted", help="Palette from paletteer for discrete colours, see https://pmassicotte.github.io/paletteer_gallery/#discrete-palettes", metavar="character"),
   make_option(c("--reverse_d_palette"), type="logical", action="store_true", default=FALSE, help="Reverse the discrete palette colours", metavar="logical"),
   make_option(c("--colours_continuous"), type="character", default="ggthemes::Classic Blue", help="Palette from paletteer for continuous colours, see https://pmassicotte.github.io/paletteer_gallery/#continuous-palettes", metavar="character"),
-  make_option(c("--reverse_c_palette"), type="logical", action="store_true", default=FALSE, help="Reverse the continuous palette colours", metavar="logical")
+  make_option(c("--reverse_c_palette"), type="logical", action="store_true", default=FALSE, help="Reverse the continuous palette colours", metavar="logical"),
+  make_option(c("-p", "--python"), type="character", default="base", help="Python conda environment to use for running DAVID annotations", metavar="character")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
+
+use_condaenv(opt$python, required = TRUE)
+py_config()
 
 figs <- fig_size(opt$figsize, aspect = 0.85, pointsize = 10)
 
@@ -1381,7 +1401,7 @@ tryCatch(
               }
               # Write annotations to csv
               df_kegg <- as.data.frame(compKEGG@compareClusterResult)
-              df_kegg <- df_kegg[order(df_kegg$p.adjust, df_kegg$FoldEnrichment, -xtfrm(df_kegg$GeneRatio), -xtfrm(df_kegg$BgRatio), df_kegg$Description), ]
+              df_kegg <- df_kegg[order(df_kegg$p.adjust, -xtfrm(df_kegg$GeneRatio), -xtfrm(df_kegg$BgRatio), df_kegg$Description), ]
               write.table(df_kegg, file=paste(result_dirs[[p]], p, '_consensus_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
               
               plt <- make_anno_dotplot(df_kegg, 
@@ -1400,7 +1420,6 @@ tryCatch(
               )
               print(plt)
               #invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_consensus_annotated_KEGG.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
-              
             }
             
           } else{
@@ -1446,7 +1465,7 @@ tryCatch(
               #compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology # found instances of inaccuracies...
               # Write annotations to csv
               df_go <- as.data.frame(compGO@compareClusterResult)
-              df_go <- df_go[order(df_go$p.adjust, df_go$FoldEnrichment, -xtfrm(df_go$GeneRatio), -xtfrm(df_go$BgRatio), df_go$Description), ]
+              df_go <- df_go[order(df_go$p.adjust, -xtfrm(df_go$GeneRatio), -xtfrm(df_go$BgRatio), df_go$Description), ]
               write.table(df_go, file=paste(result_dirs[[p]], p, '_consensus_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
               
               plt <- make_anno_dotplot(df_go, 
@@ -1484,11 +1503,11 @@ tryCatch(
       genes_entrez[[p]] <- anno@anno$geneId
       names(genes_entrez) = sub("_", "\n", names(genes_entrez))
       for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT", "KEGG_PATHWAY")){
-        cat("\nGetting ", p, ' DAVID ', annotation_type, ' annotations...\n')  
+        #cat("\nGetting ", p, ' DAVID ', annotation_type, ' annotations...\n')  
         # DAVID Annotation
         tryCatch(
           {
-            cat("\nDAVID - ", annotation_type, "\n")
+            #cat("\nDAVID - ", annotation_type, "\n")
             entrez <- unname(genes_entrez[[p]][!is.na(unname(genes_entrez[[p]]))])
             
             py_require(c("pandas"))
@@ -1517,7 +1536,16 @@ tryCatch(
             py_run_string("chartReport = client.service.getChartReport(thd,ct)")
             py_run_string("chartRow = len(chartReport)")
             py_run_string("print ('Total chart records:',chartRow)")
-            
+          },error = function(e)
+          {
+            cat("\nUnable to run DAVID\n")
+            message(e)
+            next
+            gc()
+          }
+        )
+        tryCatch(
+          {
             if (py$chartRow > 0){
               if (annotation_type == "KEGG_PATHWAY"){
                 splitter <- ":"
@@ -1649,6 +1677,7 @@ tryCatch(
                 #remove(compDAVID)
                 gc()
               } else{
+                next
                 cat("\nNo DAVID", annotation_type, "annotation results\n")
                 gc()
               }
@@ -1656,6 +1685,7 @@ tryCatch(
           },error = function(e)
           {
             message(e)
+            next
             gc()
           }
         )
@@ -1852,7 +1882,7 @@ tryCatch(
               }
               # Write annotations to csv
               df_kegg <- as.data.frame(compKEGG@compareClusterResult)
-              df_kegg <- df_kegg[order(df_kegg$p.adjust, df_kegg$FoldEnrichment, -xtfrm(df_kegg$GeneRatio), -xtfrm(df_kegg$BgRatio), df_kegg$Description), ]
+              df_kegg <- df_kegg[order(df_kegg$p.adjust, -xtfrm(df_kegg$GeneRatio), -xtfrm(df_kegg$BgRatio), df_kegg$Description), ]
               write.table(df_kegg, file=paste(result_dirs[[p]], p, '_unique_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
               
               plt <- make_anno_dotplot(df_kegg, 
@@ -1918,7 +1948,7 @@ tryCatch(
               #compGO@compareClusterResult$ONTOLOGY <- go2ont(compGO@compareClusterResult$ID)$Ontology # found instances of inaccuracies...
               # Write annotations to csv
               df_go <- as.data.frame(compGO@compareClusterResult)
-              df_go <- df_go[order(df_go$p.adjust, df_go$FoldEnrichment, -xtfrm(df_go$GeneRatio), -xtfrm(df_go$BgRatio), df_go$Description), ]
+              df_go <- df_go[order(df_go$p.adjust, -xtfrm(df_go$GeneRatio), -xtfrm(df_go$BgRatio), df_go$Description), ]
               write.table(df_go, file=paste(result_dirs[[p]], p, '_unique_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
               
               plt <- make_anno_dotplot(df_go, 
@@ -1937,7 +1967,6 @@ tryCatch(
               )
               #invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], p, '_annotated_GO-', ont, '.png', sep=''), plot=plt, dpi=320, width=10, units='in')))
               print(plt)
-              remove(compGO)
               gc()
             } else{
               cat("\nNo GO", ont, " results\n")
@@ -1946,7 +1975,6 @@ tryCatch(
           },error = function(e)
           {
             message(e)
-            remove(compGO)
             gc()
           }
         )
@@ -1958,11 +1986,11 @@ tryCatch(
       genes_entrez[[p]] <- anno@anno$geneId
       names(genes_entrez) = sub("_", "\n", names(genes_entrez))
       for (annotation_type in c("GOTERM_BP_DIRECT", "GOTERM_CC_DIRECT", "GOTERM_MF_DIRECT", "KEGG_PATHWAY")){
-        cat("\nGetting ", p, ' DAVID ', annotation_type, ' annotations...\n')  
+        #cat("\nGetting ", p, ' DAVID ', annotation_type, ' annotations...\n')  
         # DAVID Annotation
         tryCatch(
           {
-            cat("\nDAVID - ", annotation_type, "\n")
+            #cat("\nDAVID - ", annotation_type, "\n")
             entrez <- unname(genes_entrez[[p]][!is.na(unname(genes_entrez[[p]]))])
             
             py_require(c("pandas"))
@@ -1992,6 +2020,16 @@ tryCatch(
             py_run_string("chartRow = len(chartReport)")
             py_run_string("print ('Total chart records:',chartRow)")
             
+          },error = function(e)
+          {
+            cat("\nUnable to run DAVID\n")
+            message(e)
+            next
+            gc()
+          }
+        )
+        tryCatch(
+          {   
             if (py$chartRow > 0){
               if (annotation_type == "KEGG_PATHWAY"){
                 splitter <- ":"
@@ -2120,16 +2158,17 @@ tryCatch(
                 )
                 #invisible(capture.output(ggsave(filename=paste(result_dirs[[p]], 'DAVID_annotation_', annotation_type, '_', p, '_dotplot.png', sep=''), plot=plt, dpi=320)))
                 print(plt)
-                remove(compDAVID)
                 gc()
               } else{
                 cat("\nNo DAVID", annotation_type, "annotation results\n")
+                next
                 gc()
               }
             }
           },error = function(e)
           {
             message(e)
+            next
             gc()
           }
         )
