@@ -542,12 +542,30 @@ option_list = list(
   make_option(c("--reverse_d_palette"), type="logical", action="store_true", default=FALSE, help="Reverse the discrete palette colours", metavar="logical"),
   make_option(c("--colours_continuous"), type="character", default="ggthemes::Classic Blue", help="Palette from paletteer for continuous colours, see https://pmassicotte.github.io/paletteer_gallery/#continuous-palettes", metavar="character"),
   make_option(c("--reverse_c_palette"), type="logical", action="store_true", default=FALSE, help="Reverse the continuous palette colours", metavar="logical"),
-  make_option(c("-p", "--python"), type="character", default="base", help="Python conda environment to use for running DAVID annotations", metavar="character")
+  make_option(c("-p", "--python"), type="character", default="base", help="Name of python environment (can be conda or virtualenv) to use for running DAVID annotations", metavar="character")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
-use_condaenv(opt$python, required = TRUE)
+# Load available Python environment
+tryCatch(
+  {
+    use_condaenv(opt$python, required = TRUE)
+    print("Conda environment found.\n")
+  },
+  error = function(e) {
+    warning(e)
+  }
+)
+tryCatch(
+  {
+    use_virtualenv(opt$python, required = TRUE)
+    print("Virtualenv found.\n")
+  },
+    error = function(e) {
+      warning(e)
+    }
+)
 py_config()
 
 figs <- fig_size(opt$figsize, aspect = 0.85, pointsize = 10)
@@ -2298,8 +2316,15 @@ tryCatch(
     rm(plt)
     rm(anno)
     rm(peakAnnoList)
+    rm(compD)
+    rm(compDAVID)
     rm(compKEGG)
     rm(compGO)
+    rm(records)
+    rm(df_record)
+    rm(df_david)
+    rm(df_kegg)
+    rm(df_go)
     invisible(capture.output(gc()))
     
   },
@@ -2335,7 +2360,7 @@ output_prefix <- change_dirs(result_dir, '', '')
 tryCatch(
   {
     # Output log to file
-    con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt") , sep=''), open = "wt")
+    con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt") , sep=''), open = "at")
     sink(con, split = FALSE)                 # normal output
     #sink(con, type = "message", split = TRUE)  # messages
     
