@@ -665,6 +665,7 @@ tryCatch(
       cat(names(opt)[i], '=', paste(opt)[i], "\n")
     }
     cat("\nlog2FC of", opt$lfc, "equates to FC of", round(2^0.585, 2), '\n')
+    cat('\nColour palette:\n', colours_discrete, '\n')
     
     if (!(opt$assembly %in% c('mm10', 'mm9', 'hg38', 'hg19', 'rn6'))){
       cat(opt$assembly, "not a valid choice. Only supports mm9, mm10, hg19, hg38, rn6 assemblies.")
@@ -1510,7 +1511,7 @@ tryCatch(
             }
           },error = function(e)
           {
-            message("Error for GO", ont, p, conditionMessage(e), '\n')
+            message("Error for GO ", ont, ' ', p, ' ', conditionMessage(e), '\n')
             gc()
           }
         )
@@ -1703,7 +1704,7 @@ tryCatch(
             }
           },error = function(e)
           {
-            message("Error for DAVID", annotation_type, p, conditionMessage(e), '\n')
+            message("Error for DAVID ", annotation_type, ' ', p, ' ', conditionMessage(e), '\n')
             #next
             gc()
           }
@@ -1850,14 +1851,14 @@ tryCatch(
       peakAnnoList[[p]] <- anno
       
       cat("\n",length(anno@anno), "annotated out of", length(peaks[[p]]), p, "peaks\n")
-      plt <- make_anno_piebar(as.data.frame(anno@anno), type='pie', title=paste0(p, " - Unique\n", "Distribution of Sites"), specific=TRUE, colours=paletteer_d("khroma::muted"), 
+      plt <- make_anno_piebar(as.data.frame(anno@anno), type='pie', title=paste0(p, " - Unique\n", "Distribution of Sites"), specific=TRUE, colours=colours_discrete, 
                               title_size=figs$width*2.8,
                               text_size=figs$pointsize/3,
                               legend_key_size=figs$width/20,
                               legend_title_size=figs$width*1.8,
                               legend_text_size=figs$width*1.5)
       print(plt)
-      plt <- make_anno_piebar(as.data.frame(anno@anno), type='bar', title=paste0(p, " - Unique\n", "Distribution of Sites"), specific=TRUE, colours=paletteer_d("khroma::muted"),
+      plt <- make_anno_piebar(as.data.frame(anno@anno), type='bar', title=paste0(p, " - Unique\n", "Distribution of Sites"), specific=TRUE, colours=colours_discrete,
                               title_size=figs$width*2,
                               text_size=figs$pointsize/2.8,
                               axis_title_size=figs$width*1.6,
@@ -1993,7 +1994,7 @@ tryCatch(
             }
           },error = function(e)
           {
-            message("Error for GO", ont, p, conditionMessage(e), '\n')
+            message("Error for GO ", ' ', ont, ' ', p, ' ', conditionMessage(e), '\n')
             gc()
           }
         )
@@ -2016,6 +2017,8 @@ tryCatch(
             py_require(c("suds"))
             py_run_string("import pandas as pd")
             py_run_string("import sys")
+            py_run_string("import ssl")
+            py_run_string("import certifi")
             py_run_string("from suds.client import Client")
             
             # create a service client using the wsdl.
@@ -2039,16 +2042,6 @@ tryCatch(
             py_run_string("chartRow = len(chartReport)")
             py_run_string("print ('Total chart records:',chartRow)")
             
-          },error = function(e)
-          {
-            cat("\nUnable to run DAVID\n")
-            message(conditionMessage(e))
-            #next
-            gc()
-          }
-        )
-        tryCatch(
-          {   
             if (py$chartRow > 0){
               if (annotation_type == "KEGG_PATHWAY"){
                 splitter <- ":"
@@ -2184,16 +2177,16 @@ tryCatch(
                 gc()
               }
             }
+            
           },error = function(e)
           {
+            cat("\nUnable to run DAVID\n")
             message(conditionMessage(e))
             #next
             gc()
           }
         )
       }
-      
-      
       
     }
     
@@ -2232,9 +2225,9 @@ tryCatch(
     #                        tssRegion=c(-3000, 3000)
     #   )
     #   cat("\n", length(anno@anno), "annotated out of", length(shared_peaks[['Shared']]), "shared peaks\n\n")
-    #   plt <- make_anno_piebar(as.data.frame(anno@anno), type='pie', title=paste0("Shared\n", "Distribution of Sites"), specific=TRUE, colours=paletteer_d("khroma::muted"))
+    #   plt <- make_anno_piebar(as.data.frame(anno@anno), type='pie', title=paste0("Shared\n", "Distribution of Sites"), specific=TRUE, colourscolours_discrete)
     #   print(plt)
-    #   plt <-make_anno_piebar(as.data.frame(anno@anno), type='bar', title=paste0("Shared\n", "Distribution of Sites"), specific=TRUE, colours=paletteer_d("khroma::muted"))
+    #   plt <-make_anno_piebar(as.data.frame(anno@anno), type='bar', title=paste0("Shared\n", "Distribution of Sites"), specific=TRUE, colours=colours_discrete)
     #   print(plt)
     #   write.table(anno@anno, file=paste(result_dirs[[c]], '../Shared_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
     
@@ -2709,10 +2702,12 @@ for (report in names(reports)){
                           
       cat("\n", length(anno@anno), "annotated out of", dim(res)[1], p, "sites\n\n")
       write.table(anno@anno, file=paste(result_dir, report, '_report_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F)
-
-      if (is.null(dba.report(dbObj.analyzed, method=report, contrast=1, th=opt$fdr))){
-        cat("\nNo DB sites identified by", report, "at a significance threshold of", opt$fdr, "skipping further analysis...\n")
-        next
+      
+      if (report != "DESeq2_and_edgeR"){
+        if (is.null(dba.report(dbObj.analyzed, method=report, contrast=1, th=opt$fdr))){
+          cat("\nNo DB sites identified by", report, "at a significance threshold of", opt$fdr, "skipping further analysis...\n")
+          next
+        }
       }
       
       # Report columns are seqnames, start, end, width, strand, Conc, Conc_Group1, Conc_Group2, Fold, p.value, FDR
@@ -2893,7 +2888,7 @@ for (report in names(reports)){
               }
             },error = function(e)
             {
-              message("Error for GO", ont, p, conditionMessage(e), '\n')
+              message("Error for GO ", ont, ' ', p, ' ', conditionMessage(e), '\n')
               gc()
             }
           )
@@ -2916,6 +2911,8 @@ for (report in names(reports)){
               py_require(c("suds"))
               py_run_string("import pandas as pd")
               py_run_string("import sys")
+              py_run_string("import ssl")
+              py_run_string("import certifi")
               py_run_string("from suds.client import Client")
               
               # create a service client using the wsdl.
