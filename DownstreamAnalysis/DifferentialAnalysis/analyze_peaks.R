@@ -834,7 +834,7 @@ tryCatch(
         }
       },error = function(e)
       {
-        message(e)
+        message(conditionMessage(e))
       }
     )
     # if (!exists("dbObj.noblacklist")) {
@@ -1247,7 +1247,7 @@ tryCatch(
         }
       },error = function(e)
       {
-        message(e)
+        message(conditionMessage(e))
       }
     )
     
@@ -1324,7 +1324,7 @@ tryCatch(
     
   },
   error = function(e) {
-    message("Error occurred: ", conditionMessage(e))
+    message("Error occurred: ", conditionMessage(e), '\n')
   }, 
   finally = {
     if (!is.null(dev.list())) dev.off()
@@ -1447,7 +1447,7 @@ tryCatch(
           
         },error = function(e)
         {
-          message(e)
+          message(conditionMessage(e))
           gc()
         }
       )
@@ -1476,7 +1476,7 @@ tryCatch(
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
             if (!class(compGO) == 'compareClusterResult'){
               cat("\nNo GO results", "for", ont, ".\n")
-              next
+              #next
             }else{
               cat('\n', dim(compGO@compareClusterResult)[1], 'GO', ont, 'results\n')
             }
@@ -1510,7 +1510,7 @@ tryCatch(
             }
           },error = function(e)
           {
-            message(e)
+            message("Error for GO", ont, p, conditionMessage(e), '\n')
             gc()
           }
         )
@@ -1558,8 +1558,8 @@ tryCatch(
           },error = function(e)
           {
             cat("\nUnable to run DAVID\n")
-            message(e)
-            next
+            message(conditionMessage(e), '\n')
+            #next
             gc()
           }
         )
@@ -1648,7 +1648,7 @@ tryCatch(
               
               if (!class(compDAVID) == 'enrichResult'){
                 cat("\nNo DAVID", annotation_type, "results.\n")
-                next
+                #next
               }else{
                 cat('\n', dim(compDAVID@result)[1], 'DAVID', annotation_type,  'results\n')
               }
@@ -1696,15 +1696,15 @@ tryCatch(
                 #remove(compDAVID)
                 gc()
               } else{
-                next
+                #next
                 cat("\nNo DAVID", annotation_type, "annotation results\n")
                 gc()
               }
             }
           },error = function(e)
           {
-            message(e)
-            next
+            message("Error for DAVID", annotation_type, p, conditionMessage(e), '\n')
+            #next
             gc()
           }
         )
@@ -1723,7 +1723,7 @@ tryCatch(
         #invisible(capture.output(ggsave(filename=paste(result_dir, 'peaks_annotation_distribution_bar.png', sep=''), plot=plt, dpi=320)))
       },error = function(e)
       {
-        message(e)
+        message('Error plotting AnnoBar', conditionMessage(e), '\n')
       }
     )
     tryCatch(
@@ -1734,7 +1734,7 @@ tryCatch(
         #invisible(capture.output(ggsave(filename=paste(result_dir, 'peaks_annotation_TSS_distribution.png', sep=''), plot=plt, dpi=320)))
       },error = function(e)
       {
-        message(e)
+        message('Error plotting DistToTSS:', conditionMessage(e), '\n')
       }
     )
     invisible(capture.output(gc()))
@@ -1804,7 +1804,7 @@ tryCatch(
 
   },
   error = function(e) {
-    message("Error occurred: ", conditionMessage(e))
+    message("Error occurred: ", conditionMessage(e), '\n')
   }, 
   finally = {
     if (!is.null(dev.list())) dev.off()
@@ -1930,7 +1930,7 @@ tryCatch(
           
         },error = function(e)
         {
-          message(e)
+          message(conditionMessage(e))
           gc()
         }
       )
@@ -1959,7 +1959,7 @@ tryCatch(
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
             if (!class(compGO) == 'compareClusterResult'){
               cat("\nNo GO results", "for", ont, ".\n")
-              next
+              #next
             }else{
               cat('\n', dim(compGO@compareClusterResult)[1], 'GO', ont, 'results\n')
             }
@@ -1993,7 +1993,7 @@ tryCatch(
             }
           },error = function(e)
           {
-            message(e)
+            message("Error for GO", ont, p, conditionMessage(e), '\n')
             gc()
           }
         )
@@ -2042,8 +2042,8 @@ tryCatch(
           },error = function(e)
           {
             cat("\nUnable to run DAVID\n")
-            message(e)
-            next
+            message(conditionMessage(e))
+            #next
             gc()
           }
         )
@@ -2132,7 +2132,7 @@ tryCatch(
               
               if (!class(compDAVID) == 'enrichResult'){
                 cat("\nNo DAVID", annotation_type, "results.\n")
-                next
+                #next
               }else{
                 cat('\n', dim(compDAVID@result)[1], 'DAVID', annotation_type,  'results\n')
               }
@@ -2159,7 +2159,7 @@ tryCatch(
                 # Write annotations to csv
                 df_david <- as.data.frame(compDAVID@result)
                 df_david <- df_david[order(df_david$p.adjust, df_david$FoldEnrichment, -xtfrm(df_david$GeneRatio), -xtfrm(df_david$BgRatio), df_david$Description), ]
-                write.table(df_david, file=paste(result_dirs[[p]], p, '_unique_annotated_DAVID_', annotation_type, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+                write.table(df_david, file=paste(result_dirs[[p]], p, '_unique_annotated_DAVID-', annotation_type, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
                 
                 plt <- make_anno_dotplot(df_david, 
                                          title=paste('DAVID - ', p, " Unique", sep=""), 
@@ -2180,14 +2180,14 @@ tryCatch(
                 gc()
               } else{
                 cat("\nNo DAVID", annotation_type, "annotation results\n")
-                next
+                #next
                 gc()
               }
             }
           },error = function(e)
           {
-            message(e)
-            next
+            message(conditionMessage(e))
+            #next
             gc()
           }
         )
@@ -2205,7 +2205,7 @@ tryCatch(
         #invisible(capture.output(ggsave(filename=paste(result_dir, 'peaks_annotation_distribution_bar.png', sep=''), plot=plt, dpi=320)))
       },error = function(e)
       {
-        message(e)
+        message("\nError plotting AnnoBar:", conditionMessage(e), "\n")
       }
     )
     tryCatch(
@@ -2215,7 +2215,7 @@ tryCatch(
         #invisible(capture.output(ggsave(filename=paste(result_dir, 'peaks_annotation_TSS_distribution.png', sep=''), plot=plt, dpi=320)))
       },error = function(e)
       {
-        message(e)
+        message("\nError plotting DistToTSS:", conditionMessage(e), "\n")
       }
     )
     invisible(capture.output(gc()))
@@ -2354,6 +2354,9 @@ if (!file.exists(paste(result_dir, 'DESeq2/', sep=''))) {
 }
 if (!file.exists(paste(result_dir, 'edgeR/', sep=''))) {
   dir.create(paste(result_dir, 'edgeR/', sep=''))
+}
+if (!file.exists(paste(result_dir, 'DESeq2_and_edgeR/', sep=''))) {
+  dir.create(paste(result_dir, 'DESeq2_and_edgeR/', sep=''))
 }
 
 #output_prefix <- change_dirs(result_dir, '', '')
@@ -2555,7 +2558,7 @@ tryCatch(
                           #group_anno_color=unlist(unname(conditions_colour_code))
                           )
         }, error=function(e){
-          message('\nNo profile plot of differential sites from', m, '\n')
+          message('\nNo profile plot of differential sites from', m, conditionMessage(e), '\n')
         }
       )
     
@@ -2567,7 +2570,7 @@ tryCatch(
                             method=DBA_ALL_METHODS
         )
       }, error=function(e){
-        message("\nNo venn diagram for number of DB sites by each method\n", e)
+        message("\nNo venn diagram for number of DB sites by each method", conditionMessage(e), '\n')
       }
     )
     
@@ -2582,7 +2585,7 @@ tryCatch(
                         sep='')
                       )
         }, error=function(e){
-          message('\nNo venn of differential sites from', m, '\n')
+          message('\nNo venn of differential sites from', m, conditionMessage(e), '\n')
         }
       )
 
@@ -2594,7 +2597,7 @@ tryCatch(
             '\nFold Change < 0 = ', dbObj.analyzed$contrasts[[1]]$name2, '\n',
               sep=''))
         }, error=function(e){
-          message('\nNo volcano plot of differential sites from', m, '\n')
+          message('\nNo volcano plot of differential sites from', m, conditionMessage(e), '\n')
         }
       )
 
@@ -2602,7 +2605,7 @@ tryCatch(
         {
           dba.plotMA(dbObj.analyzed, method=m, factor=paste(m, sep=''))
         }, error=function(e){
-          message('\nNo MA plot of differential sites from', m, '\n')
+          message('\nNo MA plot of differential sites from', m, conditionMessage(e), '\n')
         }
       )
 
@@ -2612,7 +2615,7 @@ tryCatch(
           dba.plotBox(dbObj.analyzed, method=m)
           mtext(m, outer = TRUE, side = 3, line = 1)
         }, error=function(e){
-          message('\nNo box plot of differential sites from', m, '\n')
+          message('\nNo box plot of differential sites from', m, conditionMessage(e), '\n')
         }
       )
 
@@ -2648,6 +2651,15 @@ tryCatch(
 
     reports[["edgeR"]] <- dba.report(dbObj.analyzed, method=DBA_EDGER, contrast=1, th=1)
     write.table(as.data.frame(reports[["edgeR"]]), file=paste(result_dir, 'edgeR_report.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+  
+    # For considering sites identified by DESeq2 AND edgeR
+    df_both <- merge(as.data.frame(reports[["DESeq2"]]), as.data.frame(reports[["edgeR"]]), by=c("seqnames", "start", "end"), suffixes=c(".DESeq2", ".edgeR"))
+    # Use Average 
+    df_both['log2FoldChange'] <- (df_both$Fold.DESeq2 + df_both$Fold.edgeR)/2
+    df_both['p.value'] <- (df_both$p.value.DESeq2 + df_both$p.value.edgeR)/2
+    df_both['FDR'] <- (df_both$FDR.DESeq2 + df_both$FDR.edgeR)/2
+    reports[["DESeq2_and_edgeR"]] <- GRanges(df_both)
+  
   },
   error = function(e) {
     message("\nError occurred: ", conditionMessage(e), "\n")
@@ -2661,9 +2673,9 @@ tryCatch(
   }
 )
 
+# Annotate differential binding sites for each report
 for (report in names(reports)){
-  output_prefix <- change_dirs(result_dir, report, '')
-  print("\n\n---------- ", report, " ----------\n\n")
+  
   tryCatch(
     {
       # Output log to file
@@ -2671,11 +2683,14 @@ for (report in names(reports)){
       sink(con, split = FALSE)                 # normal output
       #sink(con, type = "message", split = TRUE)  # messages
 
+      output_prefix <- change_dirs(result_dir, report, '')
+
       pdf(paste(output_prefix, report, '_affinity-analysis_annotated-sites.pdf', sep=""),
           width  = figs$width,
           height = figs$height,
           pointsize = figs$pointsize)  # or 9–10)
       
+      cat("\n\n================== ", report, " ==================\n\n")
       # Write complete report to file
       res <- as.data.frame(reports[[report]])
       names(res)[names(res) == 'Fold'] <- 'log2FoldChange'
@@ -2684,7 +2699,7 @@ for (report in names(reports)){
       cat(dim(res[res$log2FoldChange > 0, ])[1], "total sites in", dbObj.analyzed$contrasts[[1]]$name1, "\n")
       cat(dim(res[res$log2FoldChange < 0, ])[1], "total sites in", dbObj.analyzed$contrasts[[1]]$name2, "\n")
 
-      cat("\n\n---------- Annotating Full", report, " ----------\n")
+      cat("\n\n---------- Annotating Full", report, "Report ----------\n")
       anno <- annotatePeak(GRanges(res), 
                             TxDb=anno_ref$txdb, 
                             annoDb=anno_ref$annoDb,
@@ -2692,7 +2707,7 @@ for (report in names(reports)){
                             tssRegion=c(-3000, 3000)
                           )
                           
-      cat("\n", length(anno@anno), "annotated out of", length(res), p, "sites\n")
+      cat("\n", length(anno@anno), "annotated out of", dim(res)[1], p, "sites\n\n")
       write.table(anno@anno, file=paste(result_dir, report, '_report_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F)
 
       if (is.null(dba.report(dbObj.analyzed, method=report, contrast=1, th=opt$fdr))){
@@ -2708,51 +2723,7 @@ for (report in names(reports)){
       sites[[dbObj.analyzed$contrasts[[1]]$name2]] <- res[(res$log2FoldChange < 0) & (res$FDR <= opt$fdr), ]
       cat(dim(sites[[dbObj.analyzed$contrasts[[1]]$name1]])[1], paste0("statistically significant (FDR <= ", opt$fdr, ") sites in"), dbObj.analyzed$contrasts[[1]]$name1, "\n")
       cat(dim(sites[[dbObj.analyzed$contrasts[[1]]$name2]])[1], paste0("statistically significant (FDR <= ", opt$fdr, ") sites in"), dbObj.analyzed$contrasts[[1]]$name2, "\n")
-
-      # Write result to bed files
-      for (s in names(sites)){
-        #output_prefix <- change_dirs(result_dir, report, s)
-        write.table(sites[[s]][c('seqnames', 'start', 'end')], file=paste(result_dir, report, '_report_', s, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
-      }
-      
-
-      ## Plot profile heatmaps for all significant (FDR < opt$fdr) sites for each method
-      #output_prefix <- change_dirs(result_dir, report, '')
-      #tryCatch(
-      #  {
-      #    profile_colors <- list()
-      #    for (i in 1:length(unique(dbObj.analyzed$samples$Condition))) {
-      #      profile_colors[[unique(dbObj.analyzed$samples$Condition)[i]]] <- c('white', discrete_colours[[i]])
-      #    }
-      #    profile_colors <- rev(profile_colors)
-      #    # Plots all significant sites among both conditions (will include signals)
-      #    profiles_significant <- dba.plotProfile(dbObj.analyzed, merge=c(DBA_REPLICATE), normalize=TRUE, 
-      #                    sites=GRanges(sites[[s]])
-      #    )
-      #    dba.plotProfile(profiles_significant, matrices_color=profile_colors, all_color_scales_equal=FALSE, 
-      #                    decreasing=FALSE, 
-      #                    #group_anno_color=unlist(unname(conditions_colour_code))
-      #    )
-      #  }, error=function(e){
-      #    message("\nNo profile plot for ", report, "\n", e)
-      #  }
-      #)
-      
-      # Plot peaks gained/lost over genome between conditions
-      #output_prefix <- change_dirs(result_dir, report, '')
-      #tryCatch(
-      #  {
-      #    plt <- covplot(gpeaks, title=paste("Peaks over Genome", report, sep=' - '), weightCol='Fold') + 
-      #      scale_color_manual(values=rev(c(colours[1:length(unique_peaks)]))) + 
-      #      scale_fill_manual(values=rev(c(colours[1:length(unique_peaks)])))
-      #    invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_significant_merged_peaks.png', sep=''), plot=plt, dpi=320)))
-      #    plt <- plt + facet_grid(chr ~ .id)
-      #    invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_significant_peaks.png', sep=''), plot=plt, dpi=320)))
-      #  }, error=function(e){
-      #    message("No figure\n", e)
-      #  }
-      #)
-      #invisible(capture.output(gc()))
+      sites[[dbObj.analyzed$contrasts[[1]]$name2]] <- sites[[dbObj.analyzed$contrasts[[1]]$name2]][order(sites[[dbObj.analyzed$contrasts[[1]]$name2]]$log2FoldChange, decreasing=FALSE), ]
       
       # ========= Get Annotations =========
       peakAnnoList <- list()
@@ -2762,6 +2733,8 @@ for (report in names(reports)){
           cat("\nNo", p, "sites for", report,' to annotate.\n')
           next
         }
+        # Write sites to bed file
+        write.table(sites[[p]][c('seqnames', 'start', 'end')], file=paste(output_prefix, report, '_', p, '.bed', sep=''), sep="\t", quote=F, row.names=F, col.names=F)
 
         cat("\n\n---------- Annotating Statistically Significant", report, p, 'Sites ----------\n')
         anno <- annotatePeak(GRanges(sites[[p]]), 
@@ -2773,20 +2746,20 @@ for (report in names(reports)){
         
         peakAnnoList[[p]] <- anno
         cat("\n", length(anno@anno), "annotated out of", dim(sites[[p]])[1], p, "sites\n")
-        write.table(anno@anno, file=paste(result_dir, report, '_report_', p, '_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F)
+        write.table(anno@anno, file=paste(output_prefix, report, '_', p, '_annotated.tsv', sep=''), sep="\t", quote=F, row.names=F)
         
         # Set plot colors
         colour <- conditions_colour_code[[p]]
         heat_colour <- conditions_colour_code[[p]]
         
-        plt <- make_anno_piebar(as.data.frame(anno@anno), type='pie', title=paste0(p, "Distribution of Sites"), specific=TRUE, colours=colours_discrete, 
+        plt <- make_anno_piebar(as.data.frame(anno@anno), type='pie', title=paste0(p, " Distribution of Sites"), specific=TRUE, colours=colours_discrete, 
                                 title_size=figs$width*2.8,
                                 text_size=figs$pointsize/3,
                                 legend_key_size=figs$width/20,
                                 legend_title_size=figs$width*1.8,
                                 legend_text_size=figs$width*1.5)
         print(plt)
-        plt <- make_anno_piebar(as.data.frame(anno@anno), type='bar', title=paste0(p, "Distribution of Sites"), specific=TRUE, colours=colours_discrete,
+        plt <- make_anno_piebar(as.data.frame(anno@anno), type='bar', title=paste0(p, " Distribution of Sites"), specific=TRUE, colours=colours_discrete,
                                 title_size=figs$width*2,
                                 text_size=figs$pointsize/2.8,
                                 axis_title_size=figs$width*1.6,
@@ -2830,7 +2803,7 @@ for (report in names(reports)){
                 # Write annotations to csv
                 df_kegg <- as.data.frame(compKEGG@compareClusterResult)
                 df_kegg <- df_kegg[order(df_kegg$p.adjust, -xtfrm(df_kegg$GeneRatio), -xtfrm(df_kegg$BgRatio), df_kegg$Description), ]
-                write.table(df_kegg, file=paste(result_dir, report, '_', p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+                write.table(df_kegg, file=paste(output_prefix, report, '_', p, '_annotated_KEGG.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
                 
                 plt <- make_anno_dotplot(df_kegg, 
                                         title=paste('KEGG - ', p,  ' Unique', sep=""), 
@@ -2857,7 +2830,7 @@ for (report in names(reports)){
             
           },error = function(e)
           {
-            message(e)
+            message('Error with KEGG:', p, conditionMessage(e), '\n')
             gc()
           }
         )
@@ -2886,7 +2859,7 @@ for (report in names(reports)){
               ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
               if (!class(compGO) == 'compareClusterResult'){
                 cat("\nNo GO results", "for", ont, ".\n")
-                next
+                #next
               }else{
                 cat('\n', dim(compGO@compareClusterResult)[1], 'GO', ont, 'results\n')
               }
@@ -2895,7 +2868,7 @@ for (report in names(reports)){
                 # Write annotations to csv
                 df_go <- as.data.frame(compGO@compareClusterResult)
                 df_go <- df_go[order(df_go$p.adjust, -xtfrm(df_go$GeneRatio), -xtfrm(df_go$BgRatio), df_go$Description), ]
-                write.table(df_go, file=paste(result_dir, report, '_', p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+                write.table(df_go, file=paste(output_prefix, report, '_', p, '_annotated_GO-', ont, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
                 
                 plt <- make_anno_dotplot(df_go, 
                                         title=paste("GO (", ont, ") - ", p, sep=""), 
@@ -2920,7 +2893,7 @@ for (report in names(reports)){
               }
             },error = function(e)
             {
-              message(e)
+              message("Error for GO", ont, p, conditionMessage(e), '\n')
               gc()
             }
           )
@@ -2965,17 +2938,7 @@ for (report in names(reports)){
               py_run_string("chartReport = client.service.getChartReport(thd,ct)")
               py_run_string("chartRow = len(chartReport)")
               py_run_string("print ('Total chart records:',chartRow)")
-              
-            },error = function(e)
-            {
-              cat("\nUnable to run DAVID\n")
-              message(e)
-              next
-              gc()
-            }
-          )
-          tryCatch(
-            {   
+
               if (py$chartRow > 0){
                 if (annotation_type == "KEGG_PATHWAY"){
                   splitter <- ":"
@@ -3040,7 +3003,7 @@ for (report in names(reports)){
                 
                 if (!class(compDAVID) == 'enrichResult'){
                   cat("\nNo DAVID", annotation_type, "results.\n")
-                  next
+                  #next
                 }else{
                   cat('\n', dim(compDAVID@result)[1], 'DAVID', annotation_type,  'results\n')
                 }
@@ -3055,7 +3018,7 @@ for (report in names(reports)){
                   # Write annotations to csv
                   df_david <- as.data.frame(compDAVID@result)
                   df_david <- df_david[order(df_david$p.adjust, df_david$FoldEnrichment, -xtfrm(df_david$GeneRatio), -xtfrm(df_david$BgRatio), df_david$Description), ]
-                  write.table(df_david, file=paste(result_dir, report, '_', p, '_annotated_DAVID_', annotation_type, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+                  write.table(df_david, file=paste(output_prefix, report, '_', p, '_annotated_DAVID-', annotation_type, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
                   
                   plt <- make_anno_dotplot(df_david, 
                                           title=paste('DAVID - ', p, sep=""), 
@@ -3076,19 +3039,21 @@ for (report in names(reports)){
                   gc()
                 } else{
                   cat("\nNo DAVID", annotation_type, "annotation results\n")
-                  next
+                  #next
                   gc()
                 }
               }
+              
             },error = function(e)
             {
-              message(e)
-              next
+              cat("\nUnable to run DAVID", annotation_type, conditionMessage(e), "\n")
+              #message(e)
+              #next
               gc()
             }
           )
         }
-        
+
       }
       
       # Plot sites distributions
@@ -3099,7 +3064,7 @@ for (report in names(reports)){
           #invisible(capture.output(ggsave(filename=paste(result_dir, 'peaks_annotation_distribution_bar.png', sep=''), plot=plt, dpi=320)))
         },error = function(e)
         {
-          message(e)
+          message('Problem plotting AnnoBar:', conditionMessage(e), '\n')
         }
       )
       tryCatch(
@@ -3109,7 +3074,7 @@ for (report in names(reports)){
           #invisible(capture.output(ggsave(filename=paste(result_dir, 'peaks_annotation_TSS_distribution.png', sep=''), plot=plt, dpi=320)))
         },error = function(e)
         {
-          message(e)
+          message('Problem plotting DistToTSS:', conditionMessage(e), '\n')
         }
       )
       invisible(capture.output(gc()))
@@ -3168,74 +3133,30 @@ for (report in names(reports)){
   )
 
 }
-                    
-              plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
-              invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_KEGG_annotation_', p, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
-              remove(plt)
-              plt <- make_pheatmapplot(compKEGG@compareClusterResult, res, anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', p, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=round(max(res$log2FoldChange)), dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
-              invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_KEGG_annotation_', p, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
-              remove(plt)
-              remove(compKEGG)
-              gc()
 
-# Quit if one method produced no results to avoid repeating functions...
-if (is.null(dba.report(dbObj.analyzed, method=DBA_DESEQ2, contrast=1, th=opt$fdr)) | is.null(dba.report(dbObj.analyzed, method=DBA_EDGER, contrast=1, th=opt$fdr))){
-  cat("\nNo DEGs identified by either DESeq2 or edgeR at a significance threshold of", opt$fdr, "skipping further analysis...\n")
-  cat("\nFINISHED!\n")
-  q()
-}
-      
-      
-      # For considering sites identified by DESeq2 AND edgeR
-      #reports[["DESeq2_and_edgeR"]] <- c(reports[["DESeq2"]], reports[["edgeR"]])
-      #names(reports[["DESeq2_and_edgeR"]]) <- 1:length(names(reports[["DESeq2_and_edgeR"]]))
-      df_both <- merge(as.data.frame(reports[["DESeq2"]]), as.data.frame(reports[["edgeR"]]), by=c("seqnames", "start", "end"), suffixes=c(".DESeq2", ".edgeR"))
-      reports[["DESeq2_and_edgeR"]] <- GRanges(df_both)
-      report <- "DESeq2_and_edgeR"
-      
-      output_prefix <- change_dirs(result_dir, report, '')
-      
-      # Write complete report to file
-      res <- as.data.frame(reports[[report]])
-      res['log2FoldChange'] <- (res$Fold.DESeq2 + res$Fold.edgeR)/2
-      res['p.adjust'] <- (res$FDR.DESeq2 + res$FDR.edgeR)/2
-      
-      # Use absolute fold-change for plotting magnitude
-      #gained$Fold <- abs(gained$Fold)
-      #lost$Fold <- abs(lost$Fold)
-      
-      gpeaks <- GenomicRanges::GRangesList(Gained=gained, Lost=lost)
-      names(gpeaks) <- c(dbObj.contrast$contrasts[[1]]$name1, dbObj.contrast$contrasts[[1]]$name2)
-      
-      # Plot peaks gained/lost over genome between conditions
-      output_prefix <- change_dirs(result_dir, report, '')
-      tryCatch(
-        {
-          plt <- covplot(gpeaks, title=paste("Peaks over Genome", report, sep=' - '), ) + #weightCol='Fold') + 
-            scale_color_manual(values=rev(c(colours[1:length(unique_peaks)]))) + 
-            scale_fill_manual(values=rev(c(colours[1:length(unique_peaks)])))
-          invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_significant_merged_peaks.png', sep=''), plot=plt, dpi=320)))
-          plt <- plt + facet_grid(chr ~ .id)
-          invisible(capture.output(ggsave(filename=paste(output_prefix, report, '_significant_peaks.png', sep=''), plot=plt, dpi=320)))
-        }, error=function(e){
-          message("No figure\n", e)
-          invisible(capture.output(dev.off()))
-        }
-      )
-      invisible(capture.output(gc()))
-      
-      cat('\nFINISHED!\n')
-      
-    },
+tryCatch(
+  {
+    # Output log to file
+    con <- file(paste(opt$result_dir, str_replace(opt$result_dir, "/", "_log.txt") , sep=''), open = "at")
+    sink(con, split = FALSE)                 # normal output
+    #sink(con, type = "message", split = TRUE)  # messages
+    # Quit if one method produced no results to avoid repeating functions...
+    if (is.null(dba.report(dbObj.analyzed, method=DBA_DESEQ2, contrast=1, th=opt$fdr)) | is.null(dba.report(dbObj.analyzed, method=DBA_EDGER, contrast=1, th=opt$fdr))){
+      cat("\nNo DB sites identified by either DESeq2 or edgeR at a significance threshold of", opt$fdr, "skipping further analysis...\n")
+      cat("\n========== FINISHED! ==========\n")
+      q()
+    }
+
+  },
   error = function(e) {
-    message("\nError occurred: ", conditionMessage(e), "\n")
+    message("Error occurred: ", conditionMessage(e), '\n')
   }, 
   finally = {
+    cat("\n========== FINISHED! ==========\n")
     if (!is.null(dev.list())) dev.off()
     invisible(capture.output(gc()))
     #sink()                  # stop messages
     sink()                  # stop normal output
     close(con)
   }
-  
-)
+)  
