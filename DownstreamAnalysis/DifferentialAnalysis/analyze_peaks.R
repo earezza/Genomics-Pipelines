@@ -1534,6 +1534,8 @@ tryCatch(
             py_require(c("suds"))
             py_run_string("import pandas as pd")
             py_run_string("import sys")
+            py_run_string("import ssl")
+            py_run_string("import certifi")
             py_run_string("from suds.client import Client")
             
             # create a service client using the wsdl.
