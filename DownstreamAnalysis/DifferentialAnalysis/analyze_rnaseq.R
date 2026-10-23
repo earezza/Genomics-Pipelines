@@ -45,7 +45,7 @@ option_list = list(
   make_option(c("-a", "--assembly"), type="character", default="mm10", help="Assembly to annotate genes/peaks (e.g. hg19, hg38, mm9, mm10, rn6)", metavar="character"),
   make_option(c("-d", "--database"), type="character", default="ucsc", help="Database reference for peaks gene annotations, ucsc (default) or ensembl", metavar="character"),
   make_option(c("-r", "--result_dir"), type="character", default="DEG_Analysis/", help="Directory name for saving output results", metavar="character"),
-  make_option(c("-m", "--method"), type="character", default="all", help="Method to analyze data, ('deseq2', 'edger', 'limma', default: 'all')", metavar="character"), 
+  make_option(c("-m", "--method"), type="character", default="deseq2", help="Method to analyze data, ('deseq2', 'edger', 'limma', default: 'all')", metavar="character"), 
   make_option(c("-f", "--filter"), action="store_true", type="logical", default=FALSE, help="Flag to filter read counts (removes genes < min_count from raw matrix, then removes genes < min_baseMean after normalizing", metavar="logical"),
   make_option(c("-b", "--batch_correct"), action="store_true", type="logical", default=FALSE, help="Flag to apply batch correction according to batches defined in sampleinfo sheet", metavar="logical"),
   make_option(c("--min_count"), type="integer", default=1, help="Minimum counts to include if filtering", metavar="integer"),
@@ -847,6 +847,15 @@ for (c in colnames(combs)){
     
       output_prefix <- change_dirs(opt$result_dir, r, comparison)
       res <- results[[r]]
+      
+      bg_genes <- rownames(res)
+      if (opt$assembly == "hg19" | opt$assembly == "hg38"){
+        bg_entrez <- mapIds(org.Hs.eg.db, keys = bg_genes, column = "ENTREZID", keytype = "SYMBOL")
+      }else if (opt$assembly == "mm9" | opt$assembly == "mm10"){
+        bg_entrez <- mapIds(org.Mm.eg.db, keys = bg_genes, column = "ENTREZID", keytype = "SYMBOL")
+      }else if (opt$assembly == "rn6"){
+        bg_entrez <- mapIds(org.Rn.eg.db, keys = bg_genes, column = "ENTREZID", keytype = "SYMBOL")
+      }
     
       # ========== Organize DEGs ==============
       out_dirs <- list()
@@ -979,7 +988,8 @@ for (c in colnames(combs)){
                                        minGSSize = opt$minGSSize,
                                        maxGSSize = opt$maxGSSize,
                                        readable=TRUE,
-                                       ont=ont
+                                       ont=ont,
+                                       universe=bg_genes
               ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
               if (!class(compGO) == 'compareClusterResult'){
                 cat("\nNo results.\n")
@@ -1032,7 +1042,8 @@ for (c in colnames(combs)){
                                        pAdjustMethod="BH",
                                        organism=anno_ref$keggOrg,
                                        minGSSize = opt$minGSSize,
-                                       maxGSSize = opt$maxGSSize
+                                       maxGSSize = opt$maxGSSize,
+                                       universe = bg_entrez
             ) # Check https://www.genome.jp/kegg/catalog/org_list.html for organism hsa=human mmu=mouse
             if (!class(compKEGG) == 'compareClusterResult'){
               cat("\nNo results.\n")
@@ -1040,33 +1051,37 @@ for (c in colnames(combs)){
             }else{
               cat('\n', dim(compKEGG@compareClusterResult)[1], 'results\n')
             }
-            if ((!is.null(compKEGG)) & (dim(compKEGG@compareClusterResult)[1] > 0)){
-              # Map EntrezIDs to gene SYMBOL
-              compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
-              myEntrez <- lapply(compKEGG@compareClusterResult$geneID, strsplit, '/')
-              for (i in 1:length(myEntrez)){
-                compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
-              }
-              # Write annotations to csv
-              write.table(as.data.frame(compKEGG), file=paste(out_dirs[[n]], 'KEGG_annotation_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
-              
-              plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', n, sep=""), ylabel="KEGG Category", colour=colour, n=15)
-              invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
-              remove(plt)
-              
-              plt <- make_pheatmapplot(compKEGG@compareClusterResult, result_dfs[[n]], anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
-              invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
-              remove(plt)
-              plt <- make_pheatmapplot(compKEGG@compareClusterResult, result_dfs[[n]], anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
-              invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
-              remove(plt)
-              remove(compKEGG)
-              gc()
-            } else{
+            if ((!is.null(compKEGG)) ) {
+
+              if (dim(compKEGG@compareClusterResult)[1] > 0){
+                # Map EntrezIDs to gene SYMBOL
+                compKEGG@compareClusterResult$SYMBOL <- compKEGG@compareClusterResult$geneID
+                myEntrez <- lapply(compKEGG@compareClusterResult$geneID, strsplit, '/')
+                for (i in 1:length(myEntrez)){
+                  compKEGG@compareClusterResult$SYMBOL[i] <- paste(plyr::mapvalues(myEntrez[[i]][[1]], mapper$geneId, mapper$SYMBOL, warn_missing = FALSE), collapse='/')
+                }
+                # Write annotations to csv
+                write.table(as.data.frame(compKEGG), file=paste(out_dirs[[n]], 'KEGG_annotation_', n, '.tsv', sep=''), sep="\t", quote=F, row.names=F, col.names=T)
+                
+                plt <- make_dotplot(compKEGG@compareClusterResult, title=paste('KEGG - ', n, sep=""), ylabel="KEGG Category", colour=colour, n=15)
+                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_dotplot.png', sep=''), plot=plt, dpi=320)))
+                remove(plt)
+                
+                plt <- make_pheatmapplot(compKEGG@compareClusterResult, result_dfs[[n]], anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=TRUE, ylabel="KEGG Category")
+                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_pheatmap_bygene.png', sep=''), plot=plt, dpi=320)))
+                remove(plt)
+                plt <- make_pheatmapplot(compKEGG@compareClusterResult, result_dfs[[n]], anno_type="KEGG", assembly=opt$assembly, title=paste('KEGG - ', n, sep=""), heat_colour = heat_colour, num_terms=25, num_genes=50, lfc=opt$lfc, dendro=TRUE, sort_genes=FALSE, ylabel="KEGG Category")
+                invisible(capture.output(ggsave(filename=paste(out_dirs[[n]], 'KEGG_annotation_', n, '_pheatmap.png', sep=''), plot=plt, dpi=320)))
+                remove(plt)
+                remove(compKEGG)
+                gc()
+              } else{
               cat("\nNo annotation results\n")
               remove(compKEGG)
               gc()
+              }
             }
+
           },error = function(e)
           {
             message(e)
@@ -1215,6 +1230,7 @@ for (c in colnames(combs)){
                             organism       = opt$assembly,
                             ontology       = annotation_type,
                             gene           = entrez,
+                            universe=bg_entrez,
                             keytype        = "ENTREZ_GENE_ID")
                 rm(compD)
                 
@@ -1280,6 +1296,5 @@ for (c in colnames(combs)){
     }
     cat("Completed", r,  "\n")
   }
-  
-  
+
 }
